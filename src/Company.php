@@ -26,8 +26,90 @@ class Company extends \CommonDBTM
     }
 
     /**
+     * Define as colunas exibidas na listagem (Search::show)
+     * Sem isso, a tabela aparece vazia mesmo com dados
+     */
+    public function rawSearchOptions(): array
+    {
+        $tab = [];
+
+        $tab[] = [
+            'id'            => 'common',
+            'name'          => self::getTypeName(1),
+        ];
+
+        $tab[] = [
+            'id'            => 1,
+            'table'         => self::getTable(),
+            'field'         => 'name',
+            'name'          => __('Nome', 'newmanagement'),
+            'datatype'      => 'itemlink',
+            'massiveaction' => false,
+        ];
+
+        $tab[] = [
+            'id'       => 2,
+            'table'    => self::getTable(),
+            'field'    => 'cnpj',
+            'name'     => __('CNPJ', 'newmanagement'),
+            'datatype' => 'string',
+        ];
+
+        $tab[] = [
+            'id'       => 3,
+            'table'    => self::getTable(),
+            'field'    => 'phone',
+            'name'     => __('Telefone', 'newmanagement'),
+            'datatype' => 'string',
+        ];
+
+        $tab[] = [
+            'id'       => 4,
+            'table'    => self::getTable(),
+            'field'    => 'email',
+            'name'     => __('E-mail', 'newmanagement'),
+            'datatype' => 'email',
+        ];
+
+        $tab[] = [
+            'id'       => 5,
+            'table'    => self::getTable(),
+            'field'    => 'address',
+            'name'     => __('Endereço', 'newmanagement'),
+            'datatype' => 'text',
+        ];
+
+        $tab[] = [
+            'id'       => 6,
+            'table'    => self::getTable(),
+            'field'    => 'comment',
+            'name'     => __('Comentário', 'newmanagement'),
+            'datatype' => 'text',
+        ];
+
+        $tab[] = [
+            'id'       => 19,
+            'table'    => self::getTable(),
+            'field'    => 'date_mod',
+            'name'     => __('Last update'),
+            'datatype' => 'datetime',
+            'massiveaction' => false,
+        ];
+
+        $tab[] = [
+            'id'       => 121,
+            'table'    => self::getTable(),
+            'field'    => 'date_creation',
+            'name'     => __('Creation date'),
+            'datatype' => 'datetime',
+            'massiveaction' => false,
+        ];
+
+        return $tab;
+    }
+
+    /**
      * Menu lateral do GLPI 11
-     * Define todas as entradas do plugin no menu Ferramentas
      */
     public static function getMenuContent(): array
     {
@@ -37,7 +119,6 @@ class Company extends \CommonDBTM
         $menu['page']  = '/plugins/newmanagement/front/company.php';
         $menu['icon']  = 'ti ti-building';
 
-        // Submenus
         $menu['options']['company']['title']           = __('Empresas', 'newmanagement');
         $menu['options']['company']['page']            = '/plugins/newmanagement/front/company.php';
         $menu['options']['company']['icon']            = 'ti ti-building';
@@ -91,26 +172,26 @@ class Company extends \CommonDBTM
 
         echo '<tr class="tab_bg_1">';
         echo '<td>' . __('Nome', 'newmanagement') . '</td>';
-        echo '<td><input type="text" name="name" value="' . $this->fields['name'] . '" class="form-control" required></td>';
+        echo '<td><input type="text" name="name" value="' . ($this->fields['name'] ?? '') . '" class="form-control" required></td>';
         echo '<td>' . __('CNPJ', 'newmanagement') . '</td>';
-        echo '<td><input type="text" name="cnpj" value="' . $this->fields['cnpj'] . '" class="form-control"></td>';
+        echo '<td><input type="text" name="cnpj" value="' . ($this->fields['cnpj'] ?? '') . '" class="form-control"></td>';
         echo '</tr>';
 
         echo '<tr class="tab_bg_1">';
         echo '<td>' . __('Telefone', 'newmanagement') . '</td>';
-        echo '<td><input type="text" name="phone" value="' . $this->fields['phone'] . '" class="form-control"></td>';
+        echo '<td><input type="text" name="phone" value="' . ($this->fields['phone'] ?? '') . '" class="form-control"></td>';
         echo '<td>' . __('E-mail', 'newmanagement') . '</td>';
-        echo '<td><input type="text" name="email" value="' . $this->fields['email'] . '" class="form-control"></td>';
+        echo '<td><input type="text" name="email" value="' . ($this->fields['email'] ?? '') . '" class="form-control"></td>';
         echo '</tr>';
 
         echo '<tr class="tab_bg_1">';
         echo '<td>' . __('Endereço', 'newmanagement') . '</td>';
-        echo '<td colspan="3"><textarea name="address" class="form-control" rows="2">' . $this->fields['address'] . '</textarea></td>';
+        echo '<td colspan="3"><textarea name="address" class="form-control" rows="2">' . ($this->fields['address'] ?? '') . '</textarea></td>';
         echo '</tr>';
 
         echo '<tr class="tab_bg_1">';
         echo '<td>' . __('Comentário', 'newmanagement') . '</td>';
-        echo '<td colspan="3"><textarea name="comment" class="form-control" rows="3">' . $this->fields['comment'] . '</textarea></td>';
+        echo '<td colspan="3"><textarea name="comment" class="form-control" rows="3">' . ($this->fields['comment'] ?? '') . '</textarea></td>';
         echo '</tr>';
 
         $this->showFormButtons($options);
