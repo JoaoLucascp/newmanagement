@@ -23,9 +23,10 @@ function plugin_init_newmanagement()
     $PLUGIN_HOOKS['csrf_compliant']['newmanagement'] = true;
     $PLUGIN_HOOKS['use_massive_action']['newmanagement'] = 1;
 
-    // CSS e JS
-    $PLUGIN_HOOKS['add_css']['newmanagement']        = 'css/newmanagement.css';
-    $PLUGIN_HOOKS['add_javascript']['newmanagement'] = 'js/newmanagement.js';
+    // CSS e JS — no GLPI 11, assets são servidos a partir de public/
+    // O caminho informado aqui é relativo ao diretório public/ do plugin
+    $PLUGIN_HOOKS['add_css']['newmanagement']        = 'public/css/newmanagement.css';
+    $PLUGIN_HOOKS['add_javascript']['newmanagement'] = 'public/js/newmanagement.js';
 
     // Página de configuração
     $PLUGIN_HOOKS['config_page']['newmanagement'] = 'front/config.php';
@@ -39,7 +40,6 @@ function plugin_init_newmanagement()
     \Plugin::registerClass(\GlpiPlugin\Newmanagement\Task::class);
 
     // Menu lateral — GLPI 11: o menu vem de getMenuContent() na classe Company
-    // O hook correto é Hooks::MENU_TOADD (não mais 'menu' direto)
     $PLUGIN_HOOKS[\Glpi\Plugin\Hooks::MENU_TOADD]['newmanagement'] = [
         'plugins' => [\GlpiPlugin\Newmanagement\Company::class],
     ];
