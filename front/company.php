@@ -42,8 +42,9 @@ if (isset($_GET['id'])) {
     Html::header(
         Company::getTypeName(1),
         '',
-        'tools',
-        'GlpiPlugin\\Newmanagement\\Company'
+        'plugins',
+        'GlpiPlugin\\Newmanagement\\Company',
+        'company'
     );
     $company->showForm((int) $_GET['id']);
     Html::footer();
@@ -52,8 +53,9 @@ if (isset($_GET['id'])) {
     Html::header(
         Company::getTypeName(1),
         '',
-        'tools',
-        'GlpiPlugin\\Newmanagement\\Company'
+        'plugins',
+        'GlpiPlugin\\Newmanagement\\Company',
+        'company'
     );
     $company->showForm(-1);
     Html::footer();
@@ -62,8 +64,9 @@ if (isset($_GET['id'])) {
     Html::header(
         Company::getTypeName(0),
         '',
-        'tools',
-        'GlpiPlugin\\Newmanagement\\Company'
+        'plugins',
+        'GlpiPlugin\\Newmanagement\\Company',
+        'company'
     );
     Search::show(Company::class);
     Html::footer();
