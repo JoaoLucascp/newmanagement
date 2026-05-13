@@ -13,24 +13,28 @@ function plugin_newmanagement_install() {
 
     $migration = new Migration(PLUGIN_NEWMANAGEMENT_VERSION);
 
+    $default_charset   = DBConnection::getDefaultCharset();
+    $default_collation = DBConnection::getDefaultCollation();
+    $default_key_sign  = DBConnection::getDefaultPrimaryKeySignOption();
+
     // -------------------------------------------------------
     // Tabela: Empresas
     // -------------------------------------------------------
     if (!$DB->tableExists('glpi_plugin_newmanagement_companies')) {
         $query = "CREATE TABLE `glpi_plugin_newmanagement_companies` (
-            `id`              INT(11)      NOT NULL AUTO_INCREMENT,
-            `name`            VARCHAR(255) NOT NULL DEFAULT '',
-            `cnpj`            VARCHAR(20)           DEFAULT NULL,
-            `address`         TEXT                  DEFAULT NULL,
-            `phone`           VARCHAR(50)           DEFAULT NULL,
-            `email`           VARCHAR(255)          DEFAULT NULL,
-            `comment`         TEXT                  DEFAULT NULL,
-            `date_creation`   DATETIME              DEFAULT NULL,
-            `date_mod`        DATETIME              DEFAULT NULL,
-            `is_deleted`      TINYINT(1)   NOT NULL DEFAULT 0,
+            `id`            int {$default_key_sign} NOT NULL AUTO_INCREMENT,
+            `name`          varchar(255) NOT NULL DEFAULT '',
+            `cnpj`          varchar(20)           DEFAULT NULL,
+            `address`       text                  DEFAULT NULL,
+            `phone`         varchar(50)           DEFAULT NULL,
+            `email`         varchar(255)          DEFAULT NULL,
+            `comment`       text                  DEFAULT NULL,
+            `date_creation` timestamp             DEFAULT NULL,
+            `date_mod`      timestamp             DEFAULT NULL,
+            `is_deleted`    tinyint(1)   NOT NULL DEFAULT 0,
             PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC";
-        $DB->queryOrDie($query, $DB->error());
+        ) ENGINE=InnoDB DEFAULT CHARSET={$default_charset} COLLATE={$default_collation} ROW_FORMAT=DYNAMIC";
+        $DB->doQueryOrDie($query);
     }
 
     // -------------------------------------------------------
@@ -38,20 +42,20 @@ function plugin_newmanagement_install() {
     // -------------------------------------------------------
     if (!$DB->tableExists('glpi_plugin_newmanagement_asterisk_servers')) {
         $query = "CREATE TABLE `glpi_plugin_newmanagement_asterisk_servers` (
-            `id`                  INT(11)      NOT NULL AUTO_INCREMENT,
-            `name`                VARCHAR(255) NOT NULL DEFAULT '',
-            `companies_id`        INT(11)               DEFAULT NULL,
-            `ip_address`          VARCHAR(45)           DEFAULT NULL,
-            `asterisk_version`    VARCHAR(50)           DEFAULT NULL,
-            `sip_trunk`           VARCHAR(255)          DEFAULT NULL,
-            `extensions_count`    INT(11)               DEFAULT 0,
-            `comment`             TEXT                  DEFAULT NULL,
-            `date_creation`       DATETIME              DEFAULT NULL,
-            `date_mod`            DATETIME              DEFAULT NULL,
-            `is_deleted`          TINYINT(1)   NOT NULL DEFAULT 0,
+            `id`                int {$default_key_sign} NOT NULL AUTO_INCREMENT,
+            `name`              varchar(255) NOT NULL DEFAULT '',
+            `companies_id`      int {$default_key_sign}       DEFAULT NULL,
+            `ip_address`        varchar(45)           DEFAULT NULL,
+            `asterisk_version`  varchar(50)           DEFAULT NULL,
+            `sip_trunk`         varchar(255)          DEFAULT NULL,
+            `extensions_count`  int                   DEFAULT 0,
+            `comment`           text                  DEFAULT NULL,
+            `date_creation`     timestamp             DEFAULT NULL,
+            `date_mod`          timestamp             DEFAULT NULL,
+            `is_deleted`        tinyint(1)   NOT NULL DEFAULT 0,
             PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC";
-        $DB->queryOrDie($query, $DB->error());
+        ) ENGINE=InnoDB DEFAULT CHARSET={$default_charset} COLLATE={$default_collation} ROW_FORMAT=DYNAMIC";
+        $DB->doQueryOrDie($query);
     }
 
     // -------------------------------------------------------
@@ -59,20 +63,20 @@ function plugin_newmanagement_install() {
     // -------------------------------------------------------
     if (!$DB->tableExists('glpi_plugin_newmanagement_asterisk_cloud')) {
         $query = "CREATE TABLE `glpi_plugin_newmanagement_asterisk_cloud` (
-            `id`                  INT(11)      NOT NULL AUTO_INCREMENT,
-            `name`                VARCHAR(255) NOT NULL DEFAULT '',
-            `companies_id`        INT(11)               DEFAULT NULL,
-            `provider`            VARCHAR(255)          DEFAULT NULL,
-            `cloud_region`        VARCHAR(100)          DEFAULT NULL,
-            `sip_trunk`           VARCHAR(255)          DEFAULT NULL,
-            `extensions_count`    INT(11)               DEFAULT 0,
-            `comment`             TEXT                  DEFAULT NULL,
-            `date_creation`       DATETIME              DEFAULT NULL,
-            `date_mod`            DATETIME              DEFAULT NULL,
-            `is_deleted`          TINYINT(1)   NOT NULL DEFAULT 0,
+            `id`                int {$default_key_sign} NOT NULL AUTO_INCREMENT,
+            `name`              varchar(255) NOT NULL DEFAULT '',
+            `companies_id`      int {$default_key_sign}       DEFAULT NULL,
+            `provider`          varchar(255)          DEFAULT NULL,
+            `cloud_region`      varchar(100)          DEFAULT NULL,
+            `sip_trunk`         varchar(255)          DEFAULT NULL,
+            `extensions_count`  int                   DEFAULT 0,
+            `comment`           text                  DEFAULT NULL,
+            `date_creation`     timestamp             DEFAULT NULL,
+            `date_mod`          timestamp             DEFAULT NULL,
+            `is_deleted`        tinyint(1)   NOT NULL DEFAULT 0,
             PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC";
-        $DB->queryOrDie($query, $DB->error());
+        ) ENGINE=InnoDB DEFAULT CHARSET={$default_charset} COLLATE={$default_collation} ROW_FORMAT=DYNAMIC";
+        $DB->doQueryOrDie($query);
     }
 
     // -------------------------------------------------------
@@ -80,19 +84,19 @@ function plugin_newmanagement_install() {
     // -------------------------------------------------------
     if (!$DB->tableExists('glpi_plugin_newmanagement_chatbots')) {
         $query = "CREATE TABLE `glpi_plugin_newmanagement_chatbots` (
-            `id`              INT(11)      NOT NULL AUTO_INCREMENT,
-            `name`            VARCHAR(255) NOT NULL DEFAULT '',
-            `companies_id`    INT(11)               DEFAULT NULL,
-            `platform`        VARCHAR(100)          DEFAULT NULL,
-            `channels`        TEXT                  DEFAULT NULL,
-            `api_endpoint`    VARCHAR(255)          DEFAULT NULL,
-            `comment`         TEXT                  DEFAULT NULL,
-            `date_creation`   DATETIME              DEFAULT NULL,
-            `date_mod`        DATETIME              DEFAULT NULL,
-            `is_deleted`      TINYINT(1)   NOT NULL DEFAULT 0,
+            `id`            int {$default_key_sign} NOT NULL AUTO_INCREMENT,
+            `name`          varchar(255) NOT NULL DEFAULT '',
+            `companies_id`  int {$default_key_sign}       DEFAULT NULL,
+            `platform`      varchar(100)          DEFAULT NULL,
+            `channels`      text                  DEFAULT NULL,
+            `api_endpoint`  varchar(255)          DEFAULT NULL,
+            `comment`       text                  DEFAULT NULL,
+            `date_creation` timestamp             DEFAULT NULL,
+            `date_mod`      timestamp             DEFAULT NULL,
+            `is_deleted`    tinyint(1)   NOT NULL DEFAULT 0,
             PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC";
-        $DB->queryOrDie($query, $DB->error());
+        ) ENGINE=InnoDB DEFAULT CHARSET={$default_charset} COLLATE={$default_collation} ROW_FORMAT=DYNAMIC";
+        $DB->doQueryOrDie($query);
     }
 
     // -------------------------------------------------------
@@ -100,19 +104,19 @@ function plugin_newmanagement_install() {
     // -------------------------------------------------------
     if (!$DB->tableExists('glpi_plugin_newmanagement_fixedlines')) {
         $query = "CREATE TABLE `glpi_plugin_newmanagement_fixedlines` (
-            `id`              INT(11)      NOT NULL AUTO_INCREMENT,
-            `name`            VARCHAR(255) NOT NULL DEFAULT '',
-            `companies_id`    INT(11)               DEFAULT NULL,
-            `number`          VARCHAR(50)           DEFAULT NULL,
-            `operator`        VARCHAR(100)          DEFAULT NULL,
-            `contract_end`    DATE                  DEFAULT NULL,
-            `comment`         TEXT                  DEFAULT NULL,
-            `date_creation`   DATETIME              DEFAULT NULL,
-            `date_mod`        DATETIME              DEFAULT NULL,
-            `is_deleted`      TINYINT(1)   NOT NULL DEFAULT 0,
+            `id`            int {$default_key_sign} NOT NULL AUTO_INCREMENT,
+            `name`          varchar(255) NOT NULL DEFAULT '',
+            `companies_id`  int {$default_key_sign}       DEFAULT NULL,
+            `number`        varchar(50)           DEFAULT NULL,
+            `operator`      varchar(100)          DEFAULT NULL,
+            `contract_end`  date                  DEFAULT NULL,
+            `comment`       text                  DEFAULT NULL,
+            `date_creation` timestamp             DEFAULT NULL,
+            `date_mod`      timestamp             DEFAULT NULL,
+            `is_deleted`    tinyint(1)   NOT NULL DEFAULT 0,
             PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC";
-        $DB->queryOrDie($query, $DB->error());
+        ) ENGINE=InnoDB DEFAULT CHARSET={$default_charset} COLLATE={$default_collation} ROW_FORMAT=DYNAMIC";
+        $DB->doQueryOrDie($query);
     }
 
     // -------------------------------------------------------
@@ -120,23 +124,23 @@ function plugin_newmanagement_install() {
     // -------------------------------------------------------
     if (!$DB->tableExists('glpi_plugin_newmanagement_tasks')) {
         $query = "CREATE TABLE `glpi_plugin_newmanagement_tasks` (
-            `id`                INT(11)       NOT NULL AUTO_INCREMENT,
-            `name`              VARCHAR(255)  NOT NULL DEFAULT '',
-            `companies_id`      INT(11)                DEFAULT NULL,
-            `assigned_user_id`  INT(11)                DEFAULT NULL,
-            `status`            TINYINT(1)    NOT NULL DEFAULT 0,
-            `latitude`          DECIMAL(10,7)          DEFAULT NULL,
-            `longitude`         DECIMAL(10,7)          DEFAULT NULL,
-            `km_calculated`     DECIMAL(10,2)          DEFAULT NULL,
-            `digital_signature` TEXT                   DEFAULT NULL,
-            `date_due`          DATETIME               DEFAULT NULL,
-            `comment`           TEXT                   DEFAULT NULL,
-            `date_creation`     DATETIME               DEFAULT NULL,
-            `date_mod`          DATETIME               DEFAULT NULL,
-            `is_deleted`        TINYINT(1)    NOT NULL DEFAULT 0,
+            `id`                int {$default_key_sign}  NOT NULL AUTO_INCREMENT,
+            `name`              varchar(255)  NOT NULL DEFAULT '',
+            `companies_id`      int {$default_key_sign}         DEFAULT NULL,
+            `assigned_user_id`  int {$default_key_sign}         DEFAULT NULL,
+            `status`            tinyint(1)    NOT NULL DEFAULT 0,
+            `latitude`          decimal(10,7)          DEFAULT NULL,
+            `longitude`         decimal(10,7)          DEFAULT NULL,
+            `km_calculated`     decimal(10,2)          DEFAULT NULL,
+            `digital_signature` text                   DEFAULT NULL,
+            `date_due`          timestamp              DEFAULT NULL,
+            `comment`           text                   DEFAULT NULL,
+            `date_creation`     timestamp              DEFAULT NULL,
+            `date_mod`          timestamp              DEFAULT NULL,
+            `is_deleted`        tinyint(1)    NOT NULL DEFAULT 0,
             PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC";
-        $DB->queryOrDie($query, $DB->error());
+        ) ENGINE=InnoDB DEFAULT CHARSET={$default_charset} COLLATE={$default_collation} ROW_FORMAT=DYNAMIC";
+        $DB->doQueryOrDie($query);
     }
 
     $migration->executeMigration();
@@ -160,7 +164,7 @@ function plugin_newmanagement_uninstall() {
 
     foreach ($tables as $table) {
         if ($DB->tableExists($table)) {
-            $DB->queryOrDie("DROP TABLE `$table`", $DB->error());
+            $DB->doQueryOrDie("DROP TABLE `{$table}`");
         }
     }
 
