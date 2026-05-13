@@ -38,10 +38,10 @@ function plugin_newmanagement_install() {
     }
 
     // -------------------------------------------------------
-    // Tabela: Servidores Telefônicos (Asterisk On-Premise)
+    // Tabela: IPBX On-Premise
     // -------------------------------------------------------
-    if (!$DB->tableExists('glpi_plugin_newmanagement_asterisk_servers')) {
-        $query = "CREATE TABLE `glpi_plugin_newmanagement_asterisk_servers` (
+    if (!$DB->tableExists('glpi_plugin_newmanagement_ipbx')) {
+        $query = "CREATE TABLE `glpi_plugin_newmanagement_ipbx` (
             `id`                int {$default_key_sign} NOT NULL AUTO_INCREMENT,
             `name`              varchar(255) NOT NULL DEFAULT '',
             `companies_id`      int {$default_key_sign}       DEFAULT NULL,
@@ -59,10 +59,10 @@ function plugin_newmanagement_install() {
     }
 
     // -------------------------------------------------------
-    // Tabela: Servidores Telefônicos em Nuvem (Asterisk Cloud)
+    // Tabela: IPBX Cloud
     // -------------------------------------------------------
-    if (!$DB->tableExists('glpi_plugin_newmanagement_asterisk_cloud')) {
-        $query = "CREATE TABLE `glpi_plugin_newmanagement_asterisk_cloud` (
+    if (!$DB->tableExists('glpi_plugin_newmanagement_ipbx_cloud')) {
+        $query = "CREATE TABLE `glpi_plugin_newmanagement_ipbx_cloud` (
             `id`                int {$default_key_sign} NOT NULL AUTO_INCREMENT,
             `name`              varchar(255) NOT NULL DEFAULT '',
             `companies_id`      int {$default_key_sign}       DEFAULT NULL,
@@ -155,8 +155,8 @@ function plugin_newmanagement_uninstall() {
 
     $tables = [
         'glpi_plugin_newmanagement_companies',
-        'glpi_plugin_newmanagement_asterisk_servers',
-        'glpi_plugin_newmanagement_asterisk_cloud',
+        'glpi_plugin_newmanagement_ipbx',
+        'glpi_plugin_newmanagement_ipbx_cloud',
         'glpi_plugin_newmanagement_chatbots',
         'glpi_plugin_newmanagement_fixedlines',
         'glpi_plugin_newmanagement_tasks',
