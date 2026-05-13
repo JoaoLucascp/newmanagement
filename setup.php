@@ -11,8 +11,8 @@
 define('PLUGIN_NEWMANAGEMENT_VERSION', '1.0.0');
 
 // Versão mínima e máxima do GLPI suportada
-define('PLUGIN_NEWMANAGEMENT_MIN_GLPI_VERSION', '10.0.0');
-define('PLUGIN_NEWMANAGEMENT_MAX_GLPI_VERSION', '10.0.99');
+define('PLUGIN_NEWMANAGEMENT_MIN_GLPI_VERSION', '11.0.0');
+define('PLUGIN_NEWMANAGEMENT_MAX_GLPI_VERSION', '11.0.99');
 
 /**
  * Inicialização do plugin - chamado em todas as páginas do GLPI
