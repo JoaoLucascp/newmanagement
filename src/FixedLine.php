@@ -5,11 +5,11 @@
  * Classe: FixedLine (Linhas Fixas)
  */
 
+namespace GlpiPlugin\Newmanagement;
+
 if (!defined('GLPI_ROOT')) {
     die('Sorry. You can\'t access this file directly');
 }
-
-namespace GlpiPlugin\Newmanagement;
 
 class FixedLine extends \CommonDBTM
 {
@@ -36,7 +36,26 @@ class FixedLine extends \CommonDBTM
     {
         $this->initForm($ID, $options);
         $this->showFormHeader($options);
-        // TODO: renderizar template Twig
+
+        echo '<tr class="tab_bg_1">';
+        echo '<td>' . __('Nome', 'newmanagement') . '</td>';
+        echo '<td><input type="text" name="name" value="' . $this->fields['name'] . '" class="form-control" required></td>';
+        echo '<td>' . __('Número', 'newmanagement') . '</td>';
+        echo '<td><input type="text" name="number" value="' . $this->fields['number'] . '" class="form-control"></td>';
+        echo '</tr>';
+
+        echo '<tr class="tab_bg_1">';
+        echo '<td>' . __('Operadora', 'newmanagement') . '</td>';
+        echo '<td><input type="text" name="operator" value="' . $this->fields['operator'] . '" class="form-control"></td>';
+        echo '<td>' . __('Fim do contrato', 'newmanagement') . '</td>';
+        echo '<td><input type="date" name="contract_end" value="' . $this->fields['contract_end'] . '" class="form-control"></td>';
+        echo '</tr>';
+
+        echo '<tr class="tab_bg_1">';
+        echo '<td>' . __('Comentário', 'newmanagement') . '</td>';
+        echo '<td colspan="3"><textarea name="comment" class="form-control" rows="3">' . $this->fields['comment'] . '</textarea></td>';
+        echo '</tr>';
+
         $this->showFormButtons($options);
         return true;
     }

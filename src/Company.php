@@ -5,11 +5,11 @@
  * Classe: Company (Empresas)
  */
 
+namespace GlpiPlugin\Newmanagement;
+
 if (!defined('GLPI_ROOT')) {
     die('Sorry. You can\'t access this file directly');
 }
-
-namespace GlpiPlugin\Newmanagement;
 
 class Company extends \CommonDBTM
 {
@@ -88,7 +88,31 @@ class Company extends \CommonDBTM
     {
         $this->initForm($ID, $options);
         $this->showFormHeader($options);
-        // TODO: renderizar template Twig
+
+        echo '<tr class="tab_bg_1">';
+        echo '<td>' . __('Nome', 'newmanagement') . '</td>';
+        echo '<td><input type="text" name="name" value="' . $this->fields['name'] . '" class="form-control" required></td>';
+        echo '<td>' . __('CNPJ', 'newmanagement') . '</td>';
+        echo '<td><input type="text" name="cnpj" value="' . $this->fields['cnpj'] . '" class="form-control"></td>';
+        echo '</tr>';
+
+        echo '<tr class="tab_bg_1">';
+        echo '<td>' . __('Telefone', 'newmanagement') . '</td>';
+        echo '<td><input type="text" name="phone" value="' . $this->fields['phone'] . '" class="form-control"></td>';
+        echo '<td>' . __('E-mail', 'newmanagement') . '</td>';
+        echo '<td><input type="text" name="email" value="' . $this->fields['email'] . '" class="form-control"></td>';
+        echo '</tr>';
+
+        echo '<tr class="tab_bg_1">';
+        echo '<td>' . __('Endereço', 'newmanagement') . '</td>';
+        echo '<td colspan="3"><textarea name="address" class="form-control" rows="2">' . $this->fields['address'] . '</textarea></td>';
+        echo '</tr>';
+
+        echo '<tr class="tab_bg_1">';
+        echo '<td>' . __('Comentário', 'newmanagement') . '</td>';
+        echo '<td colspan="3"><textarea name="comment" class="form-control" rows="3">' . $this->fields['comment'] . '</textarea></td>';
+        echo '</tr>';
+
         $this->showFormButtons($options);
         return true;
     }

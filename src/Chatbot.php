@@ -2,14 +2,14 @@
 
 /**
  * Newmanagement - Plugin GLPI
- * Classe: Chatbot (Chatbot Omnichannel)
+ * Classe: Chatbot (Omnichannel)
  */
+
+namespace GlpiPlugin\Newmanagement;
 
 if (!defined('GLPI_ROOT')) {
     die('Sorry. You can\'t access this file directly');
 }
-
-namespace GlpiPlugin\Newmanagement;
 
 class Chatbot extends \CommonDBTM
 {
@@ -36,7 +36,29 @@ class Chatbot extends \CommonDBTM
     {
         $this->initForm($ID, $options);
         $this->showFormHeader($options);
-        // TODO: renderizar template Twig
+
+        echo '<tr class="tab_bg_1">';
+        echo '<td>' . __('Nome', 'newmanagement') . '</td>';
+        echo '<td><input type="text" name="name" value="' . $this->fields['name'] . '" class="form-control" required></td>';
+        echo '<td>' . __('Plataforma', 'newmanagement') . '</td>';
+        echo '<td><input type="text" name="platform" value="' . $this->fields['platform'] . '" class="form-control"></td>';
+        echo '</tr>';
+
+        echo '<tr class="tab_bg_1">';
+        echo '<td>' . __('Endpoint API', 'newmanagement') . '</td>';
+        echo '<td colspan="3"><input type="text" name="api_endpoint" value="' . $this->fields['api_endpoint'] . '" class="form-control"></td>';
+        echo '</tr>';
+
+        echo '<tr class="tab_bg_1">';
+        echo '<td>' . __('Canais', 'newmanagement') . '</td>';
+        echo '<td colspan="3"><textarea name="channels" class="form-control" rows="2">' . $this->fields['channels'] . '</textarea></td>';
+        echo '</tr>';
+
+        echo '<tr class="tab_bg_1">';
+        echo '<td>' . __('Comentário', 'newmanagement') . '</td>';
+        echo '<td colspan="3"><textarea name="comment" class="form-control" rows="3">' . $this->fields['comment'] . '</textarea></td>';
+        echo '</tr>';
+
         $this->showFormButtons($options);
         return true;
     }
