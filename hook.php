@@ -143,6 +143,27 @@ function plugin_newmanagement_install() {
         $DB->doQueryOrDie($query);
     }
 
+    // -------------------------------------------------------
+    // Registra os direitos de acesso no banco
+    // SEM isso, nenhum perfil (nem Super-Admin) consegue acessar as páginas
+    // -------------------------------------------------------
+    $rights = [
+        ['itemtype' => 'GlpiPlugin\\Newmanagement\\Company',    'name' => 'plugin_newmanagement_company'],
+        ['itemtype' => 'GlpiPlugin\\Newmanagement\\Ipbx',       'name' => 'plugin_newmanagement_ipbx'],
+        ['itemtype' => 'GlpiPlugin\\Newmanagement\\IpbxCloud',  'name' => 'plugin_newmanagement_ipbxcloud'],
+        ['itemtype' => 'GlpiPlugin\\Newmanagement\\Chatbot',    'name' => 'plugin_newmanagement_chatbot'],
+        ['itemtype' => 'GlpiPlugin\\Newmanagement\\FixedLine',  'name' => 'plugin_newmanagement_fixedline'],
+        ['itemtype' => 'GlpiPlugin\\Newmanagement\\Task',       'name' => 'plugin_newmanagement_task'],
+    ];
+
+    foreach ($rights as $right) {
+        // Garante que o direito existe na tabela glpi_profilerights para todos os perfis
+        // O valor 255 = todos os direitos (READ + CREATE + UPDATE + DELETE + etc.)
+        ProfileRight::addProfileRights([$right['name']]);
+        // Dá todos os direitos ao perfil Super-Admin (ID 4)
+        ProfileRight::updateProfileRights(4, [$right['name'] => ALLSTANDARDRIGHT | READNOTE | UPDATENOTE]);
+    }
+
     $migration->executeMigration();
     return true;
 }
@@ -167,6 +188,17 @@ function plugin_newmanagement_uninstall() {
             $DB->doQueryOrDie("DROP TABLE `{$table}`");
         }
     }
+
+    // Remove os direitos do banco ao desinstalar
+    $rights_names = [
+        'plugin_newmanagement_company',
+        'plugin_newmanagement_ipbx',
+        'plugin_newmanagement_ipbxcloud',
+        'plugin_newmanagement_chatbot',
+        'plugin_newmanagement_fixedline',
+        'plugin_newmanagement_task',
+    ];
+    ProfileRight::deleteProfileRights($rights_names);
 
     return true;
 }
