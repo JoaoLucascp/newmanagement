@@ -1,0 +1,85 @@
+{#
+  Newmanagement - Formulário de Chatbot
+#}
+{% extends 'layout/page.html.twig' %}
+
+{% block content %}
+<div class="container-fluid">
+
+  <h2>
+    {% if item.id %}
+      {{ 'Editar Chatbot'|__('newmanagement') }} — {{ item.name }}
+    {% else %}
+      {{ 'Novo Chatbot'|__('newmanagement') }}
+    {% endif %}
+  </h2>
+
+  <div class="card mt-3">
+    <div class="card-body">
+      <form method="POST" action="">
+        <input type="hidden" name="id" value="{{ item.id|default('') }}">
+        <input type="hidden" name="_glpi_csrf_token" value="{{ csrf_token() }}">
+
+        <div class="row g-3">
+
+          <div class="col-md-6">
+            <label class="form-label" for="name">
+              {{ 'Nome'|__('newmanagement') }} <span class="text-danger">*</span>
+            </label>
+            <input type="text" id="name" name="name" class="form-control"
+                   value="{{ item.name|default('') }}" required>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label" for="companies_id">{{ 'Empresa'|__('newmanagement') }}</label>
+            <select id="companies_id" name="companies_id" class="form-select">
+              <option value="">— {{ 'Selecione'|__('newmanagement') }} —</option>
+              {% for company in companies %}
+              <option value="{{ company.id }}"
+                {% if item.companies_id == company.id %}selected{% endif %}>
+                {{ company.name }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label" for="platform">{{ 'Plataforma'|__('newmanagement') }}</label>
+            <input type="text" id="platform" name="platform" class="form-control"
+                   value="{{ item.platform|default('') }}">
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label" for="api_endpoint">{{ 'API Endpoint'|__('newmanagement') }}</label>
+            <input type="text" id="api_endpoint" name="api_endpoint" class="form-control"
+                   value="{{ item.api_endpoint|default('') }}">
+          </div>
+
+          <div class="col-12">
+            <label class="form-label" for="channels">{{ 'Canais'|__('newmanagement') }}</label>
+            <textarea id="channels" name="channels" class="form-control" rows="2">{{ item.channels|default('') }}</textarea>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label" for="comment">{{ 'Observações'|__('newmanagement') }}</label>
+            <textarea id="comment" name="comment" class="form-control" rows="3">{{ item.comment|default('') }}</textarea>
+          </div>
+
+        </div>
+
+        <div class="mt-4 d-flex gap-2">
+          <button type="submit" name="update" class="btn btn-primary">
+            <i class="ti ti-device-floppy"></i>
+            {{ 'Salvar'|__('newmanagement') }}
+          </button>
+          <a href="{{ path('GlpiPlugin\\Newmanagement\\Chatbot') }}" class="btn btn-secondary">
+            {{ 'Cancelar'|__('newmanagement') }}
+          </a>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

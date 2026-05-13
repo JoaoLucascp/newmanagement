@@ -1,0 +1,58 @@
+{#
+  Newmanagement - Lista de Chatbots
+#}
+{% extends 'layout/page.html.twig' %}
+
+{% block content %}
+<div class="container-fluid">
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>{{ 'Chatbots'|__('newmanagement') }}</h2>
+    <a href="{{ path('GlpiPlugin\\Newmanagement\\Chatbot') }}?action=add"
+       class="btn btn-primary">
+      <i class="ti ti-plus"></i>
+      {{ 'Adicionar Chatbot'|__('newmanagement') }}
+    </a>
+  </div>
+
+  <div class="card">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th>{{ 'ID'|__('newmanagement') }}</th>
+            <th>{{ 'Nome'|__('newmanagement') }}</th>
+            <th>{{ 'Empresa'|__('newmanagement') }}</th>
+            <th>{{ 'Plataforma'|__('newmanagement') }}</th>
+            <th>{{ 'Canais'|__('newmanagement') }}</th>
+            <th>{{ 'API Endpoint'|__('newmanagement') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in items %}
+          <tr>
+            <td>{{ item.id }}</td>
+            <td>
+              <a href="{{ path('GlpiPlugin\\Newmanagement\\Chatbot') }}?id={{ item.id }}">
+                {{ item.name }}
+              </a>
+            </td>
+            <td>{{ item.company_name ?? '-' }}</td>
+            <td>{{ item.platform ?? '-' }}</td>
+            <td>{{ item.channels ?? '-' }}</td>
+            <td>{{ item.api_endpoint ?? '-' }}</td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="6" class="text-center text-muted py-4">
+              {{ 'Nenhum chatbot cadastrado.'|__('newmanagement') }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,78 @@
+{#
+  Newmanagement - Formulário de Empresa
+#}
+{% extends 'layout/page.html.twig' %}
+
+{% block content %}
+<div class="container-fluid">
+
+  <h2>
+    {% if item.id %}
+      {{ 'Editar Empresa'|__('newmanagement') }} — {{ item.name }}
+    {% else %}
+      {{ 'Nova Empresa'|__('newmanagement') }}
+    {% endif %}
+  </h2>
+
+  <div class="card mt-3">
+    <div class="card-body">
+      <form method="POST" action="">
+        <input type="hidden" name="id" value="{{ item.id|default('') }}">
+        <input type="hidden" name="_glpi_csrf_token" value="{{ csrf_token() }}">
+
+        <div class="row g-3">
+
+          <div class="col-md-6">
+            <label class="form-label" for="name">
+              {{ 'Nome'|__('newmanagement') }} <span class="text-danger">*</span>
+            </label>
+            <input type="text" id="name" name="name" class="form-control"
+                   value="{{ item.name|default('') }}" required>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label" for="cnpj">{{ 'CNPJ'|__('newmanagement') }}</label>
+            <input type="text" id="cnpj" name="cnpj" class="form-control"
+                   value="{{ item.cnpj|default('') }}" maxlength="20">
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label" for="phone">{{ 'Telefone'|__('newmanagement') }}</label>
+            <input type="text" id="phone" name="phone" class="form-control"
+                   value="{{ item.phone|default('') }}">
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label" for="email">{{ 'E-mail'|__('newmanagement') }}</label>
+            <input type="email" id="email" name="email" class="form-control"
+                   value="{{ item.email|default('') }}">
+          </div>
+
+          <div class="col-12">
+            <label class="form-label" for="address">{{ 'Endereço'|__('newmanagement') }}</label>
+            <textarea id="address" name="address" class="form-control" rows="2">{{ item.address|default('') }}</textarea>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label" for="comment">{{ 'Observações'|__('newmanagement') }}</label>
+            <textarea id="comment" name="comment" class="form-control" rows="3">{{ item.comment|default('') }}</textarea>
+          </div>
+
+        </div>{# /.row #}
+
+        <div class="mt-4 d-flex gap-2">
+          <button type="submit" name="update" class="btn btn-primary">
+            <i class="ti ti-device-floppy"></i>
+            {{ 'Salvar'|__('newmanagement') }}
+          </button>
+          <a href="{{ path('GlpiPlugin\\Newmanagement\\Company') }}" class="btn btn-secondary">
+            {{ 'Cancelar'|__('newmanagement') }}
+          </a>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,58 @@
+{#
+  Newmanagement - Lista de Empresas
+#}
+{% extends 'layout/page.html.twig' %}
+
+{% block content %}
+<div class="container-fluid">
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>{{ 'Empresas'|__('newmanagement') }}</h2>
+    <a href="{{ path('GlpiPlugin\\Newmanagement\\Company') }}?action=add"
+       class="btn btn-primary">
+      <i class="ti ti-plus"></i>
+      {{ 'Adicionar Empresa'|__('newmanagement') }}
+    </a>
+  </div>
+
+  <div class="card">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th>{{ 'ID'|__('newmanagement') }}</th>
+            <th>{{ 'Nome'|__('newmanagement') }}</th>
+            <th>{{ 'CNPJ'|__('newmanagement') }}</th>
+            <th>{{ 'Telefone'|__('newmanagement') }}</th>
+            <th>{{ 'E-mail'|__('newmanagement') }}</th>
+            <th>{{ 'Criado em'|__('newmanagement') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in items %}
+          <tr>
+            <td>{{ item.id }}</td>
+            <td>
+              <a href="{{ path('GlpiPlugin\\Newmanagement\\Company') }}?id={{ item.id }}">
+                {{ item.name }}
+              </a>
+            </td>
+            <td>{{ item.cnpj ?? '-' }}</td>
+            <td>{{ item.phone ?? '-' }}</td>
+            <td>{{ item.email ?? '-' }}</td>
+            <td>{{ item.date_creation|date('d/m/Y') }}</td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="6" class="text-center text-muted py-4">
+              {{ 'Nenhuma empresa cadastrada.'|__('newmanagement') }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,64 @@
+{#
+  Newmanagement - Lista de Linhas Fixas
+#}
+{% extends 'layout/page.html.twig' %}
+
+{% block content %}
+<div class="container-fluid">
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>{{ 'Linhas Fixas'|__('newmanagement') }}</h2>
+    <a href="{{ path('GlpiPlugin\\Newmanagement\\FixedLine') }}?action=add"
+       class="btn btn-primary">
+      <i class="ti ti-plus"></i>
+      {{ 'Adicionar Linha Fixa'|__('newmanagement') }}
+    </a>
+  </div>
+
+  <div class="card">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th>{{ 'ID'|__('newmanagement') }}</th>
+            <th>{{ 'Nome'|__('newmanagement') }}</th>
+            <th>{{ 'Empresa'|__('newmanagement') }}</th>
+            <th>{{ 'Número'|__('newmanagement') }}</th>
+            <th>{{ 'Operadora'|__('newmanagement') }}</th>
+            <th>{{ 'Venc. Contrato'|__('newmanagement') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in items %}
+          <tr>
+            <td>{{ item.id }}</td>
+            <td>
+              <a href="{{ path('GlpiPlugin\\Newmanagement\\FixedLine') }}?id={{ item.id }}">
+                {{ item.name }}
+              </a>
+            </td>
+            <td>{{ item.company_name ?? '-' }}</td>
+            <td>{{ item.number ?? '-' }}</td>
+            <td>{{ item.operator ?? '-' }}</td>
+            <td>
+              {% if item.contract_end %}
+                {{ item.contract_end|date('d/m/Y') }}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="6" class="text-center text-muted py-4">
+              {{ 'Nenhuma linha fixa cadastrada.'|__('newmanagement') }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

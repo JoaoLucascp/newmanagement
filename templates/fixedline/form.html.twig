@@ -1,0 +1,86 @@
+{#
+  Newmanagement - Formulário de Linha Fixa
+#}
+{% extends 'layout/page.html.twig' %}
+
+{% block content %}
+<div class="container-fluid">
+
+  <h2>
+    {% if item.id %}
+      {{ 'Editar Linha Fixa'|__('newmanagement') }} — {{ item.name }}
+    {% else %}
+      {{ 'Nova Linha Fixa'|__('newmanagement') }}
+    {% endif %}
+  </h2>
+
+  <div class="card mt-3">
+    <div class="card-body">
+      <form method="POST" action="">
+        <input type="hidden" name="id" value="{{ item.id|default('') }}">
+        <input type="hidden" name="_glpi_csrf_token" value="{{ csrf_token() }}">
+
+        <div class="row g-3">
+
+          <div class="col-md-6">
+            <label class="form-label" for="name">
+              {{ 'Nome'|__('newmanagement') }} <span class="text-danger">*</span>
+            </label>
+            <input type="text" id="name" name="name" class="form-control"
+                   value="{{ item.name|default('') }}" required>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label" for="companies_id">{{ 'Empresa'|__('newmanagement') }}</label>
+            <select id="companies_id" name="companies_id" class="form-select">
+              <option value="">— {{ 'Selecione'|__('newmanagement') }} —</option>
+              {% for company in companies %}
+              <option value="{{ company.id }}"
+                {% if item.companies_id == company.id %}selected{% endif %}>
+                {{ company.name }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label" for="number">{{ 'Número'|__('newmanagement') }}</label>
+            <input type="text" id="number" name="number" class="form-control"
+                   value="{{ item.number|default('') }}">
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label" for="operator">{{ 'Operadora'|__('newmanagement') }}</label>
+            <input type="text" id="operator" name="operator" class="form-control"
+                   value="{{ item.operator|default('') }}">
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label" for="contract_end">{{ 'Vencimento do Contrato'|__('newmanagement') }}</label>
+            <input type="date" id="contract_end" name="contract_end" class="form-control"
+                   value="{{ item.contract_end|default('') }}">
+          </div>
+
+          <div class="col-12">
+            <label class="form-label" for="comment">{{ 'Observações'|__('newmanagement') }}</label>
+            <textarea id="comment" name="comment" class="form-control" rows="3">{{ item.comment|default('') }}</textarea>
+          </div>
+
+        </div>
+
+        <div class="mt-4 d-flex gap-2">
+          <button type="submit" name="update" class="btn btn-primary">
+            <i class="ti ti-device-floppy"></i>
+            {{ 'Salvar'|__('newmanagement') }}
+          </button>
+          <a href="{{ path('GlpiPlugin\\Newmanagement\\FixedLine') }}" class="btn btn-secondary">
+            {{ 'Cancelar'|__('newmanagement') }}
+          </a>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
