@@ -38,11 +38,10 @@ function plugin_init_newmanagement()
     \Plugin::registerClass(\GlpiPlugin\Newmanagement\FixedLine::class);
     \Plugin::registerClass(\GlpiPlugin\Newmanagement\Task::class);
 
-    // Menu lateral — GLPI 11: usar 'menu' + classe que implementa getMenuContent()
-    $PLUGIN_HOOKS['menu']['newmanagement'] = [
-        'title' => 'Newmanagement',
-        'page'  => '/plugins/newmanagement/front/company.php',
-        'icon'  => 'ti ti-building',
+    // Menu lateral — GLPI 11: o menu vem de getMenuContent() na classe Company
+    // O hook correto é Hooks::MENU_TOADD (não mais 'menu' direto)
+    $PLUGIN_HOOKS[\Glpi\Plugin\Hooks::MENU_TOADD]['newmanagement'] = [
+        'plugins' => [\GlpiPlugin\Newmanagement\Company::class],
     ];
 }
 
