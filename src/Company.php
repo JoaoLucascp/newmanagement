@@ -25,6 +25,58 @@ class Company extends \CommonDBTM
         return 'glpi_plugin_newmanagement_companies';
     }
 
+    /**
+     * Menu lateral do GLPI 11
+     * Define todas as entradas do plugin no menu Ferramentas
+     */
+    public static function getMenuContent(): array
+    {
+        $menu = [];
+
+        $menu['title'] = 'Newmanagement';
+        $menu['page']  = '/plugins/newmanagement/front/company.php';
+        $menu['icon']  = 'ti ti-building';
+
+        // Submenus
+        $menu['options']['company']['title']           = __('Empresas', 'newmanagement');
+        $menu['options']['company']['page']            = '/plugins/newmanagement/front/company.php';
+        $menu['options']['company']['icon']            = 'ti ti-building';
+        $menu['options']['company']['links']['search'] = '/plugins/newmanagement/front/company.php';
+        $menu['options']['company']['links']['add']    = '/plugins/newmanagement/front/company.php?action=add';
+
+        $menu['options']['ipbx']['title']           = __('IPBX', 'newmanagement');
+        $menu['options']['ipbx']['page']            = '/plugins/newmanagement/front/ipbx.php';
+        $menu['options']['ipbx']['icon']            = 'ti ti-server';
+        $menu['options']['ipbx']['links']['search'] = '/plugins/newmanagement/front/ipbx.php';
+        $menu['options']['ipbx']['links']['add']    = '/plugins/newmanagement/front/ipbx.php?action=add';
+
+        $menu['options']['ipbxcloud']['title']           = __('IPBX Cloud', 'newmanagement');
+        $menu['options']['ipbxcloud']['page']            = '/plugins/newmanagement/front/ipbxcloud.php';
+        $menu['options']['ipbxcloud']['icon']            = 'ti ti-cloud';
+        $menu['options']['ipbxcloud']['links']['search'] = '/plugins/newmanagement/front/ipbxcloud.php';
+        $menu['options']['ipbxcloud']['links']['add']    = '/plugins/newmanagement/front/ipbxcloud.php?action=add';
+
+        $menu['options']['chatbot']['title']           = __('Chatbots', 'newmanagement');
+        $menu['options']['chatbot']['page']            = '/plugins/newmanagement/front/chatbot.php';
+        $menu['options']['chatbot']['icon']            = 'ti ti-robot';
+        $menu['options']['chatbot']['links']['search'] = '/plugins/newmanagement/front/chatbot.php';
+        $menu['options']['chatbot']['links']['add']    = '/plugins/newmanagement/front/chatbot.php?action=add';
+
+        $menu['options']['fixedline']['title']           = __('Linhas Fixas', 'newmanagement');
+        $menu['options']['fixedline']['page']            = '/plugins/newmanagement/front/fixedline.php';
+        $menu['options']['fixedline']['icon']            = 'ti ti-phone';
+        $menu['options']['fixedline']['links']['search'] = '/plugins/newmanagement/front/fixedline.php';
+        $menu['options']['fixedline']['links']['add']    = '/plugins/newmanagement/front/fixedline.php?action=add';
+
+        $menu['options']['task']['title']           = __('Tarefas', 'newmanagement');
+        $menu['options']['task']['page']            = '/plugins/newmanagement/front/task.php';
+        $menu['options']['task']['icon']            = 'ti ti-checklist';
+        $menu['options']['task']['links']['search'] = '/plugins/newmanagement/front/task.php';
+        $menu['options']['task']['links']['add']    = '/plugins/newmanagement/front/task.php?action=add';
+
+        return $menu;
+    }
+
     public function defineTabs($options = []): array
     {
         $ong = [];
