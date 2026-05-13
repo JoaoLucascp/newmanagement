@@ -5,15 +5,13 @@
  * Classe: Task (Tarefas com Geolocalização)
  */
 
-namespace GlpiPlugin\Newmanagement;
-
-use CommonDBTM;
-
 if (!defined('GLPI_ROOT')) {
     die('Sorry. You can\'t access this file directly');
 }
 
-class Task extends CommonDBTM
+namespace GlpiPlugin\Newmanagement;
+
+class Task extends \CommonDBTM
 {
     public static $rightname = 'plugin_newmanagement_task';
 

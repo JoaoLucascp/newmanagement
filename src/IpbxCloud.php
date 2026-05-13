@@ -5,15 +5,13 @@
  * Classe: IpbxCloud (Servidores Telefônicos em Nuvem)
  */
 
-namespace GlpiPlugin\Newmanagement;
-
-use CommonDBTM;
-
 if (!defined('GLPI_ROOT')) {
     die('Sorry. You can\'t access this file directly');
 }
 
-class IpbxCloud extends CommonDBTM
+namespace GlpiPlugin\Newmanagement;
+
+class IpbxCloud extends \CommonDBTM
 {
     public static $rightname = 'plugin_newmanagement_ipbxcloud';
 

@@ -5,15 +5,13 @@
  * Classe: Chatbot (Chatbot Omnichannel)
  */
 
-namespace GlpiPlugin\Newmanagement;
-
-use CommonDBTM;
-
 if (!defined('GLPI_ROOT')) {
     die('Sorry. You can\'t access this file directly');
 }
 
-class Chatbot extends CommonDBTM
+namespace GlpiPlugin\Newmanagement;
+
+class Chatbot extends \CommonDBTM
 {
     public static $rightname = 'plugin_newmanagement_chatbot';
 

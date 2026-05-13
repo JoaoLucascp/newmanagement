@@ -5,15 +5,13 @@
  * Classe: FixedLine (Linhas Fixas)
  */
 
-namespace GlpiPlugin\Newmanagement;
-
-use CommonDBTM;
-
 if (!defined('GLPI_ROOT')) {
     die('Sorry. You can\'t access this file directly');
 }
 
-class FixedLine extends CommonDBTM
+namespace GlpiPlugin\Newmanagement;
+
+class FixedLine extends \CommonDBTM
 {
     public static $rightname = 'plugin_newmanagement_fixedline';
 
