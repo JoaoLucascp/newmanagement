@@ -1,53 +1,67 @@
 <?php
 
 /**
- * Newmanagement - Plugin GLPI
- * Controller: Servidor IPBX
+ * Newmanagement - Controller: Ipbx
  */
-
-use GlpiPlugin\Newmanagement\Ipbx;
 
 include('../../../inc/includes.php');
 
-Session::checkLoginUser();
+use GlpiPlugin\Newmanagement\Ipbx;
 
-if (!Ipbx::canView()) {
-    Html::displayRightError();
-}
+Session::checkLoginUser();
+Session::checkRight(Ipbx::$rightname, READ);
 
 $ipbx = new Ipbx();
 
-if (isset($_POST['add'])) {
-    $ipbx->check(-1, CREATE);
-    if ($newID = $ipbx->add($_POST)) {
-        Html::redirect(Ipbx::getFormURLWithID($newID));
-    }
-    Html::back();
-} elseif (isset($_POST['update'])) {
-    $ipbx->check($_POST['id'], UPDATE);
+// --- AÇÕES POST ---
+if (isset($_POST['update'])) {
+    Session::checkCsrfToken();
+    Session::checkRight(Ipbx::$rightname, UPDATE);
     $ipbx->update($_POST);
     Html::back();
-} elseif (isset($_POST['delete'])) {
-    $ipbx->check($_POST['id'], DELETE);
+}
+
+if (isset($_POST['add'])) {
+    Session::checkCsrfToken();
+    Session::checkRight(Ipbx::$rightname, CREATE);
+    $newid = $ipbx->add($_POST);
+    Html::redirect(Ipbx::getFormURL() . '?id=' . $newid);
+}
+
+if (isset($_POST['delete'])) {
+    Session::checkCsrfToken();
+    Session::checkRight(Ipbx::$rightname, DELETE);
     $ipbx->delete($_POST);
     Html::redirect(Ipbx::getSearchURL());
-} elseif (isset($_POST['restore'])) {
-    $ipbx->check($_POST['id'], DELETE);
-    $ipbx->restore($_POST);
-    Html::back();
-} elseif (isset($_POST['purge'])) {
-    $ipbx->check($_POST['id'], PURGE);
-    $ipbx->delete($_POST, true);
-    Html::redirect(Ipbx::getSearchURL());
-} else {
-    $id = (int)($_GET['id'] ?? -1);
+}
+
+// --- EXIBIÇÃO ---
+if (isset($_GET['id'])) {
+    $ipbx->getFromDB((int) $_GET['id']);
     Html::header(
         Ipbx::getTypeName(1),
-        $_SERVER['PHP_SELF'],
-        'plugins',
-        'newmanagement',
-        'ipbx'
+        '',
+        'tools',
+        'GlpiPlugin\\Newmanagement\\Ipbx'
     );
-    $ipbx->display(['id' => $id]);
+    $ipbx->showForm((int) $_GET['id']);
+    Html::footer();
+} elseif (isset($_GET['action']) && $_GET['action'] === 'add') {
+    Html::header(
+        Ipbx::getTypeName(1),
+        '',
+        'tools',
+        'GlpiPlugin\\Newmanagement\\Ipbx'
+    );
+    $ipbx->showForm(-1);
+    Html::footer();
+} else {
+    Html::header(
+        Ipbx::getTypeName(0),
+        '',
+        'tools',
+        'GlpiPlugin\\Newmanagement\\Ipbx'
+    );
+    Search::show(Ipbx::class);
     Html::footer();
 }
