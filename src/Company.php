@@ -135,12 +135,6 @@ class Company extends \CommonDBTM
         $menu['options']['company']['links']['search'] = '/plugins/newmanagement/front/company.php';
         $menu['options']['company']['links']['add']    = '/plugins/newmanagement/front/company.php?action=add';
 
-        $menu['options']['ipbx']['title']           = __('IPBX', 'newmanagement');
-        $menu['options']['ipbx']['page']            = '/plugins/newmanagement/front/ipbx.php';
-        $menu['options']['ipbx']['icon']            = 'ti ti-server';
-        $menu['options']['ipbx']['links']['search'] = '/plugins/newmanagement/front/ipbx.php';
-        $menu['options']['ipbx']['links']['add']    = '/plugins/newmanagement/front/ipbx.php?action=add';
-
         $menu['options']['ipbxcloud']['title']           = __('IPBX Cloud', 'newmanagement');
         $menu['options']['ipbxcloud']['page']            = '/plugins/newmanagement/front/ipbxcloud.php';
         $menu['options']['ipbxcloud']['icon']            = 'ti ti-cloud';
@@ -168,10 +162,14 @@ class Company extends \CommonDBTM
         return $menu;
     }
 
+    /**
+     * Registra as abas filhas — Ipbx aparece como aba dentro da ficha de Empresa
+     */
     public function defineTabs($options = []): array
     {
         $ong = [];
-        $this->addDefaultFormTab($ong);
+        $this->addDefaultFormTab($ong);          // Aba principal: Empresa
+        $this->addImmutableTab(Ipbx::class, $ong); // Aba: Servidor IPBX
         return $ong;
     }
 
@@ -190,7 +188,6 @@ class Company extends \CommonDBTM
         $comment         = htmlspecialchars($this->fields['comment']         ?? '', ENT_QUOTES);
         $contract_status = (int) ($this->fields['contract_status'] ?? self::CONTRACT_NO_CONTRACT);
 
-        // --- Linha 1: Nome | ID ---
         echo '<tr class="tab_bg_1">';
         echo '<td><label for="name">' . __('Nome', 'newmanagement') . ' <span style="color:red">*</span></label></td>';
         echo '<td><input type="text" id="name" name="name" value="' . $name . '" class="form-control" required></td>';
@@ -198,8 +195,6 @@ class Company extends \CommonDBTM
         echo '<td><input type="text" value="' . ($ID > 0 ? $ID : __('Gerado automaticamente', 'newmanagement')) . '" class="form-control" disabled></td>';
         echo '</tr>';
 
-        // --- Linha 2: CNPJ (com busca) | Razao Social ---
-        // IMPORTANTE: sem onclick inline - o JS registra o listener via getElementById
         echo '<tr class="tab_bg_1">';
         echo '<td><label for="cnpj">' . __('CNPJ', 'newmanagement') . '</label></td>';
         echo '<td>';
@@ -215,7 +210,6 @@ class Company extends \CommonDBTM
         echo '<td><input type="text" id="razao_social" name="razao_social" value="' . $razao_social . '" class="form-control"></td>';
         echo '</tr>';
 
-        // --- Linha 3: E-mail | Telefone ---
         echo '<tr class="tab_bg_1">';
         echo '<td><label for="email">' . __('E-mail', 'newmanagement') . '</label></td>';
         echo '<td><input type="email" id="email" name="email" value="' . $email . '" class="form-control"></td>';
@@ -223,8 +217,6 @@ class Company extends \CommonDBTM
         echo '<td><input type="text" id="phone" name="phone" value="' . $phone . '" class="form-control" placeholder="(00) 00000-0000"></td>';
         echo '</tr>';
 
-        // --- Linha 4: CEP (com busca) | Status do Contrato ---
-        // IMPORTANTE: sem onclick inline - o JS registra o listener via getElementById
         echo '<tr class="tab_bg_1">';
         echo '<td><label for="cep">' . __('CEP', 'newmanagement') . '</label></td>';
         echo '<td>';
@@ -247,13 +239,11 @@ class Company extends \CommonDBTM
         echo '</td>';
         echo '</tr>';
 
-        // --- Linha 5: Endereco ---
         echo '<tr class="tab_bg_1">';
         echo '<td><label for="address">' . __('Endereco', 'newmanagement') . '</label></td>';
         echo '<td colspan="3"><textarea id="address" name="address" class="form-control" rows="2">' . $address . '</textarea></td>';
         echo '</tr>';
 
-        // --- Linha 6: Comentario ---
         echo '<tr class="tab_bg_1">';
         echo '<td><label for="comment">' . __('Comentario', 'newmanagement') . '</label></td>';
         echo '<td colspan="3"><textarea id="comment" name="comment" class="form-control" rows="3">' . $comment . '</textarea></td>';
