@@ -76,6 +76,7 @@ class Ipbx extends \CommonDBTM
 
         echo '<div class="nm-ipbx-tab">';
 
+        // ---- Form Servidor IPBX (botão submit oculto) ----
         echo '<form method="post" action="' . $action . '" id="nm-ipbx-form">';
         echo '<input type="hidden" name="_glpi_csrf_token" value="' . $csrf . '">';
         echo '<input type="hidden" name="action" value="' . ($ipbx_id > 0 ? 'update_ipbx' : 'add_ipbx') . '">';
@@ -129,9 +130,11 @@ class Ipbx extends \CommonDBTM
         echo '<td colspan="3"><textarea name="comment" class="form-control" rows="2">' . htmlspecialchars($fields['comment'] ?? '', ENT_QUOTES) . '</textarea></td>';
         echo '</tr>';
 
-        echo '<tr><td colspan="4" style="text-align:right;padding:8px">';
-        echo '<button type="submit" class="btn btn-primary"><i class="ti ti-device-floppy"></i> ' . __('Salvar', 'newmanagement') . '</button>';
+        // Botão oculto — acionado pelo JS do botão único no final
+        echo '<tr style="display:none"><td colspan="4">';
+        echo '<button type="submit" id="nm-ipbx-submit"></button>';
         echo '</td></tr>';
+
         echo '</table>';
         echo '</form>';
 
@@ -160,6 +163,13 @@ class Ipbx extends \CommonDBTM
         echo '</div></div>';
 
         echo '</div>'; // .nm-ipbx-tab
+
+        // ---- Botão Salvar único: submete IPBX primeiro, depois Linha Fixa ----
+        echo '<script>';
+        echo 'document.getElementById("nm-save-all").addEventListener("click", function() {';
+        echo '  document.getElementById("nm-ipbx-submit").click();';
+        echo '});';
+        echo '</script>';
     }
 
     // ------------------------------------------------------------------
@@ -312,6 +322,7 @@ class Ipbx extends \CommonDBTM
 
     // ------------------------------------------------------------------
     // Linha Fixa — registro único, formulário de edição em grade 3 colunas
+    // Botão Salvar único para toda a página (id="nm-save-all")
     // ------------------------------------------------------------------
     private function renderLinesForm(int $ipbx_id, int $companies_id, string $csrf, string $action, string $redirect): void
     {
@@ -358,7 +369,7 @@ class Ipbx extends \CommonDBTM
             return htmlspecialchars((string)($f[$key] ?? ''), ENT_QUOTES);
         };
 
-        echo '<form method="post" action="' . $action . '">';
+        echo '<form method="post" action="' . $action . '" id="nm-lines-form">';
         echo '<input type="hidden" name="_glpi_csrf_token" value="' . $csrf . '">';
         echo '<input type="hidden" name="action" value="' . $form_action . '">';
         echo '<input type="hidden" name="id" value="' . $line_id . '">';
@@ -427,9 +438,9 @@ class Ipbx extends \CommonDBTM
         echo '<td colspan="5"><textarea name="comment" class="form-control" rows="2">' . $v('comment') . '</textarea></td>';
         echo '</tr>';
 
-        // Botão salvar
+        // Botão Salvar único para toda a página
         echo '<tr><td colspan="6" style="text-align:right;padding:8px">';
-        echo '<button type="submit" class="btn btn-primary"><i class="ti ti-device-floppy"></i> ' . __('Salvar', 'newmanagement') . '</button>';
+        echo '<button type="button" id="nm-save-all" class="btn btn-primary"><i class="ti ti-device-floppy"></i> ' . __('Salvar', 'newmanagement') . '</button>';
         echo '</td></tr>';
 
         echo '</table>';
