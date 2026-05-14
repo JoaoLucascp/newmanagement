@@ -10,6 +10,7 @@
 
 define('PLUGIN_NEWMANAGEMENT_VERSION', '1.0.0');
 
+// Padronizado para GLPI 11 (corrige inconsistência com README anterior)
 define('PLUGIN_NEWMANAGEMENT_MIN_GLPI_VERSION', '11.0.0');
 define('PLUGIN_NEWMANAGEMENT_MAX_GLPI_VERSION', '11.0.99');
 
@@ -24,7 +25,6 @@ function plugin_init_newmanagement()
     $PLUGIN_HOOKS['use_massive_action']['newmanagement'] = 1;
 
     // CSS e JS — no GLPI 11, assets são servidos a partir de public/
-    // O caminho informado aqui é relativo ao diretório public/ do plugin
     $PLUGIN_HOOKS['add_css']['newmanagement']        = 'public/css/newmanagement.css';
     $PLUGIN_HOOKS['add_javascript']['newmanagement'] = 'public/js/newmanagement.js';
 
