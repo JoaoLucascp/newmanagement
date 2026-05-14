@@ -31,8 +31,10 @@ class Ipbx extends \CommonDBTM
 
     // ------------------------------------------------------------------
     // Integração como aba dentro da ficha de Company
+    // getTabNameForItem e displayTabContentForItem NÃO podem ser static
+    // no GLPI 11 — CommonGLPI os define como métodos de instância.
     // ------------------------------------------------------------------
-    public static function getTabNameForItem(\CommonGLPI $item, $withtemplate = 0): string
+    public function getTabNameForItem(\CommonGLPI $item, $withtemplate = 0): string
     {
         if ($item instanceof Company) {
             return self::getTypeName(1);
@@ -40,7 +42,7 @@ class Ipbx extends \CommonDBTM
         return '';
     }
 
-    public static function displayTabContentForItem(\CommonGLPI $item, $tabnum = 1, $withtemplate = 0): bool
+    public function displayTabContentForItem(\CommonGLPI $item, $tabnum = 1, $withtemplate = 0): bool
     {
         if ($item instanceof Company) {
             $ipbx = new self();
@@ -80,6 +82,7 @@ class Ipbx extends \CommonDBTM
 
         $csrf   = \Session::getNewCSRFToken();
         $action = (defined('GLPI_ROOT') ? \Plugin::getWebDir('newmanagement') : '') . '/ajax/ipbx_sub.php';
+        $redirect = htmlspecialchars($_SERVER['REQUEST_URI'] ?? '', ENT_QUOTES);
 
         echo '<div class="nm-ipbx-tab">';
 
@@ -91,12 +94,11 @@ class Ipbx extends \CommonDBTM
         echo '<input type="hidden" name="action" value="' . ($ipbx_id > 0 ? 'update_ipbx' : 'add_ipbx') . '">';
         echo '<input type="hidden" name="id" value="' . $ipbx_id . '">';
         echo '<input type="hidden" name="companies_id" value="' . $companies_id . '">';
-        echo '<input type="hidden" name="redirect" value="' . htmlspecialchars($_SERVER['REQUEST_URI'] ?? '', ENT_QUOTES) . '">';
+        echo '<input type="hidden" name="redirect" value="' . $redirect . '">';
 
         echo '<table class="tab_cadre_fixe nm-table">';
         echo '<tr><th colspan="4">' . __('Servidor IPBX', 'newmanagement') . '</th></tr>';
 
-        // Linha 1: Modelo | Versão
         echo '<tr class="tab_bg_1">';
         echo '<td>' . __('Modelo', 'newmanagement') . '</td>';
         echo '<td><input type="text" name="model" value="' . htmlspecialchars($fields['model'] ?? '', ENT_QUOTES) . '" class="form-control"></td>';
@@ -104,7 +106,6 @@ class Ipbx extends \CommonDBTM
         echo '<td><input type="text" name="server_version" value="' . htmlspecialchars($fields['server_version'] ?? '', ENT_QUOTES) . '" class="form-control"></td>';
         echo '</tr>';
 
-        // Linha 2: IP Local | IP Externo
         echo '<tr class="tab_bg_1">';
         echo '<td>' . __('IP Local', 'newmanagement') . '</td>';
         echo '<td><input type="text" name="ip_local" value="' . htmlspecialchars($fields['ip_local'] ?? '', ENT_QUOTES) . '" class="form-control" placeholder="192.168.1.1"></td>';
@@ -112,7 +113,6 @@ class Ipbx extends \CommonDBTM
         echo '<td><input type="text" name="ip_external" value="' . htmlspecialchars($fields['ip_external'] ?? '', ENT_QUOTES) . '" class="form-control" placeholder="201.x.x.x"></td>';
         echo '</tr>';
 
-        // Linha 3: Porta Web | Senha Web
         echo '<tr class="tab_bg_1">';
         echo '<td>' . __('Porta Web', 'newmanagement') . '</td>';
         echo '<td><input type="text" name="web_port" value="' . htmlspecialchars($fields['web_port'] ?? '', ENT_QUOTES) . '" class="form-control" placeholder="80"></td>';
@@ -125,7 +125,6 @@ class Ipbx extends \CommonDBTM
         echo '</td>';
         echo '</tr>';
 
-        // Linha 4: Porta SSH | Senha SSH
         echo '<tr class="tab_bg_1">';
         echo '<td>' . __('Porta SSH', 'newmanagement') . '</td>';
         echo '<td><input type="text" name="ssh_port" value="' . htmlspecialchars($fields['ssh_port'] ?? '', ENT_QUOTES) . '" class="form-control" placeholder="22"></td>';
@@ -138,7 +137,6 @@ class Ipbx extends \CommonDBTM
         echo '</td>';
         echo '</tr>';
 
-        // Linha 5: Comentário
         echo '<tr class="tab_bg_1">';
         echo '<td>' . __('Comentário', 'newmanagement') . '</td>';
         echo '<td colspan="3"><textarea name="comment" class="form-control" rows="2">' . htmlspecialchars($fields['comment'] ?? '', ENT_QUOTES) . '</textarea></td>';
@@ -158,7 +156,7 @@ class Ipbx extends \CommonDBTM
         echo '<h4><i class="ti ti-phone-call"></i> ' . __('Ramais', 'newmanagement') . '</h4>';
         echo '</div>';
         echo '<div class="nm-subsection-body">';
-        $this->renderExtensionsTable($ipbx_id, $companies_id, $csrf, $action);
+        $this->renderExtensionsTable($ipbx_id, $companies_id, $csrf, $action, $redirect);
         echo '</div></div>';
 
         // --------------------------------------------------
@@ -169,7 +167,7 @@ class Ipbx extends \CommonDBTM
         echo '<h4><i class="ti ti-device-desktop"></i> ' . __('Dispositivos', 'newmanagement') . '</h4>';
         echo '</div>';
         echo '<div class="nm-subsection-body">';
-        $this->renderDevicesTable($ipbx_id, $companies_id, $csrf, $action);
+        $this->renderDevicesTable($ipbx_id, $companies_id, $csrf, $action, $redirect);
         echo '</div></div>';
 
         // --------------------------------------------------
@@ -180,7 +178,7 @@ class Ipbx extends \CommonDBTM
         echo '<h4><i class="ti ti-network"></i> ' . __('Rede da Empresa', 'newmanagement') . '</h4>';
         echo '</div>';
         echo '<div class="nm-subsection-body">';
-        $this->renderNetworkTable($ipbx_id, $companies_id, $csrf, $action);
+        $this->renderNetworkTable($ipbx_id, $companies_id, $csrf, $action, $redirect);
         echo '</div></div>';
 
         // --------------------------------------------------
@@ -191,7 +189,7 @@ class Ipbx extends \CommonDBTM
         echo '<h4><i class="ti ti-phone"></i> ' . __('Linha Fixa', 'newmanagement') . '</h4>';
         echo '</div>';
         echo '<div class="nm-subsection-body">';
-        $this->renderLinesTable($ipbx_id, $companies_id, $csrf, $action);
+        $this->renderLinesTable($ipbx_id, $companies_id, $csrf, $action, $redirect);
         echo '</div></div>';
 
         echo '</div>'; // .nm-ipbx-tab
@@ -200,7 +198,7 @@ class Ipbx extends \CommonDBTM
     // ------------------------------------------------------------------
     // Ramais
     // ------------------------------------------------------------------
-    private function renderExtensionsTable(int $ipbx_id, int $companies_id, string $csrf, string $action): void
+    private function renderExtensionsTable(int $ipbx_id, int $companies_id, string $csrf, string $action, string $redirect): void
     {
         global $DB;
 
@@ -226,20 +224,19 @@ class Ipbx extends \CommonDBTM
             echo '<input type="hidden" name="action" value="delete_extension">';
             echo '<input type="hidden" name="id" value="' . $rid . '">';
             echo '<input type="hidden" name="companies_id" value="' . $companies_id . '">';
-            echo '<input type="hidden" name="redirect" value="' . htmlspecialchars($_SERVER['REQUEST_URI'] ?? '', ENT_QUOTES) . '">';
+            echo '<input type="hidden" name="redirect" value="' . $redirect . '">';
             echo '<button type="submit" class="btn btn-sm btn-danger" onclick="return confirm(\'' . __('Remover ramal?', 'newmanagement') . '\')"><i class="ti ti-trash"></i></button>';
             echo '</form>';
             echo '</td></tr>';
         }
 
-        // Formulário de adição
         echo '<tr class="tab_bg_2 nm-add-row">';
         echo '<form method="post" action="' . $action . '">';
         echo '<input type="hidden" name="_glpi_csrf_token" value="' . $csrf . '">';
         echo '<input type="hidden" name="action" value="add_extension">';
         echo '<input type="hidden" name="ipbx_id" value="' . $ipbx_id . '">';
         echo '<input type="hidden" name="companies_id" value="' . $companies_id . '">';
-        echo '<input type="hidden" name="redirect" value="' . htmlspecialchars($_SERVER['REQUEST_URI'] ?? '', ENT_QUOTES) . '">';
+        echo '<input type="hidden" name="redirect" value="' . $redirect . '">';
         echo '<td><input type="text" name="number" class="form-control form-control-sm" placeholder="' . __('Número', 'newmanagement') . '"></td>';
         echo '<td><input type="password" name="password" class="form-control form-control-sm" placeholder="' . __('Senha', 'newmanagement') . '" autocomplete="new-password"></td>';
         echo '<td><input type="text" name="device_ip" class="form-control form-control-sm" placeholder="IP"></td>';
@@ -255,7 +252,7 @@ class Ipbx extends \CommonDBTM
     // ------------------------------------------------------------------
     // Dispositivos
     // ------------------------------------------------------------------
-    private function renderDevicesTable(int $ipbx_id, int $companies_id, string $csrf, string $action): void
+    private function renderDevicesTable(int $ipbx_id, int $companies_id, string $csrf, string $action, string $redirect): void
     {
         global $DB;
 
@@ -278,7 +275,7 @@ class Ipbx extends \CommonDBTM
             echo '<input type="hidden" name="action" value="delete_device">';
             echo '<input type="hidden" name="id" value="' . $rid . '">';
             echo '<input type="hidden" name="companies_id" value="' . $companies_id . '">';
-            echo '<input type="hidden" name="redirect" value="' . htmlspecialchars($_SERVER['REQUEST_URI'] ?? '', ENT_QUOTES) . '">';
+            echo '<input type="hidden" name="redirect" value="' . $redirect . '">';
             echo '<button type="submit" class="btn btn-sm btn-danger" onclick="return confirm(\'' . __('Remover dispositivo?', 'newmanagement') . '\')"><i class="ti ti-trash"></i></button>';
             echo '</form>';
             echo '</td></tr>';
@@ -290,7 +287,7 @@ class Ipbx extends \CommonDBTM
         echo '<input type="hidden" name="action" value="add_device">';
         echo '<input type="hidden" name="ipbx_id" value="' . $ipbx_id . '">';
         echo '<input type="hidden" name="companies_id" value="' . $companies_id . '">';
-        echo '<input type="hidden" name="redirect" value="' . htmlspecialchars($_SERVER['REQUEST_URI'] ?? '', ENT_QUOTES) . '">';
+        echo '<input type="hidden" name="redirect" value="' . $redirect . '">';
         echo '<td><input type="text" name="device_type" class="form-control form-control-sm" placeholder="' . __('Tipo', 'newmanagement') . '"></td>';
         echo '<td><input type="text" name="ip_address" class="form-control form-control-sm" placeholder="IP"></td>';
         echo '<td><input type="password" name="password" class="form-control form-control-sm" placeholder="' . __('Senha', 'newmanagement') . '" autocomplete="new-password"></td>';
@@ -303,7 +300,7 @@ class Ipbx extends \CommonDBTM
     // ------------------------------------------------------------------
     // Rede da Empresa
     // ------------------------------------------------------------------
-    private function renderNetworkTable(int $ipbx_id, int $companies_id, string $csrf, string $action): void
+    private function renderNetworkTable(int $ipbx_id, int $companies_id, string $csrf, string $action, string $redirect): void
     {
         global $DB;
 
@@ -328,7 +325,7 @@ class Ipbx extends \CommonDBTM
             echo '<input type="hidden" name="action" value="delete_network">';
             echo '<input type="hidden" name="id" value="' . $rid . '">';
             echo '<input type="hidden" name="companies_id" value="' . $companies_id . '">';
-            echo '<input type="hidden" name="redirect" value="' . htmlspecialchars($_SERVER['REQUEST_URI'] ?? '', ENT_QUOTES) . '">';
+            echo '<input type="hidden" name="redirect" value="' . $redirect . '">';
             echo '<button type="submit" class="btn btn-sm btn-danger" onclick="return confirm(\'' . __('Remover rede?', 'newmanagement') . '\')"><i class="ti ti-trash"></i></button>';
             echo '</form>';
             echo '</td></tr>';
@@ -340,7 +337,7 @@ class Ipbx extends \CommonDBTM
         echo '<input type="hidden" name="action" value="add_network">';
         echo '<input type="hidden" name="ipbx_id" value="' . $ipbx_id . '">';
         echo '<input type="hidden" name="companies_id" value="' . $companies_id . '">';
-        echo '<input type="hidden" name="redirect" value="' . htmlspecialchars($_SERVER['REQUEST_URI'] ?? '', ENT_QUOTES) . '">';
+        echo '<input type="hidden" name="redirect" value="' . $redirect . '">';
         echo '<td><input type="text" name="ip_network" class="form-control form-control-sm" placeholder="192.168.1.0"></td>';
         echo '<td><input type="text" name="netmask" class="form-control form-control-sm" placeholder="255.255.255.0"></td>';
         echo '<td><input type="text" name="gateway" class="form-control form-control-sm" placeholder="192.168.1.1"></td>';
@@ -355,7 +352,7 @@ class Ipbx extends \CommonDBTM
     // ------------------------------------------------------------------
     // Linha Fixa
     // ------------------------------------------------------------------
-    private function renderLinesTable(int $ipbx_id, int $companies_id, string $csrf, string $action): void
+    private function renderLinesTable(int $ipbx_id, int $companies_id, string $csrf, string $action, string $redirect): void
     {
         global $DB;
 
@@ -407,20 +404,19 @@ class Ipbx extends \CommonDBTM
             echo '<input type="hidden" name="action" value="delete_line">';
             echo '<input type="hidden" name="id" value="' . $rid . '">';
             echo '<input type="hidden" name="companies_id" value="' . $companies_id . '">';
-            echo '<input type="hidden" name="redirect" value="' . htmlspecialchars($_SERVER['REQUEST_URI'] ?? '', ENT_QUOTES) . '">';
+            echo '<input type="hidden" name="redirect" value="' . $redirect . '">';
             echo '<button type="submit" class="btn btn-sm btn-danger" onclick="return confirm(\'' . __('Remover linha?', 'newmanagement') . '\')"><i class="ti ti-trash"></i></button>';
             echo '</form>';
             echo '</td></tr>';
         }
 
-        // Formulário de adição — linha de inputs
         echo '<tr class="tab_bg_2 nm-add-row">';
         echo '<form method="post" action="' . $action . '">';
         echo '<input type="hidden" name="_glpi_csrf_token" value="' . $csrf . '">';
         echo '<input type="hidden" name="action" value="add_line">';
         echo '<input type="hidden" name="ipbx_id" value="' . $ipbx_id . '">';
         echo '<input type="hidden" name="companies_id" value="' . $companies_id . '">';
-        echo '<input type="hidden" name="redirect" value="' . htmlspecialchars($_SERVER['REQUEST_URI'] ?? '', ENT_QUOTES) . '">';
+        echo '<input type="hidden" name="redirect" value="' . $redirect . '">';
         echo '<td><input type="text" name="pilot_number" class="form-control form-control-sm" placeholder="Piloto"></td>';
         echo '<td><input type="text" name="line_type" class="form-control form-control-sm" placeholder="Tipo"></td>';
         echo '<td><input type="text" name="operator" class="form-control form-control-sm" placeholder="Operadora"></td>';
