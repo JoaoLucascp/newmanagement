@@ -1,67 +1,53 @@
 <?php
 
 /**
- * Newmanagement - Controller: Ipbx
+ * Newmanagement - Plugin GLPI
+ * Controller: Servidor IPBX
  */
-
-include('../../../inc/includes.php');
 
 use GlpiPlugin\Newmanagement\Ipbx;
 
+include('../../../inc/includes.php');
+
 Session::checkLoginUser();
-Session::checkRight(Ipbx::$rightname, READ);
+
+if (!Ipbx::canView()) {
+    Html::displayRightError();
+}
 
 $ipbx = new Ipbx();
 
-// --- AÇÕES POST ---
-if (isset($_POST['update'])) {
-    Session::checkCsrfToken();
-    Session::checkRight(Ipbx::$rightname, UPDATE);
+if (isset($_POST['add'])) {
+    $ipbx->check(-1, CREATE);
+    if ($newID = $ipbx->add($_POST)) {
+        Html::redirect(Ipbx::getFormURLWithID($newID));
+    }
+    Html::back();
+} elseif (isset($_POST['update'])) {
+    $ipbx->check($_POST['id'], UPDATE);
     $ipbx->update($_POST);
     Html::back();
-}
-
-if (isset($_POST['add'])) {
-    Session::checkCsrfToken();
-    Session::checkRight(Ipbx::$rightname, CREATE);
-    $newid = $ipbx->add($_POST);
-    Html::redirect(Ipbx::getFormURL() . '?id=' . $newid);
-}
-
-if (isset($_POST['delete'])) {
-    Session::checkCsrfToken();
-    Session::checkRight(Ipbx::$rightname, DELETE);
+} elseif (isset($_POST['delete'])) {
+    $ipbx->check($_POST['id'], DELETE);
     $ipbx->delete($_POST);
     Html::redirect(Ipbx::getSearchURL());
-}
-
-// --- EXIBIÇÃO ---
-if (isset($_GET['id'])) {
-    $ipbx->getFromDB((int) $_GET['id']);
-    Html::header(
-        Ipbx::getTypeName(1),
-        '',
-        'tools',
-        'GlpiPlugin\\Newmanagement\\Ipbx'
-    );
-    $ipbx->showForm((int) $_GET['id']);
-    Html::footer();
-} elseif (isset($_GET['action']) && $_GET['action'] === 'add') {
-    Html::header(
-        Ipbx::getTypeName(1),
-        '',
-        'tools',
-        'GlpiPlugin\\Newmanagement\\Ipbx'
-    );
-    $ipbx->showForm(-1);
-    Html::footer();
+} elseif (isset($_POST['restore'])) {
+    $ipbx->check($_POST['id'], DELETE);
+    $ipbx->restore($_POST);
+    Html::back();
+} elseif (isset($_POST['purge'])) {
+    $ipbx->check($_POST['id'], PURGE);
+    $ipbx->delete($_POST, true);
+    Html::redirect(Ipbx::getSearchURL());
 } else {
+    $id = (int)($_GET['id'] ?? -1);
     Html::header(
-        Ipbx::getTypeName(0),
-        '',
-        'tools',
-        'GlpiPlugin\\Newmanagement\\Ipbx'
+        Ipbx::getTypeName(1),
+        $_SERVER['PHP_SELF'],
+        'plugins',
+        'newmanagement',
+        'ipbx'
     );
-    Search::show(Ipbx::class);
+    $ipbx->display(['id' => $id]);
     Html::footer();
 }
