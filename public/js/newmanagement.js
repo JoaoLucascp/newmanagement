@@ -1,6 +1,7 @@
 /**
  * Newmanagement - Plugin GLPI
- * Mascaras, busca CNPJ e CEP via BrasilAPI + ReceitaWS (e-mail)
+ * Mascaras, busca CNPJ e CEP via BrasilAPI
+ * E-mail do CNPJ via proxy PHP local (contorna CORS da ReceitaWS)
  */
 
 console.log('Newmanagement Plugin carregado.');
@@ -80,24 +81,28 @@ function nmSetLoading(btnId, loading) {
 }
 
 // ---------------------------------------------------------------------------
-// Busca e-mail na ReceitaWS (API secundaria, sem autenticacao, gratuita)
-// Limite: 3 consultas/minuto no plano gratuito.
-// Documentacao: https://www.receitaws.com.br/
+// Busca e-mail via proxy PHP local (sem CORS)
+// O arquivo ajax/cnpj_email.php faz a requisicao server-side para ReceitaWS
 // ---------------------------------------------------------------------------
 
-async function nmBuscarEmailReceitaWS(cnpj) {
+async function nmBuscarEmailProxy(cnpj) {
     try {
-        const response = await fetch('https://receitaws.com.br/v1/cnpj/' + cnpj);
+        // Caminho relativo ao root do GLPI
+        const url = CFG_GLPI && CFG_GLPI.root_doc
+            ? CFG_GLPI.root_doc + '/plugins/newmanagement/ajax/cnpj_email.php?cnpj=' + cnpj
+            : '/plugins/newmanagement/ajax/cnpj_email.php?cnpj=' + cnpj;
+
+        const response = await fetch(url);
         if (!response.ok) return null;
         const data = await response.json();
-        return (data.email && data.email.trim() !== '') ? data.email.trim() : null;
+        return data.email || null;
     } catch {
         return null;
     }
 }
 
 // ---------------------------------------------------------------------------
-// Busca CNPJ via BrasilAPI (principal) + ReceitaWS para e-mail (secundaria)
+// Busca CNPJ via BrasilAPI (dados cadastrais) + proxy PHP (e-mail)
 // ---------------------------------------------------------------------------
 
 async function nmBuscarCNPJ() {
@@ -120,18 +125,15 @@ async function nmBuscarCNPJ() {
     nmSetLoading('btn-buscar-cnpj', true);
 
     try {
-        // --- API principal: BrasilAPI (dados cadastrais) ---
-        // --- API secundaria: ReceitaWS (e-mail) ---
-        // Executa as duas em paralelo para nao aumentar o tempo de resposta
-        const [brasilResponse, emailReceitaWS] = await Promise.all([
+        // Executa BrasilAPI e proxy de e-mail em paralelo
+        const [brasilResponse, emailProxy] = await Promise.all([
             fetch('https://brasilapi.com.br/api/cnpj/v1/' + cnpj),
-            nmBuscarEmailReceitaWS(cnpj),
+            nmBuscarEmailProxy(cnpj),
         ]);
 
         if (!brasilResponse.ok) {
             const err = await brasilResponse.json().catch(() => ({}));
-            const msg = err.message || 'CNPJ nao encontrado na Receita Federal.';
-            nmFeedback('cnpj-feedback', msg, 'error');
+            nmFeedback('cnpj-feedback', err.message || 'CNPJ nao encontrado na Receita Federal.', 'error');
             return;
         }
 
@@ -150,12 +152,12 @@ async function nmBuscarCNPJ() {
             if (nome) nomeInput.value = nome;
         }
 
-        // E-mail: BrasilAPI primeiro, ReceitaWS como fallback
+        // E-mail: BrasilAPI primeiro, proxy ReceitaWS como fallback
         const emailInput = document.getElementById('email');
         if (emailInput) {
             const emailFinal = (data.email && data.email.trim() !== '')
                 ? data.email.trim()
-                : emailReceitaWS;
+                : emailProxy;
             if (emailFinal) emailInput.value = emailFinal;
         }
 
