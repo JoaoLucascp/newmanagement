@@ -156,7 +156,7 @@ class Ipbx extends \CommonDBTM
         echo '<div class="nm-subsection">';
         echo '<div class="nm-subsection-header"><h4><i class="ti ti-phone"></i> ' . __('Linha Fixa', 'newmanagement') . '</h4></div>';
         echo '<div class="nm-subsection-body">';
-        $this->renderLinesTable($ipbx_id, $companies_id, $csrf, $action, $redirect);
+        $this->renderLinesForm($ipbx_id, $companies_id, $csrf, $action, $redirect);
         echo '</div></div>';
 
         echo '</div>'; // .nm-ipbx-tab
@@ -311,221 +311,132 @@ class Ipbx extends \CommonDBTM
     }
 
     // ------------------------------------------------------------------
-    // Linha Fixa — cada linha é exibida como um card com todos os campos
-    // Layout em grade 3 colunas:
-    //   Número Piloto    | Qtd DDR          | Status
-    //   Operadora        | Qtd Canais       | IP Proxy
-    //   Tipo             | IP Tráfego Áudio | Porta Proxy
-    //   Data Portabilidade | Op. Anterior   |
-    //   Data Ativação    | Data Vencimento  |
-    //   Comentário (largura total)
+    // Linha Fixa — registro único, formulário de edição em grade 3 colunas
+    // Se não existir registro, cria ao salvar (add_line).
+    // Se já existir, atualiza (update_line).
+    // Não há opção de adicionar novo nem de excluir.
     // ------------------------------------------------------------------
-    private function renderLinesTable(int $ipbx_id, int $companies_id, string $csrf, string $action, string $redirect): void
+    private function renderLinesForm(int $ipbx_id, int $companies_id, string $csrf, string $action, string $redirect): void
     {
         global $DB;
-        $rows = ($ipbx_id > 0)
-            ? $DB->request(['FROM' => 'glpi_plugin_newmanagement_ipbx_lines', 'WHERE' => ['ipbx_id' => $ipbx_id], 'ORDER' => 'pilot_number ASC'])
-            : [];
 
-        $status_labels = [1 => __('Ativo', 'newmanagement'), 2 => __('Cancelado', 'newmanagement')];
+        $line_id = 0;
+        $f = [
+            'pilot_number'      => '',
+            'ddr_count'         => '',
+            'status'            => 1,
+            'operator'          => '',
+            'channels'          => '',
+            'proxy_ip'          => '',
+            'line_type'         => '',
+            'audio_ip'          => '',
+            'proxy_port'        => '',
+            'portability_date'  => '',
+            'previous_operator' => '',
+            'activation_date'   => '',
+            'expiration_date'   => '',
+            'comment'           => '',
+        ];
 
-        echo '<style>
-.nm-lines-wrapper { display: flex; flex-direction: column; gap: 12px; }
-
-.nm-line-card {
-    border: 1px solid #dee2e6;
-    border-radius: 6px;
-    background: #fff;
-    overflow: hidden;
-}
-.nm-line-card-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 8px 12px;
-    background: #f8f9fa;
-    border-bottom: 1px solid #dee2e6;
-    font-weight: 600;
-    font-size: 13px;
-}
-.nm-line-card-header .nm-line-title { display: flex; align-items: center; gap: 8px; }
-.nm-line-card-body {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0;
-}
-.nm-line-field {
-    padding: 7px 12px;
-    border-bottom: 1px solid #f0f0f0;
-    border-right: 1px solid #f0f0f0;
-    min-width: 0;
-}
-.nm-line-field:nth-child(3n) { border-right: none; }
-.nm-line-field-full {
-    grid-column: 1 / -1;
-    padding: 7px 12px;
-    border-bottom: 1px solid #f0f0f0;
-}
-.nm-line-field:last-child,
-.nm-line-field-full:last-child { border-bottom: none; }
-.nm-line-label {
-    font-size: 10px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: .04em;
-    color: #868e96;
-    display: block;
-    margin-bottom: 2px;
-}
-.nm-line-value {
-    font-size: 13px;
-    color: #212529;
-    word-break: break-word;
-}
-
-/* Formulário de adição */
-.nm-line-add-card {
-    border: 2px dashed #ced4da;
-    border-radius: 6px;
-    background: #fafafa;
-}
-.nm-line-add-card .nm-line-card-header {
-    background: #f0f0f0;
-    border-bottom: 1px solid #ced4da;
-}
-.nm-line-add-body {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-    padding: 12px;
-}
-.nm-line-add-field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.nm-line-add-field-full { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 3px; }
-.nm-line-add-label {
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: .03em;
-    color: #868e96;
-}
-.nm-line-add-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; padding-top: 4px; }
-</style>';
-
-        echo '<div class="nm-lines-wrapper">';
-
-        // ---- Cards das linhas existentes ----
-        foreach ($rows as $row) {
-            $rid    = (int)$row['id'];
-            $status = (int)($row['status'] ?? 1);
-            $badge  = $status === 1 ? 'badge bg-success' : 'badge bg-danger';
-            $label  = $status_labels[$status] ?? '';
-
-            $v = function($key) use ($row) {
-                return htmlspecialchars((string)($row[$key] ?? ''), ENT_QUOTES);
-            };
-
-            echo '<div class="nm-line-card">';
-
-            // Cabeçalho do card
-            echo '<div class="nm-line-card-header">';
-            echo '  <div class="nm-line-title">';
-            echo '    <i class="ti ti-phone"></i>';
-            echo '    <span>' . $v('pilot_number') . '</span>';
-            echo '    <span class="' . $badge . '">' . $label . '</span>';
-            echo '  </div>';
-            echo '  <div>';
-            echo '    <form method="post" action="' . $action . '" style="display:inline">';
-            echo '      <input type="hidden" name="_glpi_csrf_token" value="' . $csrf . '">';
-            echo '      <input type="hidden" name="action" value="delete_line">';
-            echo '      <input type="hidden" name="id" value="' . $rid . '">';
-            echo '      <input type="hidden" name="companies_id" value="' . $companies_id . '">';
-            echo '      <input type="hidden" name="redirect" value="' . $redirect . '">';
-            echo '      <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm(\'' . __('Remover linha?', 'newmanagement') . '\')"><i class="ti ti-trash"></i></button>';
-            echo '    </form>';
-            echo '  </div>';
-            echo '</div>';
-
-            // Corpo do card — grade 3 colunas
-            echo '<div class="nm-line-card-body">';
-
-            // Linha 1: Número Piloto | Qtd DDR | Status
-            echo '<div class="nm-line-field"><span class="nm-line-label">' . __('Número Piloto', 'newmanagement') . '</span><span class="nm-line-value">' . ($v('pilot_number') ?: '—') . '</span></div>';
-            echo '<div class="nm-line-field"><span class="nm-line-label">' . __('Quantidade de DDR', 'newmanagement') . '</span><span class="nm-line-value">' . ((int)($row['ddr_count'] ?? 0) ?: '—') . '</span></div>';
-            echo '<div class="nm-line-field"><span class="nm-line-label">' . __('Status', 'newmanagement') . '</span><span class="nm-line-value"><span class="' . $badge . '">' . $label . '</span></span></div>';
-
-            // Linha 2: Operadora | Qtd Canais | IP Proxy
-            echo '<div class="nm-line-field"><span class="nm-line-label">' . __('Operadora', 'newmanagement') . '</span><span class="nm-line-value">' . ($v('operator') ?: '—') . '</span></div>';
-            echo '<div class="nm-line-field"><span class="nm-line-label">' . __('Quantidade de Canais', 'newmanagement') . '</span><span class="nm-line-value">' . ((int)($row['channels'] ?? 0) ?: '—') . '</span></div>';
-            echo '<div class="nm-line-field"><span class="nm-line-label">' . __('IP Proxy', 'newmanagement') . '</span><span class="nm-line-value">' . ($v('proxy_ip') ?: '—') . '</span></div>';
-
-            // Linha 3: Tipo | IP Tráfego Áudio | Porta Proxy
-            echo '<div class="nm-line-field"><span class="nm-line-label">' . __('Tipo', 'newmanagement') . '</span><span class="nm-line-value">' . ($v('line_type') ?: '—') . '</span></div>';
-            echo '<div class="nm-line-field"><span class="nm-line-label">' . __('IP Tráfego Áudio', 'newmanagement') . '</span><span class="nm-line-value">' . ($v('audio_ip') ?: '—') . '</span></div>';
-            echo '<div class="nm-line-field"><span class="nm-line-label">' . __('Porta Proxy', 'newmanagement') . '</span><span class="nm-line-value">' . ($v('proxy_port') ?: '—') . '</span></div>';
-
-            // Linha 4: Data Portabilidade | Op. Anterior | (vazio)
-            echo '<div class="nm-line-field"><span class="nm-line-label">' . __('Data Portabilidade', 'newmanagement') . '</span><span class="nm-line-value">' . ($v('portability_date') ?: '—') . '</span></div>';
-            echo '<div class="nm-line-field"><span class="nm-line-label">' . __('Operadora Anterior', 'newmanagement') . '</span><span class="nm-line-value">' . ($v('previous_operator') ?: '—') . '</span></div>';
-            echo '<div class="nm-line-field"></div>';
-
-            // Linha 5: Data Ativação | Data Vencimento | (vazio)
-            echo '<div class="nm-line-field"><span class="nm-line-label">' . __('Data de Ativação', 'newmanagement') . '</span><span class="nm-line-value">' . ($v('activation_date') ?: '—') . '</span></div>';
-            echo '<div class="nm-line-field"><span class="nm-line-label">' . __('Data de Vencimento', 'newmanagement') . '</span><span class="nm-line-value">' . ($v('expiration_date') ?: '—') . '</span></div>';
-            echo '<div class="nm-line-field"></div>';
-
-            // Linha 6: Comentário (largura total)
-            echo '<div class="nm-line-field-full"><span class="nm-line-label">' . __('Comentário', 'newmanagement') . '</span><span class="nm-line-value">' . ($v('comment') ?: '—') . '</span></div>';
-
-            echo '</div>'; // nm-line-card-body
-            echo '</div>'; // nm-line-card
+        if ($ipbx_id > 0) {
+            $rows = $DB->request([
+                'FROM'  => 'glpi_plugin_newmanagement_ipbx_lines',
+                'WHERE' => ['ipbx_id' => $ipbx_id],
+                'LIMIT' => 1,
+            ]);
+            foreach ($rows as $row) {
+                $line_id = (int)$row['id'];
+                foreach (array_keys($f) as $key) {
+                    if (isset($row[$key])) {
+                        $f[$key] = $row[$key];
+                    }
+                }
+            }
         }
 
-        // ---- Card de adição ----
-        echo '<div class="nm-line-add-card">';
-        echo '<div class="nm-line-card-header"><span><i class="ti ti-plus"></i> ' . __('Nova Linha Fixa', 'newmanagement') . '</span></div>';
+        $form_action = $line_id > 0 ? 'update_line' : 'add_line';
+        $status_opts = [1 => __('Ativo', 'newmanagement'), 2 => __('Cancelado', 'newmanagement')];
+
+        $v = function(string $key) use ($f): string {
+            return htmlspecialchars((string)($f[$key] ?? ''), ENT_QUOTES);
+        };
+
         echo '<form method="post" action="' . $action . '">';
         echo '<input type="hidden" name="_glpi_csrf_token" value="' . $csrf . '">';
-        echo '<input type="hidden" name="action" value="add_line">';
+        echo '<input type="hidden" name="action" value="' . $form_action . '">';
+        echo '<input type="hidden" name="id" value="' . $line_id . '">';
         echo '<input type="hidden" name="ipbx_id" value="' . $ipbx_id . '">';
         echo '<input type="hidden" name="companies_id" value="' . $companies_id . '">';
         echo '<input type="hidden" name="redirect" value="' . $redirect . '">';
-        echo '<div class="nm-line-add-body">';
+
+        echo '<table class="tab_cadre_fixe nm-table">';
+        echo '<tr><th colspan="6">' . __('Linha Fixa', 'newmanagement') . '</th></tr>';
 
         // Linha 1: Número Piloto | Qtd DDR | Status
-        echo '<div class="nm-line-add-field"><label class="nm-line-add-label">' . __('Número Piloto', 'newmanagement') . '</label><input type="text" name="pilot_number" class="form-control form-control-sm" placeholder="Ex: 1131000000"></div>';
-        echo '<div class="nm-line-add-field"><label class="nm-line-add-label">' . __('Quantidade de DDR', 'newmanagement') . '</label><input type="number" name="ddr_count" class="form-control form-control-sm" placeholder="0" min="0"></div>';
-        echo '<div class="nm-line-add-field"><label class="nm-line-add-label">' . __('Status', 'newmanagement') . '</label><select name="status" class="form-select form-select-sm"><option value="1">' . __('Ativo', 'newmanagement') . '</option><option value="2">' . __('Cancelado', 'newmanagement') . '</option></select></div>';
+        echo '<tr class="tab_bg_1">';
+        echo '<td>' . __('Número Piloto', 'newmanagement') . '</td>';
+        echo '<td><input type="text" name="pilot_number" value="' . $v('pilot_number') . '" class="form-control" placeholder="Ex: 1131000000"></td>';
+        echo '<td>' . __('Quantidade de DDR', 'newmanagement') . '</td>';
+        echo '<td><input type="number" name="ddr_count" value="' . $v('ddr_count') . '" class="form-control" min="0" placeholder="0"></td>';
+        echo '<td>' . __('Status', 'newmanagement') . '</td>';
+        echo '<td><select name="status" class="form-select">';
+        foreach ($status_opts as $val => $lbl) {
+            $sel = ((int)$f['status'] === $val) ? ' selected' : '';
+            echo '<option value="' . $val . '"' . $sel . '>' . $lbl . '</option>';
+        }
+        echo '</select></td>';
+        echo '</tr>';
 
         // Linha 2: Operadora | Qtd Canais | IP Proxy
-        echo '<div class="nm-line-add-field"><label class="nm-line-add-label">' . __('Operadora', 'newmanagement') . '</label><input type="text" name="operator" class="form-control form-control-sm" placeholder="Ex: Vivo"></div>';
-        echo '<div class="nm-line-add-field"><label class="nm-line-add-label">' . __('Quantidade de Canais', 'newmanagement') . '</label><input type="number" name="channels" class="form-control form-control-sm" placeholder="0" min="0"></div>';
-        echo '<div class="nm-line-add-field"><label class="nm-line-add-label">' . __('IP Proxy', 'newmanagement') . '</label><input type="text" name="proxy_ip" class="form-control form-control-sm" placeholder="Ex: 200.x.x.x"></div>';
+        echo '<tr class="tab_bg_1">';
+        echo '<td>' . __('Operadora', 'newmanagement') . '</td>';
+        echo '<td><input type="text" name="operator" value="' . $v('operator') . '" class="form-control" placeholder="Ex: Vivo"></td>';
+        echo '<td>' . __('Quantidade de Canais', 'newmanagement') . '</td>';
+        echo '<td><input type="number" name="channels" value="' . $v('channels') . '" class="form-control" min="0" placeholder="0"></td>';
+        echo '<td>' . __('IP Proxy', 'newmanagement') . '</td>';
+        echo '<td><input type="text" name="proxy_ip" value="' . $v('proxy_ip') . '" class="form-control" placeholder="Ex: 200.x.x.x"></td>';
+        echo '</tr>';
 
         // Linha 3: Tipo | IP Tráfego Áudio | Porta Proxy
-        echo '<div class="nm-line-add-field"><label class="nm-line-add-label">' . __('Tipo', 'newmanagement') . '</label><input type="text" name="line_type" class="form-control form-control-sm" placeholder="Ex: SIP, E1"></div>';
-        echo '<div class="nm-line-add-field"><label class="nm-line-add-label">' . __('IP Tráfego Áudio', 'newmanagement') . '</label><input type="text" name="audio_ip" class="form-control form-control-sm" placeholder="Ex: 200.x.x.x"></div>';
-        echo '<div class="nm-line-add-field"><label class="nm-line-add-label">' . __('Porta Proxy', 'newmanagement') . '</label><input type="text" name="proxy_port" class="form-control form-control-sm" placeholder="Ex: 5060"></div>';
+        echo '<tr class="tab_bg_1">';
+        echo '<td>' . __('Tipo', 'newmanagement') . '</td>';
+        echo '<td><input type="text" name="line_type" value="' . $v('line_type') . '" class="form-control" placeholder="Ex: SIP, E1"></td>';
+        echo '<td>' . __('IP Tráfego Áudio', 'newmanagement') . '</td>';
+        echo '<td><input type="text" name="audio_ip" value="' . $v('audio_ip') . '" class="form-control" placeholder="Ex: 200.x.x.x"></td>';
+        echo '<td>' . __('Porta Proxy', 'newmanagement') . '</td>';
+        echo '<td><input type="text" name="proxy_port" value="' . $v('proxy_port') . '" class="form-control" placeholder="Ex: 5060"></td>';
+        echo '</tr>';
 
-        // Linha 4: Data Portabilidade | Op. Anterior | (vazio)
-        echo '<div class="nm-line-add-field"><label class="nm-line-add-label">' . __('Data Portabilidade', 'newmanagement') . '</label><input type="date" name="portability_date" class="form-control form-control-sm"></div>';
-        echo '<div class="nm-line-add-field"><label class="nm-line-add-label">' . __('Operadora Anterior', 'newmanagement') . '</label><input type="text" name="previous_operator" class="form-control form-control-sm" placeholder="Ex: Claro"></div>';
-        echo '<div class="nm-line-add-field"></div>';
+        // Linha 4: Data Portabilidade | Op. Anterior
+        echo '<tr class="tab_bg_1">';
+        echo '<td>' . __('Data Portabilidade', 'newmanagement') . '</td>';
+        echo '<td><input type="date" name="portability_date" value="' . $v('portability_date') . '" class="form-control"></td>';
+        echo '<td>' . __('Operadora Anterior', 'newmanagement') . '</td>';
+        echo '<td><input type="text" name="previous_operator" value="' . $v('previous_operator') . '" class="form-control" placeholder="Ex: Claro"></td>';
+        echo '<td colspan="2"></td>';
+        echo '</tr>';
 
-        // Linha 5: Data Ativação | Data Vencimento | (vazio)
-        echo '<div class="nm-line-add-field"><label class="nm-line-add-label">' . __('Data de Ativação', 'newmanagement') . '</label><input type="date" name="activation_date" class="form-control form-control-sm"></div>';
-        echo '<div class="nm-line-add-field"><label class="nm-line-add-label">' . __('Data de Vencimento', 'newmanagement') . '</label><input type="date" name="expiration_date" class="form-control form-control-sm"></div>';
-        echo '<div class="nm-line-add-field"></div>';
+        // Linha 5: Data Ativação | Data Vencimento
+        echo '<tr class="tab_bg_1">';
+        echo '<td>' . __('Data de Ativação', 'newmanagement') . '</td>';
+        echo '<td><input type="date" name="activation_date" value="' . $v('activation_date') . '" class="form-control"></td>';
+        echo '<td>' . __('Data de Vencimento', 'newmanagement') . '</td>';
+        echo '<td><input type="date" name="expiration_date" value="' . $v('expiration_date') . '" class="form-control"></td>';
+        echo '<td colspan="2"></td>';
+        echo '</tr>';
 
         // Linha 6: Comentário (largura total)
-        echo '<div class="nm-line-add-field-full"><label class="nm-line-add-label">' . __('Comentário', 'newmanagement') . '</label><textarea name="comment" class="form-control form-control-sm" rows="2" placeholder="' . __('Observações adicionais...', 'newmanagement') . '"></textarea></div>';
+        echo '<tr class="tab_bg_1">';
+        echo '<td>' . __('Comentário', 'newmanagement') . '</td>';
+        echo '<td colspan="5"><textarea name="comment" class="form-control" rows="2">' . $v('comment') . '</textarea></td>';
+        echo '</tr>';
 
-        // Botão
-        echo '<div class="nm-line-add-actions"><button type="submit" class="btn btn-success"><i class="ti ti-plus"></i> ' . __('Adicionar Linha Fixa', 'newmanagement') . '</button></div>';
+        // Botão salvar
+        echo '<tr><td colspan="6" style="text-align:right;padding:8px">';
+        echo '<button type="submit" class="btn btn-primary"><i class="ti ti-device-floppy"></i> ' . __('Salvar', 'newmanagement') . '</button>';
+        echo '</td></tr>';
 
-        echo '</div>'; // nm-line-add-body
+        echo '</table>';
         echo '</form>';
-        echo '</div>'; // nm-line-add-card
-
-        echo '</div>'; // nm-lines-wrapper
     }
 }
