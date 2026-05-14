@@ -15,7 +15,6 @@ class Ipbx extends \CommonDBTM
 {
     public static $rightname = 'plugin_newmanagement_ipbx';
 
-    // Chave estrangeira para Company
     public static $itemtype = Company::class;
     public static $items_id = 'companies_id';
 
@@ -29,18 +28,6 @@ class Ipbx extends \CommonDBTM
         return 'glpi_plugin_newmanagement_ipbx';
     }
 
-    // ------------------------------------------------------------------
-    // Integração como aba dentro da ficha de Company
-    //
-    // Assinaturas verificadas no CommonGLPI.php do GLPI 11.0.6:
-    //   getTabNameForItem()        -> public function        (instância)
-    //   displayTabContentForItem() -> public static function (estático)
-    // ------------------------------------------------------------------
-
-    /**
-     * Retorna o nome da aba exibido na ficha de Company.
-     * NÃO é static — CommonGLPI::getTabNameForItem() é de instância.
-     */
     public function getTabNameForItem(\CommonGLPI $item, $withtemplate = 0): string
     {
         if ($item instanceof Company) {
@@ -49,11 +36,6 @@ class Ipbx extends \CommonDBTM
         return '';
     }
 
-    /**
-     * Renderiza o conteúdo da aba.
-     * DEVE ser static — CommonGLPI::displayTabContentForItem() é static.
-     * Instancia self() internamente para chamar showTabForCompany().
-     */
     public static function displayTabContentForItem(\CommonGLPI $item, $tabnum = 1, $withtemplate = 0): bool
     {
         if ($item instanceof Company) {
@@ -63,9 +45,6 @@ class Ipbx extends \CommonDBTM
         return true;
     }
 
-    // ------------------------------------------------------------------
-    // Renderiza toda a aba dentro de Company
-    // ------------------------------------------------------------------
     public function showTabForCompany(int $companies_id): void
     {
         global $DB;
@@ -183,6 +162,9 @@ class Ipbx extends \CommonDBTM
         echo '</div>'; // .nm-ipbx-tab
     }
 
+    // ------------------------------------------------------------------
+    // Ramais
+    // ------------------------------------------------------------------
     private function renderExtensionsTable(int $ipbx_id, int $companies_id, string $csrf, string $action, string $redirect): void
     {
         global $DB;
@@ -232,6 +214,9 @@ class Ipbx extends \CommonDBTM
         echo '</table>';
     }
 
+    // ------------------------------------------------------------------
+    // Dispositivos
+    // ------------------------------------------------------------------
     private function renderDevicesTable(int $ipbx_id, int $companies_id, string $csrf, string $action, string $redirect): void
     {
         global $DB;
@@ -275,6 +260,9 @@ class Ipbx extends \CommonDBTM
         echo '</table>';
     }
 
+    // ------------------------------------------------------------------
+    // Rede da Empresa
+    // ------------------------------------------------------------------
     private function renderNetworkTable(int $ipbx_id, int $companies_id, string $csrf, string $action, string $redirect): void
     {
         global $DB;
@@ -322,6 +310,11 @@ class Ipbx extends \CommonDBTM
         echo '</table>';
     }
 
+    // ------------------------------------------------------------------
+    // Linha Fixa — layout compacto
+    // Colunas visíveis: Piloto | Tipo | Operadora | Canais | Status | Ação
+    // Demais campos ficam numa linha de detalhes expansível (toggle)
+    // ------------------------------------------------------------------
     private function renderLinesTable(int $ipbx_id, int $companies_id, string $csrf, string $action, string $redirect): void
     {
         global $DB;
@@ -331,36 +324,34 @@ class Ipbx extends \CommonDBTM
 
         $status_labels = [1 => __('Ativo', 'newmanagement'), 2 => __('Cancelado', 'newmanagement')];
 
-        echo '<table class="tab_cadre_fixehov nm-table">';
+        echo '<table class="tab_cadre_fixehov nm-table" id="nm-lines-table">';
+
+        // Cabeçalho compacto
         echo '<tr class="noHover">';
-        foreach ([
-            __('Piloto', 'newmanagement'), __('Tipo', 'newmanagement'), __('Operadora', 'newmanagement'),
-            __('Canais', 'newmanagement'), __('DDR', 'newmanagement'), __('IP Proxy', 'newmanagement'),
-            __('Porta Proxy', 'newmanagement'), __('IP Áudio', 'newmanagement'), __('Portabilidade', 'newmanagement'),
-            __('Op. Anterior', 'newmanagement'), __('Ativação', 'newmanagement'), __('Vencimento', 'newmanagement'),
-            __('Status', 'newmanagement'), __('Ação', 'newmanagement'),
-        ] as $th) {
-            echo '<th>' . $th . '</th>';
-        }
+        echo '<th style="width:20px"></th>'; // seta de expand
+        echo '<th>' . __('Piloto', 'newmanagement') . '</th>';
+        echo '<th>' . __('Tipo', 'newmanagement') . '</th>';
+        echo '<th>' . __('Operadora', 'newmanagement') . '</th>';
+        echo '<th>' . __('Canais', 'newmanagement') . '</th>';
+        echo '<th>' . __('Status', 'newmanagement') . '</th>';
+        echo '<th>' . __('Ação', 'newmanagement') . '</th>';
         echo '</tr>';
 
         foreach ($rows as $row) {
             $rid    = (int)$row['id'];
             $status = (int)($row['status'] ?? 1);
             $badge  = $status === 1 ? 'badge bg-success' : 'badge bg-danger';
+            $uid    = 'nm-line-detail-' . $rid;
+
+            // Linha principal
             echo '<tr class="tab_bg_1">';
-            echo '<td>' . htmlspecialchars($row['pilot_number'] ?? '', ENT_QUOTES) . '</td>';
+            echo '<td style="text-align:center;cursor:pointer" onclick="nmToggleLine(\'' . $uid . '\', this)" title="' . __('Ver detalhes', 'newmanagement') . '">';
+            echo '<i class="ti ti-chevron-right nm-chevron"></i>';
+            echo '</td>';
+            echo '<td><strong>' . htmlspecialchars($row['pilot_number'] ?? '', ENT_QUOTES) . '</strong></td>';
             echo '<td>' . htmlspecialchars($row['line_type'] ?? '', ENT_QUOTES) . '</td>';
             echo '<td>' . htmlspecialchars($row['operator'] ?? '', ENT_QUOTES) . '</td>';
             echo '<td>' . (int)($row['channels'] ?? 0) . '</td>';
-            echo '<td>' . (int)($row['ddr_count'] ?? 0) . '</td>';
-            echo '<td>' . htmlspecialchars($row['proxy_ip'] ?? '', ENT_QUOTES) . '</td>';
-            echo '<td>' . htmlspecialchars($row['proxy_port'] ?? '', ENT_QUOTES) . '</td>';
-            echo '<td>' . htmlspecialchars($row['audio_ip'] ?? '', ENT_QUOTES) . '</td>';
-            echo '<td>' . htmlspecialchars($row['portability_date'] ?? '', ENT_QUOTES) . '</td>';
-            echo '<td>' . htmlspecialchars($row['previous_operator'] ?? '', ENT_QUOTES) . '</td>';
-            echo '<td>' . htmlspecialchars($row['activation_date'] ?? '', ENT_QUOTES) . '</td>';
-            echo '<td>' . htmlspecialchars($row['expiration_date'] ?? '', ENT_QUOTES) . '</td>';
             echo '<td><span class="' . $badge . '">' . ($status_labels[$status] ?? '') . '</span></td>';
             echo '<td>';
             echo '<form method="post" action="' . $action . '" style="display:inline">';
@@ -372,8 +363,33 @@ class Ipbx extends \CommonDBTM
             echo '<button type="submit" class="btn btn-sm btn-danger" onclick="return confirm(\'' . __('Remover linha?', 'newmanagement') . '\')"><i class="ti ti-trash"></i></button>';
             echo '</form>';
             echo '</td></tr>';
+
+            // Linha de detalhes (oculta por padrão)
+            echo '<tr id="' . $uid . '" class="nm-line-detail" style="display:none">';
+            echo '<td></td>';
+            echo '<td colspan="6">';
+            echo '<div class="nm-line-detail-grid">';
+
+            $detail_fields = [
+                __('DDR', 'newmanagement')              => (int)($row['ddr_count'] ?? 0),
+                __('IP Proxy', 'newmanagement')         => htmlspecialchars($row['proxy_ip'] ?? '', ENT_QUOTES),
+                __('Porta Proxy', 'newmanagement')      => htmlspecialchars($row['proxy_port'] ?? '', ENT_QUOTES),
+                __('IP Áudio', 'newmanagement')         => htmlspecialchars($row['audio_ip'] ?? '', ENT_QUOTES),
+                __('Portabilidade', 'newmanagement')    => htmlspecialchars($row['portability_date'] ?? '', ENT_QUOTES),
+                __('Op. Anterior', 'newmanagement')     => htmlspecialchars($row['previous_operator'] ?? '', ENT_QUOTES),
+                __('Ativação', 'newmanagement')       => htmlspecialchars($row['activation_date'] ?? '', ENT_QUOTES),
+                __('Vencimento', 'newmanagement')       => htmlspecialchars($row['expiration_date'] ?? '', ENT_QUOTES),
+            ];
+
+            foreach ($detail_fields as $label => $value) {
+                echo '<div class="nm-detail-item"><span class="nm-detail-label">' . $label . '</span><span class="nm-detail-value">' . ($value !== '' && $value !== 0 ? $value : '&mdash;') . '</span></div>';
+            }
+
+            echo '</div>';
+            echo '</td></tr>';
         }
 
+        // Linha de adição compacta
         echo '<tr class="tab_bg_2 nm-add-row">';
         echo '<form method="post" action="' . $action . '">';
         echo '<input type="hidden" name="_glpi_csrf_token" value="' . $csrf . '">';
@@ -381,21 +397,70 @@ class Ipbx extends \CommonDBTM
         echo '<input type="hidden" name="ipbx_id" value="' . $ipbx_id . '">';
         echo '<input type="hidden" name="companies_id" value="' . $companies_id . '">';
         echo '<input type="hidden" name="redirect" value="' . $redirect . '">';
-        echo '<td><input type="text" name="pilot_number" class="form-control form-control-sm" placeholder="Piloto"></td>';
-        echo '<td><input type="text" name="line_type" class="form-control form-control-sm" placeholder="Tipo"></td>';
-        echo '<td><input type="text" name="operator" class="form-control form-control-sm" placeholder="Operadora"></td>';
+
+        // Campos ocultos que ainda precisam ser enviados
+        echo '<input type="hidden" name="ddr_count" value="0">';
+        echo '<input type="hidden" name="proxy_ip" value="">';
+        echo '<input type="hidden" name="proxy_port" value="">';
+        echo '<input type="hidden" name="audio_ip" value="">';
+        echo '<input type="hidden" name="portability_date" value="">';
+        echo '<input type="hidden" name="previous_operator" value="">';
+        echo '<input type="hidden" name="activation_date" value="">';
+        echo '<input type="hidden" name="expiration_date" value="">';
+
+        echo '<td></td>'; // coluna da seta
+        echo '<td><input type="text" name="pilot_number" class="form-control form-control-sm" placeholder="' . __('Piloto', 'newmanagement') . '"></td>';
+        echo '<td><input type="text" name="line_type" class="form-control form-control-sm" placeholder="' . __('Tipo', 'newmanagement') . '"></td>';
+        echo '<td><input type="text" name="operator" class="form-control form-control-sm" placeholder="' . __('Operadora', 'newmanagement') . '"></td>';
         echo '<td><input type="number" name="channels" class="form-control form-control-sm" placeholder="0" min="0"></td>';
-        echo '<td><input type="number" name="ddr_count" class="form-control form-control-sm" placeholder="0" min="0"></td>';
-        echo '<td><input type="text" name="proxy_ip" class="form-control form-control-sm" placeholder="IP"></td>';
-        echo '<td><input type="text" name="proxy_port" class="form-control form-control-sm" placeholder="Porta"></td>';
-        echo '<td><input type="text" name="audio_ip" class="form-control form-control-sm" placeholder="IP"></td>';
-        echo '<td><input type="date" name="portability_date" class="form-control form-control-sm"></td>';
-        echo '<td><input type="text" name="previous_operator" class="form-control form-control-sm" placeholder="Op. Anterior"></td>';
-        echo '<td><input type="date" name="activation_date" class="form-control form-control-sm"></td>';
-        echo '<td><input type="date" name="expiration_date" class="form-control form-control-sm"></td>';
         echo '<td><select name="status" class="form-select form-select-sm"><option value="1">' . __('Ativo', 'newmanagement') . '</option><option value="2">' . __('Cancelado', 'newmanagement') . '</option></select></td>';
-        echo '<td><button type="submit" class="btn btn-sm btn-success"><i class="ti ti-plus"></i> ' . __('Adicionar Linha Fixa', 'newmanagement') . '</button></td>';
+        echo '<td><button type="submit" class="btn btn-sm btn-success"><i class="ti ti-plus"></i> ' . __('Adicionar', 'newmanagement') . '</button></td>';
         echo '</form></tr>';
+
         echo '</table>';
+
+        // CSS e JS inline para o toggle
+        echo '
+<style>
+.nm-chevron { transition: transform .2s ease; font-size: 14px; color: #6c757d; }
+.nm-chevron.open { transform: rotate(90deg); }
+.nm-line-detail td { background: var(--tblr-bg-surface, #f8f9fa) !important; padding: 10px 8px !important; }
+.nm-line-detail-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 20px;
+    padding: 4px 0;
+}
+.nm-detail-item {
+    display: flex;
+    flex-direction: column;
+    min-width: 120px;
+}
+.nm-detail-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #6c757d;
+    letter-spacing: .03em;
+}
+.nm-detail-value {
+    font-size: 13px;
+    color: #212529;
+}
+</style>
+<script>
+function nmToggleLine(uid, cell) {
+    var row = document.getElementById(uid);
+    var icon = cell.querySelector(".nm-chevron");
+    if (!row) return;
+    if (row.style.display === "none") {
+        row.style.display = "";
+        if (icon) icon.classList.add("open");
+    } else {
+        row.style.display = "none";
+        if (icon) icon.classList.remove("open");
+    }
+}
+</script>';
     }
 }
