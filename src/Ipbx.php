@@ -31,9 +31,16 @@ class Ipbx extends \CommonDBTM
 
     // ------------------------------------------------------------------
     // Integração como aba dentro da ficha de Company
-    // getTabNameForItem e displayTabContentForItem NÃO podem ser static
-    // no GLPI 11 — CommonGLPI os define como métodos de instância.
+    //
+    // Assinaturas verificadas no CommonGLPI.php do GLPI 11.0.6:
+    //   getTabNameForItem()        -> public function        (instância)
+    //   displayTabContentForItem() -> public static function (estático)
     // ------------------------------------------------------------------
+
+    /**
+     * Retorna o nome da aba exibido na ficha de Company.
+     * NÃO é static — CommonGLPI::getTabNameForItem() é de instância.
+     */
     public function getTabNameForItem(\CommonGLPI $item, $withtemplate = 0): string
     {
         if ($item instanceof Company) {
@@ -42,7 +49,12 @@ class Ipbx extends \CommonDBTM
         return '';
     }
 
-    public function displayTabContentForItem(\CommonGLPI $item, $tabnum = 1, $withtemplate = 0): bool
+    /**
+     * Renderiza o conteúdo da aba.
+     * DEVE ser static — CommonGLPI::displayTabContentForItem() é static.
+     * Instancia self() internamente para chamar showTabForCompany().
+     */
+    public static function displayTabContentForItem(\CommonGLPI $item, $tabnum = 1, $withtemplate = 0): bool
     {
         if ($item instanceof Company) {
             $ipbx = new self();
@@ -58,7 +70,6 @@ class Ipbx extends \CommonDBTM
     {
         global $DB;
 
-        // Busca ou cria registro IPBX para esta empresa
         $rows = $DB->request([
             'FROM'  => self::getTable(),
             'WHERE' => ['companies_id' => $companies_id, 'is_deleted' => 0],
@@ -80,15 +91,12 @@ class Ipbx extends \CommonDBTM
             $ipbx_id = (int) $row['id'];
         }
 
-        $csrf   = \Session::getNewCSRFToken();
-        $action = (defined('GLPI_ROOT') ? \Plugin::getWebDir('newmanagement') : '') . '/ajax/ipbx_sub.php';
+        $csrf     = \Session::getNewCSRFToken();
+        $action   = (defined('GLPI_ROOT') ? \Plugin::getWebDir('newmanagement') : '') . '/ajax/ipbx_sub.php';
         $redirect = htmlspecialchars($_SERVER['REQUEST_URI'] ?? '', ENT_QUOTES);
 
         echo '<div class="nm-ipbx-tab">';
 
-        // --------------------------------------------------
-        // Formulário principal do servidor
-        // --------------------------------------------------
         echo '<form method="post" action="' . $action . '" id="nm-ipbx-form">';
         echo '<input type="hidden" name="_glpi_csrf_token" value="' . $csrf . '">';
         echo '<input type="hidden" name="action" value="' . ($ipbx_id > 0 ? 'update_ipbx' : 'add_ipbx') . '">';
@@ -148,46 +156,26 @@ class Ipbx extends \CommonDBTM
         echo '</table>';
         echo '</form>';
 
-        // --------------------------------------------------
-        // Sub-seção: Ramais
-        // --------------------------------------------------
         echo '<div class="nm-subsection">';
-        echo '<div class="nm-subsection-header">';
-        echo '<h4><i class="ti ti-phone-call"></i> ' . __('Ramais', 'newmanagement') . '</h4>';
-        echo '</div>';
+        echo '<div class="nm-subsection-header"><h4><i class="ti ti-phone-call"></i> ' . __('Ramais', 'newmanagement') . '</h4></div>';
         echo '<div class="nm-subsection-body">';
         $this->renderExtensionsTable($ipbx_id, $companies_id, $csrf, $action, $redirect);
         echo '</div></div>';
 
-        // --------------------------------------------------
-        // Sub-seção: Dispositivos
-        // --------------------------------------------------
         echo '<div class="nm-subsection">';
-        echo '<div class="nm-subsection-header">';
-        echo '<h4><i class="ti ti-device-desktop"></i> ' . __('Dispositivos', 'newmanagement') . '</h4>';
-        echo '</div>';
+        echo '<div class="nm-subsection-header"><h4><i class="ti ti-device-desktop"></i> ' . __('Dispositivos', 'newmanagement') . '</h4></div>';
         echo '<div class="nm-subsection-body">';
         $this->renderDevicesTable($ipbx_id, $companies_id, $csrf, $action, $redirect);
         echo '</div></div>';
 
-        // --------------------------------------------------
-        // Sub-seção: Rede da Empresa
-        // --------------------------------------------------
         echo '<div class="nm-subsection">';
-        echo '<div class="nm-subsection-header">';
-        echo '<h4><i class="ti ti-network"></i> ' . __('Rede da Empresa', 'newmanagement') . '</h4>';
-        echo '</div>';
+        echo '<div class="nm-subsection-header"><h4><i class="ti ti-network"></i> ' . __('Rede da Empresa', 'newmanagement') . '</h4></div>';
         echo '<div class="nm-subsection-body">';
         $this->renderNetworkTable($ipbx_id, $companies_id, $csrf, $action, $redirect);
         echo '</div></div>';
 
-        // --------------------------------------------------
-        // Sub-seção: Linha Fixa
-        // --------------------------------------------------
         echo '<div class="nm-subsection">';
-        echo '<div class="nm-subsection-header">';
-        echo '<h4><i class="ti ti-phone"></i> ' . __('Linha Fixa', 'newmanagement') . '</h4>';
-        echo '</div>';
+        echo '<div class="nm-subsection-header"><h4><i class="ti ti-phone"></i> ' . __('Linha Fixa', 'newmanagement') . '</h4></div>';
         echo '<div class="nm-subsection-body">';
         $this->renderLinesTable($ipbx_id, $companies_id, $csrf, $action, $redirect);
         echo '</div></div>';
@@ -195,13 +183,9 @@ class Ipbx extends \CommonDBTM
         echo '</div>'; // .nm-ipbx-tab
     }
 
-    // ------------------------------------------------------------------
-    // Ramais
-    // ------------------------------------------------------------------
     private function renderExtensionsTable(int $ipbx_id, int $companies_id, string $csrf, string $action, string $redirect): void
     {
         global $DB;
-
         $rows = ($ipbx_id > 0)
             ? $DB->request(['FROM' => 'glpi_plugin_newmanagement_ipbx_extensions', 'WHERE' => ['ipbx_id' => $ipbx_id], 'ORDER' => 'number ASC'])
             : [];
@@ -245,17 +229,12 @@ class Ipbx extends \CommonDBTM
         echo '<td><input type="text" name="department" class="form-control form-control-sm" placeholder="' . __('Departamento', 'newmanagement') . '"></td>';
         echo '<td><button type="submit" class="btn btn-sm btn-success"><i class="ti ti-plus"></i> ' . __('Adicionar Ramal', 'newmanagement') . '</button></td>';
         echo '</form></tr>';
-
         echo '</table>';
     }
 
-    // ------------------------------------------------------------------
-    // Dispositivos
-    // ------------------------------------------------------------------
     private function renderDevicesTable(int $ipbx_id, int $companies_id, string $csrf, string $action, string $redirect): void
     {
         global $DB;
-
         $rows = ($ipbx_id > 0)
             ? $DB->request(['FROM' => 'glpi_plugin_newmanagement_ipbx_devices', 'WHERE' => ['ipbx_id' => $ipbx_id], 'ORDER' => 'device_type ASC'])
             : [];
@@ -293,17 +272,12 @@ class Ipbx extends \CommonDBTM
         echo '<td><input type="password" name="password" class="form-control form-control-sm" placeholder="' . __('Senha', 'newmanagement') . '" autocomplete="new-password"></td>';
         echo '<td><button type="submit" class="btn btn-sm btn-success"><i class="ti ti-plus"></i> ' . __('Adicionar Dispositivo', 'newmanagement') . '</button></td>';
         echo '</form></tr>';
-
         echo '</table>';
     }
 
-    // ------------------------------------------------------------------
-    // Rede da Empresa
-    // ------------------------------------------------------------------
     private function renderNetworkTable(int $ipbx_id, int $companies_id, string $csrf, string $action, string $redirect): void
     {
         global $DB;
-
         $rows = ($ipbx_id > 0)
             ? $DB->request(['FROM' => 'glpi_plugin_newmanagement_ipbx_network', 'WHERE' => ['ipbx_id' => $ipbx_id]])
             : [];
@@ -345,17 +319,12 @@ class Ipbx extends \CommonDBTM
         echo '<td><input type="text" name="dns_secondary" class="form-control form-control-sm" placeholder="8.8.4.4"></td>';
         echo '<td><button type="submit" class="btn btn-sm btn-success"><i class="ti ti-plus"></i> ' . __('Adicionar Rede', 'newmanagement') . '</button></td>';
         echo '</form></tr>';
-
         echo '</table>';
     }
 
-    // ------------------------------------------------------------------
-    // Linha Fixa
-    // ------------------------------------------------------------------
     private function renderLinesTable(int $ipbx_id, int $companies_id, string $csrf, string $action, string $redirect): void
     {
         global $DB;
-
         $rows = ($ipbx_id > 0)
             ? $DB->request(['FROM' => 'glpi_plugin_newmanagement_ipbx_lines', 'WHERE' => ['ipbx_id' => $ipbx_id], 'ORDER' => 'pilot_number ASC'])
             : [];
@@ -364,20 +333,15 @@ class Ipbx extends \CommonDBTM
 
         echo '<table class="tab_cadre_fixehov nm-table">';
         echo '<tr class="noHover">';
-        echo '<th>' . __('Piloto', 'newmanagement') . '</th>';
-        echo '<th>' . __('Tipo', 'newmanagement') . '</th>';
-        echo '<th>' . __('Operadora', 'newmanagement') . '</th>';
-        echo '<th>' . __('Canais', 'newmanagement') . '</th>';
-        echo '<th>' . __('DDR', 'newmanagement') . '</th>';
-        echo '<th>' . __('IP Proxy', 'newmanagement') . '</th>';
-        echo '<th>' . __('Porta Proxy', 'newmanagement') . '</th>';
-        echo '<th>' . __('IP Áudio', 'newmanagement') . '</th>';
-        echo '<th>' . __('Portabilidade', 'newmanagement') . '</th>';
-        echo '<th>' . __('Op. Anterior', 'newmanagement') . '</th>';
-        echo '<th>' . __('Ativação', 'newmanagement') . '</th>';
-        echo '<th>' . __('Vencimento', 'newmanagement') . '</th>';
-        echo '<th>' . __('Status', 'newmanagement') . '</th>';
-        echo '<th>' . __('Ação', 'newmanagement') . '</th>';
+        foreach ([
+            __('Piloto', 'newmanagement'), __('Tipo', 'newmanagement'), __('Operadora', 'newmanagement'),
+            __('Canais', 'newmanagement'), __('DDR', 'newmanagement'), __('IP Proxy', 'newmanagement'),
+            __('Porta Proxy', 'newmanagement'), __('IP Áudio', 'newmanagement'), __('Portabilidade', 'newmanagement'),
+            __('Op. Anterior', 'newmanagement'), __('Ativação', 'newmanagement'), __('Vencimento', 'newmanagement'),
+            __('Status', 'newmanagement'), __('Ação', 'newmanagement'),
+        ] as $th) {
+            echo '<th>' . $th . '</th>';
+        }
         echo '</tr>';
 
         foreach ($rows as $row) {
@@ -432,7 +396,6 @@ class Ipbx extends \CommonDBTM
         echo '<td><select name="status" class="form-select form-select-sm"><option value="1">' . __('Ativo', 'newmanagement') . '</option><option value="2">' . __('Cancelado', 'newmanagement') . '</option></select></td>';
         echo '<td><button type="submit" class="btn btn-sm btn-success"><i class="ti ti-plus"></i> ' . __('Adicionar Linha Fixa', 'newmanagement') . '</button></td>';
         echo '</form></tr>';
-
         echo '</table>';
     }
 }
