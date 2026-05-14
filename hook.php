@@ -22,19 +22,35 @@ function plugin_newmanagement_install() {
     // -------------------------------------------------------
     if (!$DB->tableExists('glpi_plugin_newmanagement_companies')) {
         $query = "CREATE TABLE `glpi_plugin_newmanagement_companies` (
-            `id`            int {$default_key_sign} NOT NULL AUTO_INCREMENT,
-            `name`          varchar(255) NOT NULL DEFAULT '',
-            `cnpj`          varchar(20)           DEFAULT NULL,
-            `address`       text                  DEFAULT NULL,
-            `phone`         varchar(50)           DEFAULT NULL,
-            `email`         varchar(255)          DEFAULT NULL,
-            `comment`       text                  DEFAULT NULL,
-            `date_creation` timestamp             DEFAULT NULL,
-            `date_mod`      timestamp             DEFAULT NULL,
-            `is_deleted`    tinyint(1)   NOT NULL DEFAULT 0,
+            `id`              int {$default_key_sign} NOT NULL AUTO_INCREMENT,
+            `name`            varchar(255) NOT NULL DEFAULT '',
+            `cnpj`            varchar(20)           DEFAULT NULL,
+            `razao_social`    varchar(255)          DEFAULT NULL,
+            `email`           varchar(255)          DEFAULT NULL,
+            `phone`           varchar(50)           DEFAULT NULL,
+            `cep`             varchar(10)           DEFAULT NULL,
+            `address`         text                  DEFAULT NULL,
+            `contract_status` tinyint(1)   NOT NULL DEFAULT 0 COMMENT '0=Sem contrato,1=Ativo,2=Cancelado',
+            `comment`         text                  DEFAULT NULL,
+            `date_creation`   timestamp             DEFAULT NULL,
+            `date_mod`        timestamp             DEFAULT NULL,
+            `is_deleted`      tinyint(1)   NOT NULL DEFAULT 0,
             PRIMARY KEY (`id`)
         ) ENGINE=InnoDB DEFAULT CHARSET={$default_charset} COLLATE={$default_collation} ROW_FORMAT=DYNAMIC";
         $DB->doQueryOrDie($query);
+    } else {
+        // Migração: adiciona colunas novas em instalações antigas
+        $columns = $DB->listFields('glpi_plugin_newmanagement_companies');
+
+        if (!isset($columns['razao_social'])) {
+            $migration->addField('glpi_plugin_newmanagement_companies', 'razao_social', 'varchar(255) DEFAULT NULL', ['after' => 'cnpj']);
+        }
+        if (!isset($columns['cep'])) {
+            $migration->addField('glpi_plugin_newmanagement_companies', 'cep', 'varchar(10) DEFAULT NULL', ['after' => 'phone']);
+        }
+        if (!isset($columns['contract_status'])) {
+            $migration->addField('glpi_plugin_newmanagement_companies', 'contract_status', "tinyint(1) NOT NULL DEFAULT 0 COMMENT '0=Sem contrato,1=Ativo,2=Cancelado'", ['after' => 'address']);
+        }
     }
 
     // -------------------------------------------------------
@@ -145,7 +161,6 @@ function plugin_newmanagement_install() {
 
     // -------------------------------------------------------
     // Registra os direitos de acesso no banco
-    // SEM isso, nenhum perfil (nem Super-Admin) consegue acessar as páginas
     // -------------------------------------------------------
     $rights = [
         ['itemtype' => 'GlpiPlugin\\Newmanagement\\Company',    'name' => 'plugin_newmanagement_company'],
@@ -157,10 +172,7 @@ function plugin_newmanagement_install() {
     ];
 
     foreach ($rights as $right) {
-        // Garante que o direito existe na tabela glpi_profilerights para todos os perfis
-        // O valor 255 = todos os direitos (READ + CREATE + UPDATE + DELETE + etc.)
         ProfileRight::addProfileRights([$right['name']]);
-        // Dá todos os direitos ao perfil Super-Admin (ID 4)
         ProfileRight::updateProfileRights(4, [$right['name'] => ALLSTANDARDRIGHT | READNOTE | UPDATENOTE]);
     }
 
@@ -189,7 +201,6 @@ function plugin_newmanagement_uninstall() {
         }
     }
 
-    // Remove os direitos do banco ao desinstalar
     $rights_names = [
         'plugin_newmanagement_company',
         'plugin_newmanagement_ipbx',

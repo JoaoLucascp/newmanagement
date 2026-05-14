@@ -15,6 +15,13 @@ class Company extends \CommonDBTM
 {
     public static $rightname = 'plugin_newmanagement_company';
 
+    /**
+     * Status do contrato: constantes para legibilidade
+     */
+    const CONTRACT_NO_CONTRACT = 0;
+    const CONTRACT_ACTIVE      = 1;
+    const CONTRACT_CANCELLED   = 2;
+
     public static function getTypeName($nb = 0): string
     {
         return _n('Empresa', 'Empresas', $nb, 'newmanagement');
@@ -26,16 +33,27 @@ class Company extends \CommonDBTM
     }
 
     /**
+     * Retorna as opções de Status do Contrato
+     */
+    public static function getContractStatusOptions(): array
+    {
+        return [
+            self::CONTRACT_NO_CONTRACT => __('Sem contrato', 'newmanagement'),
+            self::CONTRACT_ACTIVE      => __('Ativo',        'newmanagement'),
+            self::CONTRACT_CANCELLED   => __('Cancelado',    'newmanagement'),
+        ];
+    }
+
+    /**
      * Define as colunas exibidas na listagem (Search::show)
-     * Sem isso, a tabela aparece vazia mesmo com dados
      */
     public function rawSearchOptions(): array
     {
         $tab = [];
 
         $tab[] = [
-            'id'            => 'common',
-            'name'          => self::getTypeName(1),
+            'id'   => 'common',
+            'name' => self::getTypeName(1),
         ];
 
         $tab[] = [
@@ -58,13 +76,21 @@ class Company extends \CommonDBTM
         $tab[] = [
             'id'       => 3,
             'table'    => self::getTable(),
+            'field'    => 'razao_social',
+            'name'     => __('Razão Social', 'newmanagement'),
+            'datatype' => 'string',
+        ];
+
+        $tab[] = [
+            'id'       => 4,
+            'table'    => self::getTable(),
             'field'    => 'phone',
             'name'     => __('Telefone', 'newmanagement'),
             'datatype' => 'string',
         ];
 
         $tab[] = [
-            'id'       => 4,
+            'id'       => 5,
             'table'    => self::getTable(),
             'field'    => 'email',
             'name'     => __('E-mail', 'newmanagement'),
@@ -72,7 +98,7 @@ class Company extends \CommonDBTM
         ];
 
         $tab[] = [
-            'id'       => 5,
+            'id'       => 6,
             'table'    => self::getTable(),
             'field'    => 'address',
             'name'     => __('Endereço', 'newmanagement'),
@@ -80,7 +106,15 @@ class Company extends \CommonDBTM
         ];
 
         $tab[] = [
-            'id'       => 6,
+            'id'       => 7,
+            'table'    => self::getTable(),
+            'field'    => 'contract_status',
+            'name'     => __('Status do Contrato', 'newmanagement'),
+            'datatype' => 'specific',
+        ];
+
+        $tab[] = [
+            'id'       => 8,
             'table'    => self::getTable(),
             'field'    => 'comment',
             'name'     => __('Comentário', 'newmanagement'),
@@ -88,20 +122,20 @@ class Company extends \CommonDBTM
         ];
 
         $tab[] = [
-            'id'       => 19,
-            'table'    => self::getTable(),
-            'field'    => 'date_mod',
-            'name'     => __('Last update'),
-            'datatype' => 'datetime',
+            'id'            => 19,
+            'table'         => self::getTable(),
+            'field'         => 'date_mod',
+            'name'          => __('Last update'),
+            'datatype'      => 'datetime',
             'massiveaction' => false,
         ];
 
         $tab[] = [
-            'id'       => 121,
-            'table'    => self::getTable(),
-            'field'    => 'date_creation',
-            'name'     => __('Creation date'),
-            'datatype' => 'datetime',
+            'id'            => 121,
+            'table'         => self::getTable(),
+            'field'         => 'date_creation',
+            'name'          => __('Creation date'),
+            'datatype'      => 'datetime',
             'massiveaction' => false,
         ];
 
@@ -165,33 +199,89 @@ class Company extends \CommonDBTM
         return $ong;
     }
 
+    /**
+     * Exibe o formulário de criação/edição de Empresa
+     */
     public function showForm($ID, array $options = []): bool
     {
         $this->initForm($ID, $options);
         $this->showFormHeader($options);
 
+        $name            = htmlspecialchars($this->fields['name']            ?? '', ENT_QUOTES);
+        $cnpj            = htmlspecialchars($this->fields['cnpj']            ?? '', ENT_QUOTES);
+        $razao_social    = htmlspecialchars($this->fields['razao_social']    ?? '', ENT_QUOTES);
+        $email           = htmlspecialchars($this->fields['email']           ?? '', ENT_QUOTES);
+        $phone           = htmlspecialchars($this->fields['phone']           ?? '', ENT_QUOTES);
+        $cep             = htmlspecialchars($this->fields['cep']             ?? '', ENT_QUOTES);
+        $address         = htmlspecialchars($this->fields['address']         ?? '', ENT_QUOTES);
+        $comment         = htmlspecialchars($this->fields['comment']         ?? '', ENT_QUOTES);
+        $contract_status = (int) ($this->fields['contract_status'] ?? self::CONTRACT_NO_CONTRACT);
+
+        // --- Linha 1: Nome | ID ---
         echo '<tr class="tab_bg_1">';
-        echo '<td>' . __('Nome', 'newmanagement') . '</td>';
-        echo '<td><input type="text" name="name" value="' . ($this->fields['name'] ?? '') . '" class="form-control" required></td>';
-        echo '<td>' . __('CNPJ', 'newmanagement') . '</td>';
-        echo '<td><input type="text" name="cnpj" value="' . ($this->fields['cnpj'] ?? '') . '" class="form-control"></td>';
+        echo '<td><label for="name">' . __('Nome', 'newmanagement') . ' <span style="color:var(--color-error,red)">*</span></label></td>';
+        echo '<td><input type="text" id="name" name="name" value="' . $name . '" class="form-control" required></td>';
+        echo '<td>' . __('ID', 'newmanagement') . '</td>';
+        echo '<td><input type="text" value="' . ($ID > 0 ? $ID : __('Gerado automaticamente', 'newmanagement')) . '" class="form-control" disabled></td>';
         echo '</tr>';
 
+        // --- Linha 2: CNPJ (com busca) | Razão Social ---
         echo '<tr class="tab_bg_1">';
-        echo '<td>' . __('Telefone', 'newmanagement') . '</td>';
-        echo '<td><input type="text" name="phone" value="' . ($this->fields['phone'] ?? '') . '" class="form-control"></td>';
-        echo '<td>' . __('E-mail', 'newmanagement') . '</td>';
-        echo '<td><input type="text" name="email" value="' . ($this->fields['email'] ?? '') . '" class="form-control"></td>';
+        echo '<td><label for="cnpj">' . __('CNPJ', 'newmanagement') . '</label></td>';
+        echo '<td>';
+        echo '  <div class="nm-input-group">';
+        echo '    <input type="text" id="cnpj" name="cnpj" value="' . $cnpj . '" class="form-control" placeholder="00.000.000/0000-00" maxlength="18">';
+        echo '    <button type="button" class="nm-btn-search" id="btn-buscar-cnpj" onclick="nmBuscarCNPJ()" title="Buscar CNPJ na BrasilAPI">';
+        echo '      <i class="ti ti-search"></i> Buscar';
+        echo '    </button>';
+        echo '  </div>';
+        echo '  <span id="cnpj-feedback" class="nm-feedback"></span>';
+        echo '</td>';
+        echo '<td><label for="razao_social">' . __('Razão Social', 'newmanagement') . '</label></td>';
+        echo '<td><input type="text" id="razao_social" name="razao_social" value="' . $razao_social . '" class="form-control"></td>';
         echo '</tr>';
 
+        // --- Linha 3: E-mail | Telefone ---
         echo '<tr class="tab_bg_1">';
-        echo '<td>' . __('Endereço', 'newmanagement') . '</td>';
-        echo '<td colspan="3"><textarea name="address" class="form-control" rows="2">' . ($this->fields['address'] ?? '') . '</textarea></td>';
+        echo '<td><label for="email">' . __('E-mail', 'newmanagement') . '</label></td>';
+        echo '<td><input type="email" id="email" name="email" value="' . $email . '" class="form-control"></td>';
+        echo '<td><label for="phone">' . __('Telefone', 'newmanagement') . '</label></td>';
+        echo '<td><input type="text" id="phone" name="phone" value="' . $phone . '" class="form-control" placeholder="(00) 00000-0000"></td>';
         echo '</tr>';
 
+        // --- Linha 4: CEP (com busca) | Status do Contrato ---
         echo '<tr class="tab_bg_1">';
-        echo '<td>' . __('Comentário', 'newmanagement') . '</td>';
-        echo '<td colspan="3"><textarea name="comment" class="form-control" rows="3">' . ($this->fields['comment'] ?? '') . '</textarea></td>';
+        echo '<td><label for="cep">' . __('CEP', 'newmanagement') . '</label></td>';
+        echo '<td>';
+        echo '  <div class="nm-input-group">';
+        echo '    <input type="text" id="cep" name="cep" value="' . $cep . '" class="form-control" placeholder="00000-000" maxlength="9">';
+        echo '    <button type="button" class="nm-btn-search" id="btn-buscar-cep" onclick="nmBuscarCEP()" title="Buscar CEP na BrasilAPI">';
+        echo '      <i class="ti ti-search"></i> Buscar';
+        echo '    </button>';
+        echo '  </div>';
+        echo '  <span id="cep-feedback" class="nm-feedback"></span>';
+        echo '</td>';
+        echo '<td><label for="contract_status">' . __('Status do Contrato', 'newmanagement') . '</label></td>';
+        echo '<td>';
+        echo '  <select id="contract_status" name="contract_status" class="form-select">';
+        foreach (self::getContractStatusOptions() as $value => $label) {
+            $selected = ($contract_status === $value) ? ' selected' : '';
+            echo '    <option value="' . $value . '"' . $selected . '>' . htmlspecialchars($label, ENT_QUOTES) . '</option>';
+        }
+        echo '  </select>';
+        echo '</td>';
+        echo '</tr>';
+
+        // --- Linha 5: Endereço (largura total) ---
+        echo '<tr class="tab_bg_1">';
+        echo '<td><label for="address">' . __('Endereço', 'newmanagement') . '</label></td>';
+        echo '<td colspan="3"><textarea id="address" name="address" class="form-control" rows="2">' . $address . '</textarea></td>';
+        echo '</tr>';
+
+        // --- Linha 6: Comentário (largura total) ---
+        echo '<tr class="tab_bg_1">';
+        echo '<td><label for="comment">' . __('Comentário', 'newmanagement') . '</label></td>';
+        echo '<td colspan="3"><textarea id="comment" name="comment" class="form-control" rows="3">' . $comment . '</textarea></td>';
         echo '</tr>';
 
         $this->showFormButtons($options);
