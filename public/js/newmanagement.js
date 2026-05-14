@@ -1,10 +1,6 @@
 /**
  * Newmanagement - Plugin GLPI
  * Mascaras, busca CNPJ e CEP via BrasilAPI
- *
- * IMPORTANTE: O GLPI 11 carrega este arquivo em escopo isolado (modulo).
- * Funcoes nao ficam em window automaticamente via onclick="".
- * Solucao: registrar via addEventListener nos botoes E expor em window como fallback.
  */
 
 console.log('Newmanagement Plugin carregado.');
@@ -13,21 +9,23 @@ console.log('Newmanagement Plugin carregado.');
 // Mascaras
 // ---------------------------------------------------------------------------
 
+/**
+ * Formata CNPJ digito a digito sem embaralhar.
+ * Abordagem por comprimento evita conflito entre grupos de regex encadeados.
+ */
 function nmMascaraCNPJ(valor) {
-    return valor
-        .replace(/\D/g, '')
-        .replace(/(\d{2})(\d)/, '$1.$2')
-        .replace(/(\d{2}\.(\d{3}))(\d)/, '$1.$2')
-        .replace(/(\.\d{3})(\d)/, '$1/$2')
-        .replace(/(\/\d{4})(\d)/, '$1-$2')
-        .slice(0, 18);
+    const v = valor.replace(/\D/g, '').slice(0, 14);
+    if (v.length <= 2)  return v;
+    if (v.length <= 5)  return v.replace(/(\d{2})(\d+)/, '$1.$2');
+    if (v.length <= 8)  return v.replace(/(\d{2})(\d{3})(\d+)/, '$1.$2.$3');
+    if (v.length <= 12) return v.replace(/(\d{2})(\d{3})(\d{3})(\d+)/, '$1.$2.$3/$4');
+    return v.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{1,2})/, '$1.$2.$3/$4-$5');
 }
 
 function nmMascaraCEP(valor) {
-    return valor
-        .replace(/\D/g, '')
-        .replace(/(\d{5})(\d)/, '$1-$2')
-        .slice(0, 9);
+    const v = valor.replace(/\D/g, '').slice(0, 8);
+    if (v.length <= 5) return v;
+    return v.replace(/(\d{5})(\d+)/, '$1-$2');
 }
 
 function nmMascaraTelefone(valor) {
@@ -36,6 +34,31 @@ function nmMascaraTelefone(valor) {
         return v.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
     }
     return v.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3');
+}
+
+// ---------------------------------------------------------------------------
+// Validador do digito verificador do CNPJ (evita chamada desnecessaria a API)
+// ---------------------------------------------------------------------------
+
+function nmValidarCNPJ(cnpj) {
+    const v = cnpj.replace(/\D/g, '');
+    if (v.length !== 14) return false;
+    if (/^(\d)\1+$/.test(v)) return false; // bloqueia 00000000000000, 11111111111111, etc.
+
+    function calcDigito(base, peso) {
+        let soma = 0;
+        for (let i = 0; i < base.length; i++) {
+            soma += parseInt(base[i]) * peso--;
+            if (peso < 2) peso = 9;
+        }
+        const resto = soma % 11;
+        return resto < 2 ? 0 : 11 - resto;
+    }
+
+    const d1 = calcDigito(v.slice(0, 12), 5);
+    const d2 = calcDigito(v.slice(0, 13), 6);
+
+    return d1 === parseInt(v[12]) && d2 === parseInt(v[13]);
 }
 
 // ---------------------------------------------------------------------------
@@ -76,6 +99,11 @@ async function nmBuscarCNPJ() {
         return;
     }
 
+    if (!nmValidarCNPJ(cnpj)) {
+        nmFeedback('cnpj-feedback', 'CNPJ invalido. Verifique os digitos digitados.', 'error');
+        return;
+    }
+
     nmFeedback('cnpj-feedback', '', '');
     nmSetLoading('btn-buscar-cnpj', true);
 
@@ -83,7 +111,9 @@ async function nmBuscarCNPJ() {
         const response = await fetch('https://brasilapi.com.br/api/cnpj/v1/' + cnpj);
 
         if (!response.ok) {
-            nmFeedback('cnpj-feedback', 'CNPJ nao encontrado ou invalido.', 'error');
+            const err = await response.json().catch(() => ({}));
+            const msg = err.message || 'CNPJ nao encontrado na Receita Federal.';
+            nmFeedback('cnpj-feedback', msg, 'error');
             return;
         }
 
@@ -187,33 +217,28 @@ async function nmBuscarCEP() {
 }
 
 // ---------------------------------------------------------------------------
-// Expoe as funcoes em window (fallback para onclick inline em paginas legadas)
+// Expoe em window como fallback
 // ---------------------------------------------------------------------------
 window.nmBuscarCNPJ = nmBuscarCNPJ;
 window.nmBuscarCEP  = nmBuscarCEP;
 
 // ---------------------------------------------------------------------------
-// Registra event listeners assim que o DOM estiver pronto
-// Estrategia principal: nao depende de onclick inline no HTML
+// Registra listeners quando o DOM estiver pronto
 // ---------------------------------------------------------------------------
 
 function nmInitFormListeners() {
-    // --- Botao buscar CNPJ ---
     const btnCnpj = document.getElementById('btn-buscar-cnpj');
     if (btnCnpj) {
-        // Remove onclick legado se existir e usa addEventListener
         btnCnpj.removeAttribute('onclick');
         btnCnpj.addEventListener('click', nmBuscarCNPJ);
     }
 
-    // --- Botao buscar CEP ---
     const btnCep = document.getElementById('btn-buscar-cep');
     if (btnCep) {
         btnCep.removeAttribute('onclick');
         btnCep.addEventListener('click', nmBuscarCEP);
     }
 
-    // --- Mascara CNPJ ---
     const cnpjInput = document.getElementById('cnpj');
     if (cnpjInput) {
         cnpjInput.addEventListener('input', function () {
@@ -224,7 +249,6 @@ function nmInitFormListeners() {
         });
     }
 
-    // --- Mascara CEP ---
     const cepInput = document.getElementById('cep');
     if (cepInput) {
         cepInput.addEventListener('input', function () {
@@ -235,7 +259,6 @@ function nmInitFormListeners() {
         });
     }
 
-    // --- Mascara Telefone ---
     const phoneInput = document.getElementById('phone');
     if (phoneInput) {
         phoneInput.addEventListener('input', function () {
@@ -244,14 +267,10 @@ function nmInitFormListeners() {
     }
 }
 
-// Aguarda DOM pronto (DOMContentLoaded ou imediato se ja carregou)
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', nmInitFormListeners);
 } else {
-    // DOM ja esta pronto (script carregado defer/async)
     nmInitFormListeners();
 }
 
-// Seguranca extra: o GLPI as vezes renderiza formularios via AJAX apos o load.
-// Escuta o evento personalizado do GLPI para re-inicializar os listeners.
 document.addEventListener('glpi:ajaxformloaded', nmInitFormListeners);
