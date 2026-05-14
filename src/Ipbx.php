@@ -312,9 +312,6 @@ class Ipbx extends \CommonDBTM
 
     // ------------------------------------------------------------------
     // Linha Fixa — registro único, formulário de edição em grade 3 colunas
-    // Se não existir registro, cria ao salvar (add_line).
-    // Se já existir, atualiza (update_line).
-    // Não há opção de adicionar novo nem de excluir.
     // ------------------------------------------------------------------
     private function renderLinesForm(int $ipbx_id, int $companies_id, string $csrf, string $action, string $redirect): void
     {
@@ -370,7 +367,6 @@ class Ipbx extends \CommonDBTM
         echo '<input type="hidden" name="redirect" value="' . $redirect . '">';
 
         echo '<table class="tab_cadre_fixe nm-table">';
-        echo '<tr><th colspan="6">' . __('Linha Fixa', 'newmanagement') . '</th></tr>';
 
         // Linha 1: Número Piloto | Qtd DDR | Status
         echo '<tr class="tab_bg_1">';
