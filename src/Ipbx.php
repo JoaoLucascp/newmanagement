@@ -77,7 +77,8 @@ class Ipbx extends \CommonDBTM
         echo '<div class="nm-ipbx-tab">';
 
         // ---- Form Servidor IPBX ----
-        echo '<form method="post" action="' . $action . '" id="nm-ipbx-form">';
+        // autocomplete="off" no form para evitar aviso do Chrome sobre multiplos forms com senha
+        echo '<form method="post" action="' . $action . '" id="nm-ipbx-form" autocomplete="off">';
         echo '<input type="hidden" name="_glpi_csrf_token" value="' . $csrf . '">';
         echo '<input type="hidden" name="action" value="' . ($ipbx_id > 0 ? 'update_ipbx' : 'add_ipbx') . '">';
         echo '<input type="hidden" name="id" value="' . $ipbx_id . '">';
@@ -88,21 +89,21 @@ class Ipbx extends \CommonDBTM
 
         echo '<tr class="tab_bg_1">';
         echo '<td>' . __('Modelo', 'newmanagement') . '</td>';
-        echo '<td><input type="text" name="model" value="' . htmlspecialchars($fields['model'] ?? '', ENT_QUOTES) . '" class="form-control"></td>';
+        echo '<td><input type="text" name="model" autocomplete="off" value="' . htmlspecialchars($fields['model'] ?? '', ENT_QUOTES) . '" class="form-control"></td>';
         echo '<td>' . __('Versão', 'newmanagement') . '</td>';
-        echo '<td><input type="text" name="server_version" value="' . htmlspecialchars($fields['server_version'] ?? '', ENT_QUOTES) . '" class="form-control"></td>';
+        echo '<td><input type="text" name="server_version" autocomplete="off" value="' . htmlspecialchars($fields['server_version'] ?? '', ENT_QUOTES) . '" class="form-control"></td>';
         echo '</tr>';
 
         echo '<tr class="tab_bg_1">';
         echo '<td>' . __('IP Local', 'newmanagement') . '</td>';
-        echo '<td><input type="text" name="ip_local" value="' . htmlspecialchars($fields['ip_local'] ?? '', ENT_QUOTES) . '" class="form-control" placeholder="192.168.1.1"></td>';
+        echo '<td><input type="text" name="ip_local" autocomplete="off" value="' . htmlspecialchars($fields['ip_local'] ?? '', ENT_QUOTES) . '" class="form-control" placeholder="192.168.1.1"></td>';
         echo '<td>' . __('IP Externo', 'newmanagement') . '</td>';
-        echo '<td><input type="text" name="ip_external" value="' . htmlspecialchars($fields['ip_external'] ?? '', ENT_QUOTES) . '" class="form-control" placeholder="201.x.x.x"></td>';
+        echo '<td><input type="text" name="ip_external" autocomplete="off" value="' . htmlspecialchars($fields['ip_external'] ?? '', ENT_QUOTES) . '" class="form-control" placeholder="201.x.x.x"></td>';
         echo '</tr>';
 
         echo '<tr class="tab_bg_1">';
         echo '<td>' . __('Porta Web', 'newmanagement') . '</td>';
-        echo '<td><input type="text" name="web_port" value="' . htmlspecialchars($fields['web_port'] ?? '', ENT_QUOTES) . '" class="form-control" placeholder="80"></td>';
+        echo '<td><input type="text" name="web_port" autocomplete="off" value="' . htmlspecialchars($fields['web_port'] ?? '', ENT_QUOTES) . '" class="form-control" placeholder="80"></td>';
         echo '<td>' . __('Senha Web', 'newmanagement') . '</td>';
         echo '<td>';
         echo '  <div class="nm-input-group">';
@@ -114,7 +115,7 @@ class Ipbx extends \CommonDBTM
 
         echo '<tr class="tab_bg_1">';
         echo '<td>' . __('Porta SSH', 'newmanagement') . '</td>';
-        echo '<td><input type="text" name="ssh_port" value="' . htmlspecialchars($fields['ssh_port'] ?? '', ENT_QUOTES) . '" class="form-control" placeholder="22"></td>';
+        echo '<td><input type="text" name="ssh_port" autocomplete="off" value="' . htmlspecialchars($fields['ssh_port'] ?? '', ENT_QUOTES) . '" class="form-control" placeholder="22"></td>';
         echo '<td>' . __('Senha SSH', 'newmanagement') . '</td>';
         echo '<td>';
         echo '  <div class="nm-input-group">';
@@ -209,20 +210,20 @@ class Ipbx extends \CommonDBTM
 
         echo '</tbody></table>';
 
-        // ---- Linha de adição — form independente, fora da table ----
-        echo '<form method="post" action="' . $action . '" class="nm-add-form nm-add-ext-form" style="margin-top:8px">';
+        // Form de adição independente — autocomplete="off" no form inteiro
+        echo '<form method="post" action="' . $action . '" class="nm-add-form nm-add-ext-form" autocomplete="off" style="margin-top:8px">';
         echo '<input type="hidden" name="_glpi_csrf_token" value="' . $csrf . '">';
         echo '<input type="hidden" name="action" value="add_extension">';
         echo '<input type="hidden" name="ipbx_id" value="' . $ipbx_id . '">';
         echo '<input type="hidden" name="companies_id" value="' . $companies_id . '">';
         echo '<input type="hidden" name="redirect" value="' . $redirect . '">';
         echo '<div class="nm-add-row d-flex flex-wrap gap-2 align-items-center">';
-        echo '<input type="text" name="number" class="form-control form-control-sm" placeholder="' . __('Número', 'newmanagement') . '" style="width:110px">';
-        echo '<input type="password" name="password" class="form-control form-control-sm" placeholder="' . __('Senha', 'newmanagement') . '" autocomplete="new-password" style="width:110px">';
-        echo '<input type="text" name="device_ip" class="form-control form-control-sm" placeholder="IP" style="width:120px">';
-        echo '<input type="text" name="user_name" class="form-control form-control-sm" placeholder="' . __('Usuário', 'newmanagement') . '" style="width:120px">';
+        echo '<input type="text" name="number" autocomplete="off" class="form-control form-control-sm" placeholder="' . __('Número', 'newmanagement') . '" style="width:110px">';
+        echo '<input type="password" name="password" autocomplete="new-password" class="form-control form-control-sm" placeholder="' . __('Senha', 'newmanagement') . '" style="width:110px">';
+        echo '<input type="text" name="device_ip" autocomplete="off" class="form-control form-control-sm" placeholder="IP" style="width:120px">';
+        echo '<input type="text" name="user_name" autocomplete="off" class="form-control form-control-sm" placeholder="' . __('Usuário', 'newmanagement') . '" style="width:120px">';
         echo '<select name="records_calls" class="form-select form-select-sm" style="width:90px"><option value="0">' . __('Não', 'newmanagement') . '</option><option value="1">' . __('Sim', 'newmanagement') . '</option></select>';
-        echo '<input type="text" name="department" class="form-control form-control-sm" placeholder="' . __('Departamento', 'newmanagement') . '" style="width:140px">';
+        echo '<input type="text" name="department" autocomplete="off" class="form-control form-control-sm" placeholder="' . __('Departamento', 'newmanagement') . '" style="width:140px">';
         echo '<button type="submit" class="btn btn-sm btn-success"><i class="ti ti-plus"></i> ' . __('Adicionar Ramal', 'newmanagement') . '</button>';
         echo '</div>';
         echo '</form>';
@@ -267,16 +268,16 @@ class Ipbx extends \CommonDBTM
 
         echo '</tbody></table>';
 
-        echo '<form method="post" action="' . $action . '" class="nm-add-form" style="margin-top:8px">';
+        echo '<form method="post" action="' . $action . '" class="nm-add-form" autocomplete="off" style="margin-top:8px">';
         echo '<input type="hidden" name="_glpi_csrf_token" value="' . $csrf . '">';
         echo '<input type="hidden" name="action" value="add_device">';
         echo '<input type="hidden" name="ipbx_id" value="' . $ipbx_id . '">';
         echo '<input type="hidden" name="companies_id" value="' . $companies_id . '">';
         echo '<input type="hidden" name="redirect" value="' . $redirect . '">';
         echo '<div class="nm-add-row d-flex flex-wrap gap-2 align-items-center">';
-        echo '<input type="text" name="device_type" class="form-control form-control-sm" placeholder="' . __('Tipo', 'newmanagement') . '" style="width:160px">';
-        echo '<input type="text" name="ip_address" class="form-control form-control-sm" placeholder="IP" style="width:160px">';
-        echo '<input type="password" name="password" class="form-control form-control-sm" placeholder="' . __('Senha', 'newmanagement') . '" autocomplete="new-password" style="width:140px">';
+        echo '<input type="text" name="device_type" autocomplete="off" class="form-control form-control-sm" placeholder="' . __('Tipo', 'newmanagement') . '" style="width:160px">';
+        echo '<input type="text" name="ip_address" autocomplete="off" class="form-control form-control-sm" placeholder="IP" style="width:160px">';
+        echo '<input type="password" name="password" autocomplete="new-password" class="form-control form-control-sm" placeholder="' . __('Senha', 'newmanagement') . '" style="width:140px">';
         echo '<button type="submit" class="btn btn-sm btn-success"><i class="ti ti-plus"></i> ' . __('Adicionar Dispositivo', 'newmanagement') . '</button>';
         echo '</div>';
         echo '</form>';
@@ -325,18 +326,18 @@ class Ipbx extends \CommonDBTM
 
         echo '</tbody></table>';
 
-        echo '<form method="post" action="' . $action . '" class="nm-add-form" style="margin-top:8px">';
+        echo '<form method="post" action="' . $action . '" class="nm-add-form" autocomplete="off" style="margin-top:8px">';
         echo '<input type="hidden" name="_glpi_csrf_token" value="' . $csrf . '">';
         echo '<input type="hidden" name="action" value="add_network">';
         echo '<input type="hidden" name="ipbx_id" value="' . $ipbx_id . '">';
         echo '<input type="hidden" name="companies_id" value="' . $companies_id . '">';
         echo '<input type="hidden" name="redirect" value="' . $redirect . '">';
         echo '<div class="nm-add-row d-flex flex-wrap gap-2 align-items-center">';
-        echo '<input type="text" name="ip_network" class="form-control form-control-sm" placeholder="192.168.1.0" style="width:140px">';
-        echo '<input type="text" name="netmask" class="form-control form-control-sm" placeholder="255.255.255.0" style="width:140px">';
-        echo '<input type="text" name="gateway" class="form-control form-control-sm" placeholder="192.168.1.1" style="width:130px">';
-        echo '<input type="text" name="dns_primary" class="form-control form-control-sm" placeholder="8.8.8.8" style="width:120px">';
-        echo '<input type="text" name="dns_secondary" class="form-control form-control-sm" placeholder="8.8.4.4" style="width:120px">';
+        echo '<input type="text" name="ip_network" autocomplete="off" class="form-control form-control-sm" placeholder="192.168.1.0" style="width:140px">';
+        echo '<input type="text" name="netmask" autocomplete="off" class="form-control form-control-sm" placeholder="255.255.255.0" style="width:140px">';
+        echo '<input type="text" name="gateway" autocomplete="off" class="form-control form-control-sm" placeholder="192.168.1.1" style="width:130px">';
+        echo '<input type="text" name="dns_primary" autocomplete="off" class="form-control form-control-sm" placeholder="8.8.8.8" style="width:120px">';
+        echo '<input type="text" name="dns_secondary" autocomplete="off" class="form-control form-control-sm" placeholder="8.8.4.4" style="width:120px">';
         echo '<button type="submit" class="btn btn-sm btn-success"><i class="ti ti-plus"></i> ' . __('Adicionar Rede', 'newmanagement') . '</button>';
         echo '</div>';
         echo '</form>';
@@ -390,7 +391,7 @@ class Ipbx extends \CommonDBTM
             return htmlspecialchars((string)($f[$key] ?? ''), ENT_QUOTES);
         };
 
-        echo '<form method="post" action="' . $action . '" id="nm-lines-form">';
+        echo '<form method="post" action="' . $action . '" id="nm-lines-form" autocomplete="off">';
         echo '<input type="hidden" name="_glpi_csrf_token" value="' . $csrf . '">';
         echo '<input type="hidden" name="action" value="' . $form_action . '">';
         echo '<input type="hidden" name="id" value="' . $line_id . '">';
@@ -402,9 +403,9 @@ class Ipbx extends \CommonDBTM
 
         echo '<tr class="tab_bg_1">';
         echo '<td>' . __('Número Piloto', 'newmanagement') . '</td>';
-        echo '<td><input type="text" name="pilot_number" value="' . $v('pilot_number') . '" class="form-control" placeholder="Ex: 1131000000"></td>';
+        echo '<td><input type="text" name="pilot_number" autocomplete="off" value="' . $v('pilot_number') . '" class="form-control" placeholder="Ex: 1131000000"></td>';
         echo '<td>' . __('Quantidade de DDR', 'newmanagement') . '</td>';
-        echo '<td><input type="number" name="ddr_count" value="' . $v('ddr_count') . '" class="form-control" min="0" placeholder="0"></td>';
+        echo '<td><input type="number" name="ddr_count" autocomplete="off" value="' . $v('ddr_count') . '" class="form-control" min="0" placeholder="0"></td>';
         echo '<td>' . __('Status', 'newmanagement') . '</td>';
         echo '<td><select name="status" class="form-select">';
         foreach ($status_opts as $val => $lbl) {
@@ -416,35 +417,35 @@ class Ipbx extends \CommonDBTM
 
         echo '<tr class="tab_bg_1">';
         echo '<td>' . __('Operadora', 'newmanagement') . '</td>';
-        echo '<td><input type="text" name="operator" value="' . $v('operator') . '" class="form-control" placeholder="Ex: Vivo"></td>';
+        echo '<td><input type="text" name="operator" autocomplete="off" value="' . $v('operator') . '" class="form-control" placeholder="Ex: Vivo"></td>';
         echo '<td>' . __('Quantidade de Canais', 'newmanagement') . '</td>';
-        echo '<td><input type="number" name="channels" value="' . $v('channels') . '" class="form-control" min="0" placeholder="0"></td>';
+        echo '<td><input type="number" name="channels" autocomplete="off" value="' . $v('channels') . '" class="form-control" min="0" placeholder="0"></td>';
         echo '<td>' . __('IP Proxy', 'newmanagement') . '</td>';
-        echo '<td><input type="text" name="proxy_ip" value="' . $v('proxy_ip') . '" class="form-control" placeholder="Ex: 200.x.x.x"></td>';
+        echo '<td><input type="text" name="proxy_ip" autocomplete="off" value="' . $v('proxy_ip') . '" class="form-control" placeholder="Ex: 200.x.x.x"></td>';
         echo '</tr>';
 
         echo '<tr class="tab_bg_1">';
         echo '<td>' . __('Tipo', 'newmanagement') . '</td>';
-        echo '<td><input type="text" name="line_type" value="' . $v('line_type') . '" class="form-control" placeholder="Ex: SIP, E1"></td>';
+        echo '<td><input type="text" name="line_type" autocomplete="off" value="' . $v('line_type') . '" class="form-control" placeholder="Ex: SIP, E1"></td>';
         echo '<td>' . __('IP Tráfego Áudio', 'newmanagement') . '</td>';
-        echo '<td><input type="text" name="audio_ip" value="' . $v('audio_ip') . '" class="form-control" placeholder="Ex: 200.x.x.x"></td>';
+        echo '<td><input type="text" name="audio_ip" autocomplete="off" value="' . $v('audio_ip') . '" class="form-control" placeholder="Ex: 200.x.x.x"></td>';
         echo '<td>' . __('Porta Proxy', 'newmanagement') . '</td>';
-        echo '<td><input type="text" name="proxy_port" value="' . $v('proxy_port') . '" class="form-control" placeholder="Ex: 5060"></td>';
+        echo '<td><input type="text" name="proxy_port" autocomplete="off" value="' . $v('proxy_port') . '" class="form-control" placeholder="Ex: 5060"></td>';
         echo '</tr>';
 
         echo '<tr class="tab_bg_1">';
         echo '<td>' . __('Data Portabilidade', 'newmanagement') . '</td>';
-        echo '<td><input type="date" name="portability_date" value="' . $v('portability_date') . '" class="form-control"></td>';
+        echo '<td><input type="date" name="portability_date" autocomplete="off" value="' . $v('portability_date') . '" class="form-control"></td>';
         echo '<td>' . __('Operadora Anterior', 'newmanagement') . '</td>';
-        echo '<td><input type="text" name="previous_operator" value="' . $v('previous_operator') . '" class="form-control" placeholder="Ex: Claro"></td>';
+        echo '<td><input type="text" name="previous_operator" autocomplete="off" value="' . $v('previous_operator') . '" class="form-control" placeholder="Ex: Claro"></td>';
         echo '<td colspan="2"></td>';
         echo '</tr>';
 
         echo '<tr class="tab_bg_1">';
         echo '<td>' . __('Data de Ativação', 'newmanagement') . '</td>';
-        echo '<td><input type="date" name="activation_date" value="' . $v('activation_date') . '" class="form-control"></td>';
+        echo '<td><input type="date" name="activation_date" autocomplete="off" value="' . $v('activation_date') . '" class="form-control"></td>';
         echo '<td>' . __('Data de Vencimento', 'newmanagement') . '</td>';
-        echo '<td><input type="date" name="expiration_date" value="' . $v('expiration_date') . '" class="form-control"></td>';
+        echo '<td><input type="date" name="expiration_date" autocomplete="off" value="' . $v('expiration_date') . '" class="form-control"></td>';
         echo '<td colspan="2"></td>';
         echo '</tr>';
 
@@ -464,8 +465,6 @@ class Ipbx extends \CommonDBTM
         // ---- JS: Salvar IPBX + Linha Fixa; Deletar via fetch ----
         echo '<script>';
         echo '(function(){';
-
-        // Salvar: submete nm-ipbx-form, depois nm-lines-form em sequência
         echo 'document.addEventListener("DOMContentLoaded", function(){';
         echo '  var btnSave = document.getElementById("nm-save-all");';
         echo '  if(!btnSave) return;';
@@ -475,13 +474,9 @@ class Ipbx extends \CommonDBTM
         echo '    if(!ipbxForm || !linesForm){ return; }';
         echo '    var fd = new FormData(ipbxForm);';
         echo '    fetch(ipbxForm.action, {method:"POST", body:fd})';
-        echo '      .then(function(){';
-        echo '        linesForm.submit();';
-        echo '      })';
+        echo '      .then(function(){ linesForm.submit(); })';
         echo '      .catch(function(){ linesForm.submit(); });';
         echo '  });';
-
-        // Deletar via fetch + reload
         echo '  document.querySelectorAll(".nm-delete-btn").forEach(function(btn){';
         echo '    btn.addEventListener("click", function(){';
         echo '      var msg = btn.dataset.confirm || "Confirmar?";';
@@ -496,8 +491,7 @@ class Ipbx extends \CommonDBTM
         echo '        .then(function(){ window.location.reload(); });';
         echo '    });';
         echo '  });';
-
-        echo '});'; // DOMContentLoaded
+        echo '});';
         echo '})();';
         echo '</script>';
     }
