@@ -12,12 +12,13 @@ use GlpiPlugin\Newmanagement\Ipbx;
 use GlpiPlugin\Newmanagement\Company;
 
 Session::checkLoginUser();
-Session::checkCsrfToken();
+// CSRF é validado automaticamente pelo middleware do GLPI 11 (Symfony)
+// Session::checkCsrfToken() foi removido — não usar no GLPI 11
 Session::checkRight(Ipbx::$rightname, READ);
 
-$action      = $_POST['action']      ?? '';
+$action       = $_POST['action']       ?? '';
 $companies_id = (int)($_POST['companies_id'] ?? 0);
-$redirect    = $_POST['redirect']    ?? '';
+$redirect     = $_POST['redirect']     ?? '';
 
 // Sanitiza redirect — aceita apenas URIs internas
 if (!preg_match('#^/[^/]#', $redirect)) {
@@ -178,6 +179,32 @@ switch ($action) {
                 'date_mod'           => $now,
             ]);
         }
+        break;
+
+    case 'update_line':
+        Session::checkRight(Ipbx::$rightname, UPDATE);
+        $toDate = static fn(string $v): ?string => $v !== '' ? $v : null;
+        $DB->update(
+            'glpi_plugin_newmanagement_ipbx_lines',
+            [
+                'pilot_number'       => $_POST['pilot_number']      ?? '',
+                'line_type'          => $_POST['line_type']          ?? '',
+                'operator'           => $_POST['operator']           ?? '',
+                'channels'           => (int)($_POST['channels']     ?? 0),
+                'ddr_count'          => (int)($_POST['ddr_count']    ?? 0),
+                'proxy_ip'           => $_POST['proxy_ip']           ?? '',
+                'proxy_port'         => $_POST['proxy_port']         ?? '',
+                'audio_ip'           => $_POST['audio_ip']           ?? '',
+                'portability_date'   => $toDate($_POST['portability_date']   ?? ''),
+                'previous_operator'  => $_POST['previous_operator']  ?? '',
+                'activation_date'    => $toDate($_POST['activation_date']    ?? ''),
+                'expiration_date'    => $toDate($_POST['expiration_date']     ?? ''),
+                'status'             => (int)($_POST['status']        ?? 1),
+                'comment'            => $_POST['comment']             ?? '',
+                'date_mod'           => $now,
+            ],
+            ['id' => (int)($_POST['id'] ?? 0)]
+        );
         break;
 
     case 'delete_line':
