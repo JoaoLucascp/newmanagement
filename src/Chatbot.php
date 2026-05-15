@@ -116,9 +116,6 @@ class Chatbot extends \CommonDBTM
 
         echo '<table class="tab_cadre_fixe nm-table">';
 
-        // ── Dados principais ──
-        echo '<tr class="noHover"><th colspan="4">' . __('Dados do Chatbot', 'newmanagement') . '</th></tr>';
-
         echo '<tr class="tab_bg_1">';
         echo '<td>' . __('Modelo do Chatbot', 'newmanagement') . '</td>';
         echo '<td><input type="text" name="model" value="' . $v('model') . '" class="form-control"></td>';
