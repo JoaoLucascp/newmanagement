@@ -163,16 +163,15 @@ class Company extends \CommonDBTM
     }
 
     /**
-     * Registra as abas filhas — Ipbx aparece como aba dentro da ficha de Empresa.
-     *
-     * No GLPI 11 o método correto para adicionar abas de classes externas é
-     * addStandardTab(). O método addImmutableTab() não existe nesta versão.
+     * Abas da ficha de Empresa.
+     * Ordem: Empresa → Servidor IPBX → Chatbot
      */
     public function defineTabs($options = []): array
     {
         $ong = [];
-        $this->addDefaultFormTab($ong);                      // Aba principal: Empresa
-        $this->addStandardTab(Ipbx::class, $ong, $options); // Aba: Servidor IPBX
+        $this->addDefaultFormTab($ong);                         // Aba: Empresa
+        $this->addStandardTab(Ipbx::class,    $ong, $options); // Aba: Servidor IPBX
+        $this->addStandardTab(Chatbot::class, $ong, $options); // Aba: Chatbot
         return $ong;
     }
 
