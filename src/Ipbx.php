@@ -60,10 +60,13 @@ class Ipbx extends \CommonDBTM
 
         echo '<div class="nm-ipbx-tab" data-action-url="' . $h($action) . '" data-companies-id="' . $companies_id . '">';
 
-        // ---- Formulário único do servidor IPBX ----
-        // FIX: campos de senha (web/SSH) estão DENTRO deste form, evitando o
-        // aviso "Password field is not contained in a form" do Chrome.
-        echo '<form method="post" action="' . $h($action) . '" id="nm-ipbx-form" autocomplete="off">';
+        // ---- Formulário do servidor IPBX ----
+        // FIX: sem method/action — submit é 100% via fetch() no JS.
+        // Isso evita que o Chrome trate este form como form de login/senha
+        // e dispare o aviso "Multiple forms should be contained in their own
+        // form elements" junto com o erro de extensões de gerenciador de senhas.
+        // A URL de destino fica armazenada em data-action-url no container pai.
+        echo '<form id="nm-ipbx-form" autocomplete="off" onsubmit="return false;">';
         echo '<input type="hidden" name="_glpi_csrf_token" value="' . $csrf . '">';
         echo '<input type="hidden" name="action" value="' . ($ipbx_id > 0 ? 'update_ipbx' : 'add_ipbx') . '">';
         echo '<input type="hidden" name="id" value="' . $ipbx_id . '">';
@@ -85,15 +88,9 @@ class Ipbx extends \CommonDBTM
         echo '</tr><tr class="tab_bg_1">';
         echo '<td>' . __('Comentário', 'newmanagement') . '</td><td colspan="3"><textarea name="comment" class="form-control" rows="2">' . $h($fields['comment']) . '</textarea></td>';
         echo '</tr></table>';
-
-        // ---- Botão Salvar IPBX (dentro do form para submit nativo funcionar) ----
-        // FIX: o botão principal "#nm-save-all" fica FORA dos forms para não
-        // acionar submit nativo. O JS cuida do fluxo correto.
         echo '</form>';
 
         // ---- Ramais ----
-        // FIX: campos de senha dos ramais agora ficam dentro de um <form role="presentation">
-        // para satisfazer o Chrome sem criar um segundo form real que conflite.
         echo '<div class="nm-subsection mt-3">';
         echo '<h5><i class="ti ti-phone-call"></i> ' . __('Ramais', 'newmanagement') . '</h5>';
         $this->renderExtensions($ipbx_id, $companies_id, $csrf, $action);
@@ -117,9 +114,11 @@ class Ipbx extends \CommonDBTM
         $this->renderLines($ipbx_id, $companies_id, $csrf, $action);
         echo '</div>';
 
-        // ---- Botão Salvar (IPBX + Linha Fixa) — FORA de qualquer <form> ----
+        // ---- Botão Salvar (IPBX + Linha Fixa) — fora dos forms ----
         echo '<div class="text-end mt-3 mb-3">';
-        echo '<button type="button" id="nm-save-all" class="btn btn-primary"><i class="ti ti-device-floppy"></i> ' . __('Salvar', 'newmanagement') . '</button>';
+        echo '<button type="button" id="nm-save-all" class="btn btn-primary"'
+            . ' data-action-url="' . $h($action) . '">'
+            . '<i class="ti ti-device-floppy"></i> ' . __('Salvar', 'newmanagement') . '</button>';
         echo '</div>';
 
         echo '</div>'; // .nm-ipbx-tab
@@ -148,8 +147,8 @@ class Ipbx extends \CommonDBTM
         }
         echo '</tbody></table>';
 
-        // FIX: campo type="password" envolto em <form role="presentation"> para
-        // silenciar o aviso do Chrome sem criar um form real de submit.
+        // FIX: form role="presentation" para conter o campo password sem
+        // acionar rastreamento de login pelo Chrome/extensões de senha.
         echo '<form role="presentation" autocomplete="off" onsubmit="return false;" style="margin:0">';
         echo '<div class="nm-add-row d-flex flex-wrap gap-2 align-items-center mt-2" id="nm-ext-add">';
         echo '<input type="text" id="nm-ext-number" autocomplete="off" class="form-control form-control-sm" placeholder="' . __('Número','newmanagement') . '" style="width:110px">';
@@ -210,7 +209,7 @@ class Ipbx extends \CommonDBTM
         }
         echo '</tbody></table>';
 
-        // FIX: campo type="password" dentro de form presentation
+        // FIX: form role="presentation" para conter o campo password
         echo '<form role="presentation" autocomplete="off" onsubmit="return false;" style="margin:0">';
         echo '<div class="nm-add-row d-flex flex-wrap gap-2 align-items-center mt-2" id="nm-dev-add">';
         echo '<input type="text" id="nm-dev-device_type" autocomplete="off" class="form-control form-control-sm" placeholder="' . __('Tipo','newmanagement') . '" style="width:160px">';
@@ -320,7 +319,10 @@ class Ipbx extends \CommonDBTM
         $form_action = $line_id > 0 ? 'update_line' : 'add_line';
         $status_opts = [1 => __('Ativo','newmanagement'), 2 => __('Cancelado','newmanagement')];
 
-        echo '<form method="post" action="' . htmlspecialchars($action, ENT_QUOTES) . '" id="nm-lines-form" autocomplete="off">';
+        // FIX: sem method/action — submit é 100% via fetch() no JS.
+        // Isso impede que o Chrome rastreie este form como candidato a
+        // salvar senha e dispare o aviso sobre múltiplos forms.
+        echo '<form id="nm-lines-form" autocomplete="off" onsubmit="return false;">';
         echo '<input type="hidden" name="_glpi_csrf_token" value="' . $csrf . '">';
         echo '<input type="hidden" name="action" value="' . $form_action . '">';
         echo '<input type="hidden" name="id" value="' . $line_id . '">';
@@ -359,21 +361,24 @@ class Ipbx extends \CommonDBTM
     // ======================================================================
     private function renderJS(string $csrf, string $action): void
     {
+        $actionEscaped = htmlspecialchars($action, ENT_QUOTES);
         echo <<<HTML
 <script>
 (function(){
   'use strict';
 
+  // URL do endpoint — lida do data-action-url do botão salvar
+  // para não depender de method/action no <form>.
+  var NM_ACTION_URL = '{$actionEscaped}';
+
   // -----------------------------------------------------------------------
-  // FIX CSRF: envia SEMPRE o token tanto no body quanto no header
-  // X-Glpi-Csrf-Token exigido pelo CheckCsrfListener do GLPI 11 (Symfony).
+  // CSRF: envia o token no header X-Glpi-Csrf-Token (GLPI 11 / Symfony)
+  // e também no body para retrocompatibilidade.
   // -----------------------------------------------------------------------
   function nmPost(url, data) {
     var fd = new FormData();
     Object.keys(data).forEach(function(k){ fd.append(k, data[k]); });
 
-    // Tenta obter token do campo hidden (passado via data-csrf no botão)
-    // ou do meta tag injetado pelo GLPI 11.
     var token = data['_glpi_csrf_token'] || '';
     if (!token) {
       var meta = document.querySelector('meta[name="glpi-csrf-token"]');
@@ -388,12 +393,10 @@ class Ipbx extends \CommonDBTM
   }
 
   function getCsrf(btn) { return btn.dataset.csrf || ''; }
-  function getUrl(btn)  { return btn.dataset.url  || ''; }
+  function getUrl(btn)  { return btn.dataset.url  || NM_ACTION_URL; }
 
   // -----------------------------------------------------------------------
-  // FIX ipbx_id = 0: ao salvar um IPBX novo, captura o id retornado e
-  // atualiza data-ipbx-id em TODOS os botões de adição de sub-itens,
-  // bem como os campos hidden ipbx_id nos forms de linhas.
+  // Atualiza ipbx_id em todos os botões de sub-itens após gravar IPBX novo
   // -----------------------------------------------------------------------
   function nmUpdateIpbxId(newId) {
     ['#nm-ext-add-btn','#nm-dev-add-btn','#nm-net-add-btn'].forEach(function(sel){
@@ -403,7 +406,6 @@ class Ipbx extends \CommonDBTM
     var hiddenLines = document.querySelector('#nm-lines-form input[name="ipbx_id"]');
     if (hiddenLines) hiddenLines.value = newId;
 
-    // Muda action do form IPBX para update nas próximas gravações
     var hiddenAction = document.querySelector('#nm-ipbx-form input[name="action"]');
     if (hiddenAction) hiddenAction.value = 'update_ipbx';
     var hiddenId = document.querySelector('#nm-ipbx-form input[name="id"]');
@@ -411,21 +413,23 @@ class Ipbx extends \CommonDBTM
   }
 
   // -----------------------------------------------------------------------
-  // Botão Salvar — grava IPBX (fetch JSON) → depois submete Linha Fixa
+  // Botão Salvar: grava IPBX via fetch → depois grava Linha Fixa via fetch
+  // (os forms NÃO têm method/action — submit feito 100% aqui)
   // -----------------------------------------------------------------------
   document.addEventListener('click', function(e){
     if (!e.target.closest('#nm-save-all')) return;
+    e.preventDefault();
+
     var ipbxForm  = document.getElementById('nm-ipbx-form');
     var linesForm = document.getElementById('nm-lines-form');
     if (!ipbxForm || !linesForm) return;
-    e.preventDefault();
 
     var fd    = new FormData(ipbxForm);
     var token = fd.get('_glpi_csrf_token') || '';
     var meta  = document.querySelector('meta[name="glpi-csrf-token"]');
     if (!token && meta) token = meta.getAttribute('content');
 
-    fetch(ipbxForm.action, {
+    fetch(NM_ACTION_URL, {
       method: 'POST',
       headers: { 'X-Glpi-Csrf-Token': token },
       body: fd
@@ -434,14 +438,13 @@ class Ipbx extends \CommonDBTM
     .then(function(json){
       if (json && json.id) {
         nmUpdateIpbxId(json.id);
-        // Atualiza ipbx_id no form de linhas antes de submeter
-        var hiddenLines = linesForm.querySelector('input[name="ipbx_id"]');
-        if (hiddenLines) hiddenLines.value = json.id;
+        var hl = linesForm.querySelector('input[name="ipbx_id"]');
+        if (hl) hl.value = json.id;
       }
-      // Envia o form de linha fixa com CSRF no header via fetch também
-      var lfd   = new FormData(linesForm);
-      var ltok  = lfd.get('_glpi_csrf_token') || token;
-      fetch(linesForm.action, {
+
+      var lfd  = new FormData(linesForm);
+      var ltok = lfd.get('_glpi_csrf_token') || token;
+      fetch(NM_ACTION_URL, {
         method: 'POST',
         headers: { 'X-Glpi-Csrf-Token': ltok },
         body: lfd
@@ -449,13 +452,11 @@ class Ipbx extends \CommonDBTM
       .then(function(lr){ return lr.json(); })
       .then(function(lj){
         if (lj && lj.id) {
-          // Atualiza action para update nas próximas gravações
           var la = linesForm.querySelector('input[name="action"]');
           if (la) la.value = 'update_line';
           var li = linesForm.querySelector('input[name="id"]');
           if (li) li.value = lj.id;
         }
-        // Feedback visual simples
         var btn = document.getElementById('nm-save-all');
         if (btn) {
           btn.classList.add('btn-success');
@@ -495,8 +496,7 @@ class Ipbx extends \CommonDBTM
   });
 
   // -----------------------------------------------------------------------
-  // FIX ipbx_id = 0 nos botões de adição: bloqueia e avisa o usuário se
-  // ainda não salvou o IPBX principal.
+  // Valida ipbx_id antes de adicionar sub-item
   // -----------------------------------------------------------------------
   function checkIpbxSaved(btn) {
     var id = parseInt(btn.dataset.ipbxId || '0', 10);
