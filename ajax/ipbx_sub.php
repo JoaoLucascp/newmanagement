@@ -4,82 +4,84 @@
  * Newmanagement - Handler AJAX/POST para sub-dados do IPBX
  * Ações: add/delete de ramais, dispositivos, rede e linha fixa
  * + add/update do registro principal IPBX
+ *
+ * Responde SEMPRE com JSON { success: bool, error?: string, id?: int }
  */
 
 include('../../../inc/includes.php');
 
 use GlpiPlugin\Newmanagement\Ipbx;
-use GlpiPlugin\Newmanagement\Company;
 
 Session::checkLoginUser();
-// CSRF é validado automaticamente pelo middleware do GLPI 11 (Symfony)
-// Session::checkCsrfToken() foi removido — não usar no GLPI 11
 Session::checkRight(Ipbx::$rightname, READ);
+
+// Garante que qualquer saída seja JSON
+header('Content-Type: application/json; charset=utf-8');
+
+// Helper: encerra com JSON
+function nmJson(bool $ok, array $extra = []): void {
+    echo json_encode(array_merge(['success' => $ok], $extra));
+    exit;
+}
 
 $action       = $_POST['action']       ?? '';
 $companies_id = (int)($_POST['companies_id'] ?? 0);
-$redirect     = $_POST['redirect']     ?? '';
-
-// Sanitiza redirect — aceita apenas URIs internas
-if (!preg_match('#^/[^/]#', $redirect)) {
-    $redirect = '/plugins/newmanagement/front/company.php';
-}
 
 if ($companies_id <= 0) {
-    \Html::back();
-    exit;
+    nmJson(false, ['error' => 'companies_id inválido']);
 }
 
 global $DB;
 $now = date('Y-m-d H:i:s');
 
-switch ($action) {
+try {
+    switch ($action) {
 
-    // ------------------------------------------------------------------
-    // IPBX principal
-    // ------------------------------------------------------------------
-    case 'add_ipbx':
-        Session::checkRight(Ipbx::$rightname, CREATE);
-        $ipbx = new Ipbx();
-        $ipbx->add([
-            'companies_id'   => $companies_id,
-            'model'          => $_POST['model']          ?? '',
-            'server_version' => $_POST['server_version'] ?? '',
-            'ip_local'       => $_POST['ip_local']       ?? '',
-            'ip_external'    => $_POST['ip_external']    ?? '',
-            'web_port'       => $_POST['web_port']       ?? '',
-            'web_password'   => $_POST['web_password']   ?? '',
-            'ssh_port'       => $_POST['ssh_port']       ?? '',
-            'ssh_password'   => $_POST['ssh_password']   ?? '',
-            'comment'        => $_POST['comment']        ?? '',
-        ]);
-        break;
+        // ------------------------------------------------------------------
+        // IPBX principal
+        // ------------------------------------------------------------------
+        case 'add_ipbx':
+            Session::checkRight(Ipbx::$rightname, CREATE);
+            $ipbx = new Ipbx();
+            $newId = $ipbx->add([
+                'companies_id'   => $companies_id,
+                'model'          => $_POST['model']          ?? '',
+                'server_version' => $_POST['server_version'] ?? '',
+                'ip_local'       => $_POST['ip_local']       ?? '',
+                'ip_external'    => $_POST['ip_external']    ?? '',
+                'web_port'       => $_POST['web_port']       ?? '',
+                'web_password'   => $_POST['web_password']   ?? '',
+                'ssh_port'       => $_POST['ssh_port']       ?? '',
+                'ssh_password'   => $_POST['ssh_password']   ?? '',
+                'comment'        => $_POST['comment']        ?? '',
+            ]);
+            nmJson(true, ['id' => $newId]);
 
-    case 'update_ipbx':
-        Session::checkRight(Ipbx::$rightname, UPDATE);
-        $ipbx = new Ipbx();
-        $ipbx->update([
-            'id'             => (int)($_POST['id'] ?? 0),
-            'companies_id'   => $companies_id,
-            'model'          => $_POST['model']          ?? '',
-            'server_version' => $_POST['server_version'] ?? '',
-            'ip_local'       => $_POST['ip_local']       ?? '',
-            'ip_external'    => $_POST['ip_external']    ?? '',
-            'web_port'       => $_POST['web_port']       ?? '',
-            'web_password'   => $_POST['web_password']   ?? '',
-            'ssh_port'       => $_POST['ssh_port']       ?? '',
-            'ssh_password'   => $_POST['ssh_password']   ?? '',
-            'comment'        => $_POST['comment']        ?? '',
-        ]);
-        break;
+        case 'update_ipbx':
+            Session::checkRight(Ipbx::$rightname, UPDATE);
+            $ipbx = new Ipbx();
+            $ipbx->update([
+                'id'             => (int)($_POST['id'] ?? 0),
+                'companies_id'   => $companies_id,
+                'model'          => $_POST['model']          ?? '',
+                'server_version' => $_POST['server_version'] ?? '',
+                'ip_local'       => $_POST['ip_local']       ?? '',
+                'ip_external'    => $_POST['ip_external']    ?? '',
+                'web_port'       => $_POST['web_port']       ?? '',
+                'web_password'   => $_POST['web_password']   ?? '',
+                'ssh_port'       => $_POST['ssh_port']       ?? '',
+                'ssh_password'   => $_POST['ssh_password']   ?? '',
+                'comment'        => $_POST['comment']        ?? '',
+            ]);
+            nmJson(true);
 
-    // ------------------------------------------------------------------
-    // Ramais
-    // ------------------------------------------------------------------
-    case 'add_extension':
-        Session::checkRight(Ipbx::$rightname, CREATE);
-        $ipbx_id = (int)($_POST['ipbx_id'] ?? 0);
-        if ($ipbx_id > 0) {
+        // ------------------------------------------------------------------
+        // Ramais
+        // ------------------------------------------------------------------
+        case 'add_extension':
+            Session::checkRight(Ipbx::$rightname, CREATE);
+            $ipbx_id = (int)($_POST['ipbx_id'] ?? 0);
+            if ($ipbx_id <= 0) nmJson(false, ['error' => 'ipbx_id inválido']);
             $DB->insert('glpi_plugin_newmanagement_ipbx_extensions', [
                 'ipbx_id'       => $ipbx_id,
                 'companies_id'  => $companies_id,
@@ -92,21 +94,20 @@ switch ($action) {
                 'date_creation' => $now,
                 'date_mod'      => $now,
             ]);
-        }
-        break;
+            nmJson(true, ['id' => $DB->insertId()]);
 
-    case 'delete_extension':
-        Session::checkRight(Ipbx::$rightname, DELETE);
-        $DB->delete('glpi_plugin_newmanagement_ipbx_extensions', ['id' => (int)($_POST['id'] ?? 0)]);
-        break;
+        case 'delete_extension':
+            Session::checkRight(Ipbx::$rightname, DELETE);
+            $DB->delete('glpi_plugin_newmanagement_ipbx_extensions', ['id' => (int)($_POST['id'] ?? 0)]);
+            nmJson(true);
 
-    // ------------------------------------------------------------------
-    // Dispositivos
-    // ------------------------------------------------------------------
-    case 'add_device':
-        Session::checkRight(Ipbx::$rightname, CREATE);
-        $ipbx_id = (int)($_POST['ipbx_id'] ?? 0);
-        if ($ipbx_id > 0) {
+        // ------------------------------------------------------------------
+        // Dispositivos
+        // ------------------------------------------------------------------
+        case 'add_device':
+            Session::checkRight(Ipbx::$rightname, CREATE);
+            $ipbx_id = (int)($_POST['ipbx_id'] ?? 0);
+            if ($ipbx_id <= 0) nmJson(false, ['error' => 'ipbx_id inválido']);
             $DB->insert('glpi_plugin_newmanagement_ipbx_devices', [
                 'ipbx_id'       => $ipbx_id,
                 'companies_id'  => $companies_id,
@@ -116,21 +117,20 @@ switch ($action) {
                 'date_creation' => $now,
                 'date_mod'      => $now,
             ]);
-        }
-        break;
+            nmJson(true, ['id' => $DB->insertId()]);
 
-    case 'delete_device':
-        Session::checkRight(Ipbx::$rightname, DELETE);
-        $DB->delete('glpi_plugin_newmanagement_ipbx_devices', ['id' => (int)($_POST['id'] ?? 0)]);
-        break;
+        case 'delete_device':
+            Session::checkRight(Ipbx::$rightname, DELETE);
+            $DB->delete('glpi_plugin_newmanagement_ipbx_devices', ['id' => (int)($_POST['id'] ?? 0)]);
+            nmJson(true);
 
-    // ------------------------------------------------------------------
-    // Rede
-    // ------------------------------------------------------------------
-    case 'add_network':
-        Session::checkRight(Ipbx::$rightname, CREATE);
-        $ipbx_id = (int)($_POST['ipbx_id'] ?? 0);
-        if ($ipbx_id > 0) {
+        // ------------------------------------------------------------------
+        // Rede
+        // ------------------------------------------------------------------
+        case 'add_network':
+            Session::checkRight(Ipbx::$rightname, CREATE);
+            $ipbx_id = (int)($_POST['ipbx_id'] ?? 0);
+            if ($ipbx_id <= 0) nmJson(false, ['error' => 'ipbx_id inválido']);
             $DB->insert('glpi_plugin_newmanagement_ipbx_network', [
                 'ipbx_id'       => $ipbx_id,
                 'companies_id'  => $companies_id,
@@ -142,21 +142,20 @@ switch ($action) {
                 'date_creation' => $now,
                 'date_mod'      => $now,
             ]);
-        }
-        break;
+            nmJson(true, ['id' => $DB->insertId()]);
 
-    case 'delete_network':
-        Session::checkRight(Ipbx::$rightname, DELETE);
-        $DB->delete('glpi_plugin_newmanagement_ipbx_network', ['id' => (int)($_POST['id'] ?? 0)]);
-        break;
+        case 'delete_network':
+            Session::checkRight(Ipbx::$rightname, DELETE);
+            $DB->delete('glpi_plugin_newmanagement_ipbx_network', ['id' => (int)($_POST['id'] ?? 0)]);
+            nmJson(true);
 
-    // ------------------------------------------------------------------
-    // Linha Fixa
-    // ------------------------------------------------------------------
-    case 'add_line':
-        Session::checkRight(Ipbx::$rightname, CREATE);
-        $ipbx_id = (int)($_POST['ipbx_id'] ?? 0);
-        if ($ipbx_id > 0) {
+        // ------------------------------------------------------------------
+        // Linha Fixa
+        // ------------------------------------------------------------------
+        case 'add_line':
+            Session::checkRight(Ipbx::$rightname, CREATE);
+            $ipbx_id = (int)($_POST['ipbx_id'] ?? 0);
+            if ($ipbx_id <= 0) nmJson(false, ['error' => 'ipbx_id inválido']);
             $toDate = static fn(string $v): ?string => $v !== '' ? $v : null;
             $DB->insert('glpi_plugin_newmanagement_ipbx_lines', [
                 'ipbx_id'            => $ipbx_id,
@@ -178,39 +177,42 @@ switch ($action) {
                 'date_creation'      => $now,
                 'date_mod'           => $now,
             ]);
-        }
-        break;
+            nmJson(true, ['id' => $DB->insertId()]);
 
-    case 'update_line':
-        Session::checkRight(Ipbx::$rightname, UPDATE);
-        $toDate = static fn(string $v): ?string => $v !== '' ? $v : null;
-        $DB->update(
-            'glpi_plugin_newmanagement_ipbx_lines',
-            [
-                'pilot_number'       => $_POST['pilot_number']      ?? '',
-                'line_type'          => $_POST['line_type']          ?? '',
-                'operator'           => $_POST['operator']           ?? '',
-                'channels'           => (int)($_POST['channels']     ?? 0),
-                'ddr_count'          => (int)($_POST['ddr_count']    ?? 0),
-                'proxy_ip'           => $_POST['proxy_ip']           ?? '',
-                'proxy_port'         => $_POST['proxy_port']         ?? '',
-                'audio_ip'           => $_POST['audio_ip']           ?? '',
-                'portability_date'   => $toDate($_POST['portability_date']   ?? ''),
-                'previous_operator'  => $_POST['previous_operator']  ?? '',
-                'activation_date'    => $toDate($_POST['activation_date']    ?? ''),
-                'expiration_date'    => $toDate($_POST['expiration_date']     ?? ''),
-                'status'             => (int)($_POST['status']        ?? 1),
-                'comment'            => $_POST['comment']             ?? '',
-                'date_mod'           => $now,
-            ],
-            ['id' => (int)($_POST['id'] ?? 0)]
-        );
-        break;
+        case 'update_line':
+            Session::checkRight(Ipbx::$rightname, UPDATE);
+            $toDate = static fn(string $v): ?string => $v !== '' ? $v : null;
+            $DB->update(
+                'glpi_plugin_newmanagement_ipbx_lines',
+                [
+                    'pilot_number'       => $_POST['pilot_number']      ?? '',
+                    'line_type'          => $_POST['line_type']          ?? '',
+                    'operator'           => $_POST['operator']           ?? '',
+                    'channels'           => (int)($_POST['channels']     ?? 0),
+                    'ddr_count'          => (int)($_POST['ddr_count']    ?? 0),
+                    'proxy_ip'           => $_POST['proxy_ip']           ?? '',
+                    'proxy_port'         => $_POST['proxy_port']         ?? '',
+                    'audio_ip'           => $_POST['audio_ip']           ?? '',
+                    'portability_date'   => $toDate($_POST['portability_date']   ?? ''),
+                    'previous_operator'  => $_POST['previous_operator']  ?? '',
+                    'activation_date'    => $toDate($_POST['activation_date']    ?? ''),
+                    'expiration_date'    => $toDate($_POST['expiration_date']     ?? ''),
+                    'status'             => (int)($_POST['status']        ?? 1),
+                    'comment'            => $_POST['comment']             ?? '',
+                    'date_mod'           => $now,
+                ],
+                ['id' => (int)($_POST['id'] ?? 0)]
+            );
+            nmJson(true);
 
-    case 'delete_line':
-        Session::checkRight(Ipbx::$rightname, DELETE);
-        $DB->delete('glpi_plugin_newmanagement_ipbx_lines', ['id' => (int)($_POST['id'] ?? 0)]);
-        break;
+        case 'delete_line':
+            Session::checkRight(Ipbx::$rightname, DELETE);
+            $DB->delete('glpi_plugin_newmanagement_ipbx_lines', ['id' => (int)($_POST['id'] ?? 0)]);
+            nmJson(true);
+
+        default:
+            nmJson(false, ['error' => 'Ação desconhecida: ' . $action]);
+    }
+} catch (\Throwable $e) {
+    nmJson(false, ['error' => $e->getMessage()]);
 }
-
-\Html::redirect($redirect);
