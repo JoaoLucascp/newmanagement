@@ -85,7 +85,6 @@ class Ipbx extends \CommonDBTM
         echo '<input type="hidden" name="redirect" value="' . $redirect . '">';
 
         echo '<table class="tab_cadre_fixe nm-table">';
-        echo '<tr><th colspan="4">' . __('Servidor IPBX', 'newmanagement') . '</th></tr>';
 
         echo '<tr class="tab_bg_1">';
         echo '<td>' . __('Modelo', 'newmanagement') . '</td>';
@@ -379,7 +378,6 @@ class Ipbx extends \CommonDBTM
 
         echo '<table class="tab_cadre_fixe nm-table">';
 
-        // Linha 1: Número Piloto | Qtd DDR | Status
         echo '<tr class="tab_bg_1">';
         echo '<td>' . __('Número Piloto', 'newmanagement') . '</td>';
         echo '<td><input type="text" name="pilot_number" value="' . $v('pilot_number') . '" class="form-control" placeholder="Ex: 1131000000"></td>';
@@ -394,7 +392,6 @@ class Ipbx extends \CommonDBTM
         echo '</select></td>';
         echo '</tr>';
 
-        // Linha 2: Operadora | Qtd Canais | IP Proxy
         echo '<tr class="tab_bg_1">';
         echo '<td>' . __('Operadora', 'newmanagement') . '</td>';
         echo '<td><input type="text" name="operator" value="' . $v('operator') . '" class="form-control" placeholder="Ex: Vivo"></td>';
@@ -404,7 +401,6 @@ class Ipbx extends \CommonDBTM
         echo '<td><input type="text" name="proxy_ip" value="' . $v('proxy_ip') . '" class="form-control" placeholder="Ex: 200.x.x.x"></td>';
         echo '</tr>';
 
-        // Linha 3: Tipo | IP Tráfego Áudio | Porta Proxy
         echo '<tr class="tab_bg_1">';
         echo '<td>' . __('Tipo', 'newmanagement') . '</td>';
         echo '<td><input type="text" name="line_type" value="' . $v('line_type') . '" class="form-control" placeholder="Ex: SIP, E1"></td>';
@@ -414,7 +410,6 @@ class Ipbx extends \CommonDBTM
         echo '<td><input type="text" name="proxy_port" value="' . $v('proxy_port') . '" class="form-control" placeholder="Ex: 5060"></td>';
         echo '</tr>';
 
-        // Linha 4: Data Portabilidade | Op. Anterior
         echo '<tr class="tab_bg_1">';
         echo '<td>' . __('Data Portabilidade', 'newmanagement') . '</td>';
         echo '<td><input type="date" name="portability_date" value="' . $v('portability_date') . '" class="form-control"></td>';
@@ -423,7 +418,6 @@ class Ipbx extends \CommonDBTM
         echo '<td colspan="2"></td>';
         echo '</tr>';
 
-        // Linha 5: Data Ativação | Data Vencimento
         echo '<tr class="tab_bg_1">';
         echo '<td>' . __('Data de Ativação', 'newmanagement') . '</td>';
         echo '<td><input type="date" name="activation_date" value="' . $v('activation_date') . '" class="form-control"></td>';
@@ -432,13 +426,11 @@ class Ipbx extends \CommonDBTM
         echo '<td colspan="2"></td>';
         echo '</tr>';
 
-        // Linha 6: Comentário (largura total)
         echo '<tr class="tab_bg_1">';
         echo '<td>' . __('Comentário', 'newmanagement') . '</td>';
         echo '<td colspan="5"><textarea name="comment" class="form-control" rows="2">' . $v('comment') . '</textarea></td>';
         echo '</tr>';
 
-        // Botão Salvar único para toda a página
         echo '<tr><td colspan="6" style="text-align:right;padding:8px">';
         echo '<button type="button" id="nm-save-all" class="btn btn-primary"><i class="ti ti-device-floppy"></i> ' . __('Salvar', 'newmanagement') . '</button>';
         echo '</td></tr>';
