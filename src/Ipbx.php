@@ -61,6 +61,8 @@ class Ipbx extends \CommonDBTM
         echo '<div class="nm-ipbx-tab" data-action-url="' . $h($action) . '" data-companies-id="' . $companies_id . '">';
 
         // ---- Formulário único do servidor IPBX ----
+        // FIX: campos de senha (web/SSH) estão DENTRO deste form, evitando o
+        // aviso "Password field is not contained in a form" do Chrome.
         echo '<form method="post" action="' . $h($action) . '" id="nm-ipbx-form" autocomplete="off">';
         echo '<input type="hidden" name="_glpi_csrf_token" value="' . $csrf . '">';
         echo '<input type="hidden" name="action" value="' . ($ipbx_id > 0 ? 'update_ipbx' : 'add_ipbx') . '">';
@@ -82,9 +84,16 @@ class Ipbx extends \CommonDBTM
         echo '<td>' . __('Senha SSH', 'newmanagement') . '</td><td><div class="input-group"><input type="password" id="ssh_password" name="ssh_password" value="' . $h($fields['ssh_password']) . '" class="form-control" autocomplete="new-password"><button type="button" class="btn btn-outline-secondary nm-btn-eye" data-target="ssh_password"><i class="ti ti-eye"></i></button></div></td>';
         echo '</tr><tr class="tab_bg_1">';
         echo '<td>' . __('Comentário', 'newmanagement') . '</td><td colspan="3"><textarea name="comment" class="form-control" rows="2">' . $h($fields['comment']) . '</textarea></td>';
-        echo '</tr></table></form>';
+        echo '</tr></table>';
+
+        // ---- Botão Salvar IPBX (dentro do form para submit nativo funcionar) ----
+        // FIX: o botão principal "#nm-save-all" fica FORA dos forms para não
+        // acionar submit nativo. O JS cuida do fluxo correto.
+        echo '</form>';
 
         // ---- Ramais ----
+        // FIX: campos de senha dos ramais agora ficam dentro de um <form role="presentation">
+        // para satisfazer o Chrome sem criar um segundo form real que conflite.
         echo '<div class="nm-subsection mt-3">';
         echo '<h5><i class="ti ti-phone-call"></i> ' . __('Ramais', 'newmanagement') . '</h5>';
         $this->renderExtensions($ipbx_id, $companies_id, $csrf, $action);
@@ -108,7 +117,7 @@ class Ipbx extends \CommonDBTM
         $this->renderLines($ipbx_id, $companies_id, $csrf, $action);
         echo '</div>';
 
-        // ---- Botão Salvar (IPBX + Linha Fixa) ----
+        // ---- Botão Salvar (IPBX + Linha Fixa) — FORA de qualquer <form> ----
         echo '<div class="text-end mt-3 mb-3">';
         echo '<button type="button" id="nm-save-all" class="btn btn-primary"><i class="ti ti-device-floppy"></i> ' . __('Salvar', 'newmanagement') . '</button>';
         echo '</div>';
@@ -139,7 +148,9 @@ class Ipbx extends \CommonDBTM
         }
         echo '</tbody></table>';
 
-        // Linha de adição — sempre visível abaixo da tabela
+        // FIX: campo type="password" envolto em <form role="presentation"> para
+        // silenciar o aviso do Chrome sem criar um form real de submit.
+        echo '<form role="presentation" autocomplete="off" onsubmit="return false;" style="margin:0">';
         echo '<div class="nm-add-row d-flex flex-wrap gap-2 align-items-center mt-2" id="nm-ext-add">';
         echo '<input type="text" id="nm-ext-number" autocomplete="off" class="form-control form-control-sm" placeholder="' . __('Número','newmanagement') . '" style="width:110px">';
         echo '<input type="password" id="nm-ext-password" autocomplete="new-password" class="form-control form-control-sm" placeholder="' . __('Senha','newmanagement') . '" style="width:110px">';
@@ -155,6 +166,7 @@ class Ipbx extends \CommonDBTM
             . ' data-url="' . htmlspecialchars($action, ENT_QUOTES) . '">'
             . '<i class="ti ti-plus"></i> ' . __('Adicionar Ramal','newmanagement') . '</button>';
         echo '</div>';
+        echo '</form>';
     }
 
     private function extRow(int $id, array $row, int $companies_id, string $csrf, string $action): string
@@ -198,6 +210,8 @@ class Ipbx extends \CommonDBTM
         }
         echo '</tbody></table>';
 
+        // FIX: campo type="password" dentro de form presentation
+        echo '<form role="presentation" autocomplete="off" onsubmit="return false;" style="margin:0">';
         echo '<div class="nm-add-row d-flex flex-wrap gap-2 align-items-center mt-2" id="nm-dev-add">';
         echo '<input type="text" id="nm-dev-device_type" autocomplete="off" class="form-control form-control-sm" placeholder="' . __('Tipo','newmanagement') . '" style="width:160px">';
         echo '<input type="text" id="nm-dev-ip_address" autocomplete="off" class="form-control form-control-sm" placeholder="IP" style="width:160px">';
@@ -210,6 +224,7 @@ class Ipbx extends \CommonDBTM
             . ' data-url="' . htmlspecialchars($action, ENT_QUOTES) . '">'
             . '<i class="ti ti-plus"></i> ' . __('Adicionar Dispositivo','newmanagement') . '</button>';
         echo '</div>';
+        echo '</form>';
     }
 
     private function devRow(int $id, array $row, int $companies_id, string $csrf, string $action): string
@@ -344,40 +359,121 @@ class Ipbx extends \CommonDBTM
     // ======================================================================
     private function renderJS(string $csrf, string $action): void
     {
-        // Mapa: prefixo do botao => campos que devem ser coletados
-        $extFields = ['number','password','device_ip','user_name','records_calls','department'];
-        $devFields = ['device_type','ip_address','password'];
-        $netFields = ['ip_network','netmask','gateway','dns_primary','dns_secondary'];
-
         echo <<<HTML
 <script>
 (function(){
   'use strict';
 
-  // ---- utilitários ----
+  // -----------------------------------------------------------------------
+  // FIX CSRF: envia SEMPRE o token tanto no body quanto no header
+  // X-Glpi-Csrf-Token exigido pelo CheckCsrfListener do GLPI 11 (Symfony).
+  // -----------------------------------------------------------------------
   function nmPost(url, data) {
     var fd = new FormData();
     Object.keys(data).forEach(function(k){ fd.append(k, data[k]); });
-    return fetch(url, {method:'POST', body:fd});
+
+    // Tenta obter token do campo hidden (passado via data-csrf no botão)
+    // ou do meta tag injetado pelo GLPI 11.
+    var token = data['_glpi_csrf_token'] || '';
+    if (!token) {
+      var meta = document.querySelector('meta[name="glpi-csrf-token"]');
+      if (meta) token = meta.getAttribute('content');
+    }
+
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'X-Glpi-Csrf-Token': token },
+      body: fd
+    });
   }
 
   function getCsrf(btn) { return btn.dataset.csrf || ''; }
-  function getUrl(btn) { return btn.dataset.url || ''; }
+  function getUrl(btn)  { return btn.dataset.url  || ''; }
 
-  // ---- Botão Salvar (IPBX + Linha Fixa via fetch em sequência) ----
+  // -----------------------------------------------------------------------
+  // FIX ipbx_id = 0: ao salvar um IPBX novo, captura o id retornado e
+  // atualiza data-ipbx-id em TODOS os botões de adição de sub-itens,
+  // bem como os campos hidden ipbx_id nos forms de linhas.
+  // -----------------------------------------------------------------------
+  function nmUpdateIpbxId(newId) {
+    ['#nm-ext-add-btn','#nm-dev-add-btn','#nm-net-add-btn'].forEach(function(sel){
+      var el = document.querySelector(sel);
+      if (el) el.dataset.ipbxId = newId;
+    });
+    var hiddenLines = document.querySelector('#nm-lines-form input[name="ipbx_id"]');
+    if (hiddenLines) hiddenLines.value = newId;
+
+    // Muda action do form IPBX para update nas próximas gravações
+    var hiddenAction = document.querySelector('#nm-ipbx-form input[name="action"]');
+    if (hiddenAction) hiddenAction.value = 'update_ipbx';
+    var hiddenId = document.querySelector('#nm-ipbx-form input[name="id"]');
+    if (hiddenId) hiddenId.value = newId;
+  }
+
+  // -----------------------------------------------------------------------
+  // Botão Salvar — grava IPBX (fetch JSON) → depois submete Linha Fixa
+  // -----------------------------------------------------------------------
   document.addEventListener('click', function(e){
     if (!e.target.closest('#nm-save-all')) return;
     var ipbxForm  = document.getElementById('nm-ipbx-form');
     var linesForm = document.getElementById('nm-lines-form');
     if (!ipbxForm || !linesForm) return;
     e.preventDefault();
-    var fd = new FormData(ipbxForm);
-    fetch(ipbxForm.action, {method:'POST', body:fd})
-      .then(function(){ linesForm.submit(); })
-      .catch(function(){ linesForm.submit(); });
+
+    var fd    = new FormData(ipbxForm);
+    var token = fd.get('_glpi_csrf_token') || '';
+    var meta  = document.querySelector('meta[name="glpi-csrf-token"]');
+    if (!token && meta) token = meta.getAttribute('content');
+
+    fetch(ipbxForm.action, {
+      method: 'POST',
+      headers: { 'X-Glpi-Csrf-Token': token },
+      body: fd
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(json){
+      if (json && json.id) {
+        nmUpdateIpbxId(json.id);
+        // Atualiza ipbx_id no form de linhas antes de submeter
+        var hiddenLines = linesForm.querySelector('input[name="ipbx_id"]');
+        if (hiddenLines) hiddenLines.value = json.id;
+      }
+      // Envia o form de linha fixa com CSRF no header via fetch também
+      var lfd   = new FormData(linesForm);
+      var ltok  = lfd.get('_glpi_csrf_token') || token;
+      fetch(linesForm.action, {
+        method: 'POST',
+        headers: { 'X-Glpi-Csrf-Token': ltok },
+        body: lfd
+      })
+      .then(function(lr){ return lr.json(); })
+      .then(function(lj){
+        if (lj && lj.id) {
+          // Atualiza action para update nas próximas gravações
+          var la = linesForm.querySelector('input[name="action"]');
+          if (la) la.value = 'update_line';
+          var li = linesForm.querySelector('input[name="id"]');
+          if (li) li.value = lj.id;
+        }
+        // Feedback visual simples
+        var btn = document.getElementById('nm-save-all');
+        if (btn) {
+          btn.classList.add('btn-success');
+          btn.classList.remove('btn-primary');
+          setTimeout(function(){
+            btn.classList.remove('btn-success');
+            btn.classList.add('btn-primary');
+          }, 2000);
+        }
+      })
+      .catch(function(){ alert('Erro ao salvar Linha Fixa.'); });
+    })
+    .catch(function(){ alert('Erro ao salvar IPBX.'); });
   });
 
-  // ---- Deletar (qualquer tabela) ----
+  // -----------------------------------------------------------------------
+  // Deletar (qualquer tabela)
+  // -----------------------------------------------------------------------
   document.addEventListener('click', function(e){
     var btn = e.target.closest('.nm-del-btn');
     if (!btn) return;
@@ -398,18 +494,33 @@ class Ipbx extends \CommonDBTM
       }).catch(function(){ alert('Erro ao remover.'); });
   });
 
-  // ---- Adicionar Ramal ----
+  // -----------------------------------------------------------------------
+  // FIX ipbx_id = 0 nos botões de adição: bloqueia e avisa o usuário se
+  // ainda não salvou o IPBX principal.
+  // -----------------------------------------------------------------------
+  function checkIpbxSaved(btn) {
+    var id = parseInt(btn.dataset.ipbxId || '0', 10);
+    if (id <= 0) {
+      alert('Salve o Servidor IPBX primeiro antes de adicionar sub-itens.');
+      return false;
+    }
+    return true;
+  }
+
+  // -----------------------------------------------------------------------
+  // Adicionar Ramal
+  // -----------------------------------------------------------------------
   document.addEventListener('click', function(e){
     var btn = e.target.closest('#nm-ext-add-btn');
     if (!btn) return;
-    var fields = {number:1,password:1,device_ip:1,user_name:1,records_calls:1,department:1};
+    if (!checkIpbxSaved(btn)) return;
     var data = {
       '_glpi_csrf_token': getCsrf(btn),
       action: btn.dataset.action,
       ipbx_id: btn.dataset.ipbxId,
       companies_id: btn.dataset.companiesId
     };
-    Object.keys(fields).forEach(function(f){
+    ['number','password','device_ip','user_name','records_calls','department'].forEach(function(f){
       var el = document.getElementById('nm-ext-' + f);
       if (el) data[f] = el.value;
     });
@@ -428,10 +539,13 @@ class Ipbx extends \CommonDBTM
       }).catch(function(){ alert('Erro ao adicionar ramal.'); });
   });
 
-  // ---- Adicionar Dispositivo ----
+  // -----------------------------------------------------------------------
+  // Adicionar Dispositivo
+  // -----------------------------------------------------------------------
   document.addEventListener('click', function(e){
     var btn = e.target.closest('#nm-dev-add-btn');
     if (!btn) return;
+    if (!checkIpbxSaved(btn)) return;
     var data = {
       '_glpi_csrf_token': getCsrf(btn),
       action: btn.dataset.action,
@@ -455,10 +569,13 @@ class Ipbx extends \CommonDBTM
       }).catch(function(){ alert('Erro ao adicionar dispositivo.'); });
   });
 
-  // ---- Adicionar Rede ----
+  // -----------------------------------------------------------------------
+  // Adicionar Rede
+  // -----------------------------------------------------------------------
   document.addEventListener('click', function(e){
     var btn = e.target.closest('#nm-net-add-btn');
     if (!btn) return;
+    if (!checkIpbxSaved(btn)) return;
     var data = {
       '_glpi_csrf_token': getCsrf(btn),
       action: btn.dataset.action,
@@ -482,7 +599,9 @@ class Ipbx extends \CommonDBTM
       }).catch(function(){ alert('Erro ao adicionar rede.'); });
   });
 
-  // ---- Mostrar/Ocultar senha ----
+  // -----------------------------------------------------------------------
+  // Mostrar/Ocultar senha
+  // -----------------------------------------------------------------------
   document.addEventListener('click', function(e){
     var btn = e.target.closest('.nm-btn-eye');
     if (!btn) return;
