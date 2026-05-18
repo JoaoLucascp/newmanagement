@@ -151,38 +151,6 @@ function nmClear(ids) {
 }
 
 // ---------------------------------------------------------------------------
-// OPÇÃO A — Injeção dinâmica de campos type="password"
-//
-// O PHP emite apenas <div id="X-slot" data-value="..."> como placeholder.
-// Esta função lê esses slots e cria os <input type="password"> via JS,
-// após o DOMContentLoaded. O Chrome não varre inputs criados dinamicamente
-// para o aviso "Password field is not contained in a form".
-// ---------------------------------------------------------------------------
-
-function nmInjectPasswordFields() {
-    document.querySelectorAll('[id$="-slot"][data-target-id]').forEach(slot => {
-        const targetId    = slot.dataset.targetId;
-        const value       = slot.dataset.value      || '';
-        const placeholder = slot.dataset.placeholder || '';
-        const style       = slot.getAttribute('style') || '';
-
-        // Evita reinjeção ao recarregar (ex: glpi:ajaxformloaded)
-        if (document.getElementById(targetId)) return;
-
-        const input = document.createElement('input');
-        input.type         = 'password';
-        input.id           = targetId;
-        input.value        = value;
-        input.autocomplete = 'new-password';
-        input.className    = 'form-control' + (slot.closest('.form-control-sm, .nm-add-row') ? ' form-control-sm' : '');
-        if (placeholder) input.placeholder = placeholder;
-        if (style)       input.style.cssText = style;
-
-        slot.replaceWith(input);
-    });
-}
-
-// ---------------------------------------------------------------------------
 // HTML do botão excluir — padrão GLPI (btn-icon, sem fundo colorido)
 // Centralizado aqui para manter consistência entre PHP (renderRow) e JS (innerHTML)
 // ---------------------------------------------------------------------------
@@ -534,6 +502,7 @@ function nmInitChatbotButtons() {
         });
     }
 
+    // --- Adicionar Comunicação em Massa ---
     const btnMcAdd = document.getElementById('nm-mc-add-btn');
     if (btnMcAdd && !btnMcAdd._nmBound) {
         btnMcAdd._nmBound = true;
@@ -549,7 +518,7 @@ function nmInitChatbotButtons() {
                 homologation_type:    nmVal('nm-mc-homologation_type'),
                 access_link:          nmVal('nm-mc-access_link'),
                 login:                nmVal('nm-mc-login'),
-                manager:              nmVal('nm-mc-manager'),
+                password:             nmVal('nm-mc-password'),
             };
             try {
                 const result = await nmPost(btnMcAdd.dataset.url, data);
@@ -566,7 +535,7 @@ function nmInitChatbotButtons() {
                         <td>${data.homologation_type}</td>
                         <td>${data.access_link ? '<a href="'+data.access_link+'" target="_blank" rel="noopener"><i class="ti ti-external-link"></i></a>' : ''}</td>
                         <td>${data.login}</td>
-                        <td>${data.manager}</td>
+                        <td>••••••</td>
                         <td><button type="button" class="btn btn-sm btn-danger nm-chatbot-del"
                             data-action="delete_mass_comm" data-id="${result.id}"
                             data-row="nm-mc-row-${result.id}"
@@ -577,13 +546,14 @@ function nmInitChatbotButtons() {
                             <i class="ti ti-trash"></i></button></td>`;
                     addRow.parentNode.insertBefore(tr, addRow);
                 }
-                nmClear(['nm-mc-system_name', 'nm-mc-activation_date', 'nm-mc-authenticated_number', 'nm-mc-homologation_type', 'nm-mc-access_link', 'nm-mc-login', 'nm-mc-manager']);
+                nmClear(['nm-mc-system_name', 'nm-mc-activation_date', 'nm-mc-authenticated_number', 'nm-mc-homologation_type', 'nm-mc-access_link', 'nm-mc-login', 'nm-mc-password']);
             } catch (error) {
                 alert('Erro ao adicionar comunicação em massa: ' + error.message);
             }
         });
     }
 
+    // --- Adicionar Restrição WA ---
     const btnWaAdd = document.getElementById('nm-wa-add-btn');
     if (btnWaAdd && !btnWaAdd._nmBound) {
         btnWaAdd._nmBound = true;
@@ -596,6 +566,7 @@ function nmInitChatbotButtons() {
                 whatsapp_number:  nmVal('nm-wa-whatsapp_number'),
                 restriction_date: nmVal('nm-wa-restriction_date'),
                 restriction_time: nmVal('nm-wa-restriction_time'),
+                end_date:         nmVal('nm-wa-end_date'),
             };
             try {
                 const result = await nmPost(btnWaAdd.dataset.url, data);
@@ -609,6 +580,7 @@ function nmInitChatbotButtons() {
                         <td>${data.whatsapp_number}</td>
                         <td>${data.restriction_date}</td>
                         <td>${data.restriction_time}</td>
+                        <td>${data.end_date}</td>
                         <td><button type="button" class="btn btn-sm btn-danger nm-chatbot-del"
                             data-action="delete_wa_restriction" data-id="${result.id}"
                             data-row="nm-wa-row-${result.id}"
@@ -619,13 +591,14 @@ function nmInitChatbotButtons() {
                             <i class="ti ti-trash"></i></button></td>`;
                     addRow.parentNode.insertBefore(tr, addRow);
                 }
-                nmClear(['nm-wa-whatsapp_number', 'nm-wa-restriction_date', 'nm-wa-restriction_time']);
+                nmClear(['nm-wa-whatsapp_number', 'nm-wa-restriction_date', 'nm-wa-restriction_time', 'nm-wa-end_date']);
             } catch (error) {
                 alert('Erro ao adicionar restrição: ' + error.message);
             }
         });
     }
 
+    // --- Adicionar Usuário Chatbot ---
     const btnCuAdd = document.getElementById('nm-cu-add-btn');
     if (btnCuAdd && !btnCuAdd._nmBound) {
         btnCuAdd._nmBound = true;
@@ -769,9 +742,6 @@ window.nmBuscarCEP  = nmBuscarCEP;
 // ---------------------------------------------------------------------------
 
 function nmInit() {
-    // Injeção de campos password (Opção A) — deve rodar ANTES dos botões
-    nmInjectPasswordFields();
-
     const btnCnpj = document.getElementById('btn-buscar-cnpj');
     if (btnCnpj && !btnCnpj._nmBound) {
         btnCnpj._nmBound = true;
