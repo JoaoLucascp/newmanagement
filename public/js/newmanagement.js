@@ -416,14 +416,28 @@ function nmInitIpbxButtons() {
 }
 
 // ---------------------------------------------------------------------------
-// Chatbot — salvar formulário principal via fetch()
+// Chatbot — todos os handlers via delegação no document
+// Registrados UMA única vez via window._nmChatbotDelegated.
+// Isso garante funcionamento mesmo quando a aba é carregada via AJAX do GLPI
+// após o DOMContentLoaded (nmInit já teria rodado sem o DOM da aba presente).
 // ---------------------------------------------------------------------------
 
 function nmInitChatbotButtons() {
-    const btnSave = document.getElementById('nm-chatbot-save');
-    if (btnSave && !btnSave._nmBound) {
-        btnSave._nmBound = true;
-        btnSave.addEventListener('click', async () => {
+    // Solução 1: registrar TODOS os handlers Chatbot via delegação no document,
+    // incluindo o nm-chatbot-save que antes usava bind direto no elemento.
+    // A flag window._nmChatbotDelegated garante registro único.
+    if (!window._nmChatbotDelegated) {
+        window._nmChatbotDelegated = true;
+
+        // --- Salvar Chatbot (delegado) ---
+        // Antes: bind direto via btnSave._nmBound — falhava quando a aba
+        // ainda não existia no DOM durante o nmInit() inicial.
+        // Agora: delegação no document captura o clique independente de quando
+        // o elemento entra no DOM.
+        document.addEventListener('click', async (e) => {
+            const btnSave = e.target.closest('#nm-chatbot-save');
+            if (!btnSave) return;
+
             const url  = btnSave.dataset.actionUrl;
             const csrf = nmVal('nm-chatbot-csrf') || nmGetCsrfToken();
             const data = {
@@ -454,29 +468,27 @@ function nmInitChatbotButtons() {
             try {
                 const result = await nmPost(url, data);
                 if (!result.success) throw new Error(result.error || 'Erro ao salvar');
+
                 const actionEl = document.getElementById('nm-chatbot-action');
                 const idEl     = document.getElementById('nm-chatbot-id');
                 if (actionEl) actionEl.value = 'update_chatbot';
                 if (idEl && result.id) {
                     idEl.value = result.id;
-                    // Correção 1: propagar o chatbot_id recém-salvo para os três botões add
+                    // Propagar chatbot_id recém-salvo para os três botões add
                     ['nm-mc-add-btn', 'nm-wa-add-btn', 'nm-cu-add-btn'].forEach(btnId => {
                         const b = document.getElementById(btnId);
                         if (b) b.dataset.chatbotId = result.id;
                     });
                 }
+
                 btnSave.classList.replace('btn-primary', 'btn-success');
                 setTimeout(() => btnSave.classList.replace('btn-success', 'btn-primary'), 2000);
             } catch (error) {
                 alert('Erro ao salvar Chatbot: ' + error.message);
             }
         });
-    }
 
-    // Listeners delegados para chatbot (eye + delete + add) — registrados uma única vez
-    if (!window._nmChatbotDelegated) {
-        window._nmChatbotDelegated = true;
-
+        // --- Eye toggle + Delete delegados ---
         document.addEventListener('click', async (e) => {
             const eyeBtn = e.target.closest('.nm-btn-eye');
             if (eyeBtn) {
@@ -508,13 +520,10 @@ function nmInitChatbotButtons() {
             }
         });
 
-        // Correção 3: handlers add via delegação no document (evita problema de re-binding após AJAX do GLPI)
-
         // --- Adicionar Comunicação em Massa (delegado) ---
         document.addEventListener('click', async (e) => {
             const btn = e.target.closest('#nm-mc-add-btn');
             if (!btn) return;
-            // Correção 2: guard chatbot_id=0
             const chatbotId = btn.dataset.chatbotId || '0';
             if (parseInt(chatbotId, 10) <= 0) {
                 alert('Salve o Chatbot primeiro antes de adicionar itens.');
@@ -570,7 +579,6 @@ function nmInitChatbotButtons() {
         document.addEventListener('click', async (e) => {
             const btn = e.target.closest('#nm-wa-add-btn');
             if (!btn) return;
-            // Correção 2: guard chatbot_id=0
             const chatbotId = btn.dataset.chatbotId || '0';
             if (parseInt(chatbotId, 10) <= 0) {
                 alert('Salve o Chatbot primeiro antes de adicionar itens.');
@@ -620,7 +628,6 @@ function nmInitChatbotButtons() {
         document.addEventListener('click', async (e) => {
             const btn = e.target.closest('#nm-cu-add-btn');
             if (!btn) return;
-            // Correção 2: guard chatbot_id=0
             const chatbotId = btn.dataset.chatbotId || '0';
             if (parseInt(chatbotId, 10) <= 0) {
                 alert('Salve o Chatbot primeiro antes de adicionar itens.');
