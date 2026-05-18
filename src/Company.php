@@ -135,7 +135,6 @@ class Company extends \CommonDBTM
         $menu['options']['company']['links']['search'] = '/plugins/newmanagement/front/company.php';
         $menu['options']['company']['links']['add']    = '/plugins/newmanagement/front/company.php?action=add';
 
-        // IPBX On-Premise — entrada que estava faltando no menu lateral
         $menu['options']['ipbx']['title']           = __('IPBX On-Premise', 'newmanagement');
         $menu['options']['ipbx']['page']            = '/plugins/newmanagement/front/ipbx.php';
         $menu['options']['ipbx']['icon']            = 'ti ti-server';
@@ -217,10 +216,10 @@ class Company extends \CommonDBTM
         echo '<tr class="tab_bg_1">';
         echo '<td><label for="cnpj">' . __('CNPJ', 'newmanagement') . '</label></td>';
         echo '<td>';
-        echo '  <div class="nm-input-group">';
+        echo '  <div class="input-group">';
         echo '    <input type="text" id="cnpj" name="cnpj" value="' . $cnpj . '" class="form-control" placeholder="00.000.000/0000-00" maxlength="18">';
-        echo '    <button type="button" class="nm-btn-search" id="btn-buscar-cnpj" title="Buscar CNPJ na BrasilAPI">';
-        echo '      <i class="ti ti-search"></i> Buscar';
+        echo '    <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-buscar-cnpj" title="Buscar CNPJ na BrasilAPI">';
+        echo '      <i class="ti ti-search"></i> ' . __('Buscar', 'newmanagement');
         echo '    </button>';
         echo '  </div>';
         echo '  <span id="cnpj-feedback" class="nm-feedback"></span>';
@@ -239,10 +238,10 @@ class Company extends \CommonDBTM
         echo '<tr class="tab_bg_1">';
         echo '<td><label for="cep">' . __('CEP', 'newmanagement') . '</label></td>';
         echo '<td>';
-        echo '  <div class="nm-input-group">';
+        echo '  <div class="input-group">';
         echo '    <input type="text" id="cep" name="cep" value="' . $cep . '" class="form-control" placeholder="00000-000" maxlength="9">';
-        echo '    <button type="button" class="nm-btn-search" id="btn-buscar-cep" title="Buscar CEP na BrasilAPI">';
-        echo '      <i class="ti ti-search"></i> Buscar';
+        echo '    <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-buscar-cep" title="Buscar CEP na BrasilAPI">';
+        echo '      <i class="ti ti-search"></i> ' . __('Buscar', 'newmanagement');
         echo '    </button>';
         echo '  </div>';
         echo '  <span id="cep-feedback" class="nm-feedback"></span>';
@@ -271,22 +270,9 @@ class Company extends \CommonDBTM
         $this->showFormButtons($options);
 
         // -----------------------------------------------------------------------
-        // Injeção dinâmica via JavaScript — BrasilAPI (CNPJ + CEP)
-        // Toda a lógica de busca é client-side; nenhum dado trafega pelo servidor.
+        // JavaScript — BrasilAPI (CNPJ + CEP) — sem <style> inline (CSS no .css)
         // -----------------------------------------------------------------------
         echo <<<'JS'
-<style>
-.nm-input-group          { display:flex; gap:6px; align-items:center; }
-.nm-btn-search           { display:inline-flex; align-items:center; gap:4px; padding:4px 10px;
-                           font-size:.85rem; border-radius:4px; border:1px solid #aaa;
-                           background:#f5f5f5; color:#1d1d1b !important; cursor:pointer; white-space:nowrap; }
-.nm-btn-search:hover     { background:#e0e0e0; color:#1d1d1b !important; }
-.nm-btn-search:disabled  { opacity:.5; cursor:not-allowed; }
-.nm-feedback             { font-size:.8rem; margin-top:2px; display:block; min-height:1.2em; }
-.nm-feedback.ok          { color:#2e7d32; }
-.nm-feedback.erro        { color:#c62828; }
-</style>
-
 <script>
 (function () {
     'use strict';
@@ -298,7 +284,7 @@ class Company extends \CommonDBTM
         const el = document.getElementById(id);
         if (!el) return;
         el.textContent = msg;
-        el.className = 'nm-feedback ' + (tipo || '');
+        el.className = 'nm-feedback' + (tipo ? ' nm-feedback--' + tipo : '');
     }
 
     function setLoading(btnId, loading) {
@@ -306,7 +292,7 @@ class Company extends \CommonDBTM
         if (!btn) return;
         btn.disabled = loading;
         btn.innerHTML = loading
-            ? '<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Buscando…'
+            ? '<span class="nm-spinner"></span> Buscando…'
             : '<i class="ti ti-search"></i> Buscar';
     }
 
@@ -331,7 +317,7 @@ class Company extends \CommonDBTM
     document.getElementById('btn-buscar-cnpj')?.addEventListener('click', async function () {
         const raw = soDigitos(document.getElementById('cnpj')?.value || '');
         if (raw.length !== 14) {
-            setFeedback('cnpj-feedback', 'CNPJ deve ter 14 dígitos.', 'erro');
+            setFeedback('cnpj-feedback', 'CNPJ deve ter 14 d\u00edgitos.', 'error');
             return;
         }
 
@@ -343,11 +329,10 @@ class Company extends \CommonDBTM
             const data = await res.json();
 
             if (!res.ok) {
-                setFeedback('cnpj-feedback', data.message || 'CNPJ não encontrado.', 'erro');
+                setFeedback('cnpj-feedback', data.message || 'CNPJ n\u00e3o encontrado.', 'error');
                 return;
             }
 
-            /* preenche campos */
             const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
 
             set('razao_social', data.razao_social);
@@ -356,17 +341,15 @@ class Company extends \CommonDBTM
                                     ? '(' + data.ddd_telefone_1.slice(0,2) + ') ' + data.ddd_telefone_1.slice(2)
                                     : '');
 
-            /* monta endereço completo */
             const partes = [
                 data.logradouro  ? data.descricao_tipo_de_logradouro + ' ' + data.logradouro : '',
-                data.numero      ? 'Nº ' + data.numero : '',
+                data.numero      ? 'N\u00ba ' + data.numero : '',
                 data.complemento || '',
                 data.bairro      || '',
                 data.municipio   ? data.municipio + (data.uf ? ' - ' + data.uf : '') : '',
             ].filter(Boolean);
             set('address', partes.join(', '));
 
-            /* aplica máscara no CEP retornado */
             if (data.cep) {
                 const cepLimpo = soDigitos(data.cep).slice(0, 8);
                 set('cep', cepLimpo.length === 8
@@ -374,10 +357,10 @@ class Company extends \CommonDBTM
                     : cepLimpo);
             }
 
-            setFeedback('cnpj-feedback', '✔ Dados preenchidos com sucesso.', 'ok');
+            setFeedback('cnpj-feedback', '\u2714 Dados preenchidos com sucesso.', 'success');
 
         } catch (err) {
-            setFeedback('cnpj-feedback', 'Erro de conexão com a BrasilAPI.', 'erro');
+            setFeedback('cnpj-feedback', 'Erro de conex\u00e3o com a BrasilAPI.', 'error');
             console.error('[NM] CNPJ fetch error:', err);
         } finally {
             setLoading('btn-buscar-cnpj', false);
@@ -388,7 +371,7 @@ class Company extends \CommonDBTM
     document.getElementById('btn-buscar-cep')?.addEventListener('click', async function () {
         const raw = soDigitos(document.getElementById('cep')?.value || '');
         if (raw.length !== 8) {
-            setFeedback('cep-feedback', 'CEP deve ter 8 dígitos.', 'erro');
+            setFeedback('cep-feedback', 'CEP deve ter 8 d\u00edgitos.', 'error');
             return;
         }
 
@@ -400,33 +383,28 @@ class Company extends \CommonDBTM
             const data = await res.json();
 
             if (!res.ok) {
-                setFeedback('cep-feedback', data.message || 'CEP não encontrado.', 'erro');
+                setFeedback('cep-feedback', data.message || 'CEP n\u00e3o encontrado.', 'error');
                 return;
             }
 
             const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
 
             const partes = [
-                data.street      || '',
+                data.street       || '',
                 data.neighborhood || '',
-                data.city        ? data.city + (data.state ? ' - ' + data.state : '') : '',
+                data.city         ? data.city + (data.state ? ' - ' + data.state : '') : '',
             ].filter(Boolean);
             set('address', partes.join(', '));
 
-            setFeedback('cep-feedback', '✔ Endereço preenchido.', 'ok');
+            setFeedback('cep-feedback', '\u2714 Endere\u00e7o preenchido.', 'success');
 
         } catch (err) {
-            setFeedback('cep-feedback', 'Erro de conexão com a BrasilAPI.', 'erro');
+            setFeedback('cep-feedback', 'Erro de conex\u00e3o com a BrasilAPI.', 'error');
             console.error('[NM] CEP fetch error:', err);
         } finally {
             setLoading('btn-buscar-cep', false);
         }
     });
-
-    /* ── animação do ícone de loading ── */
-    const style = document.createElement('style');
-    style.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';
-    document.head.appendChild(style);
 })();
 </script>
 JS;

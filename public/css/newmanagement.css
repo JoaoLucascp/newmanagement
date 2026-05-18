@@ -5,6 +5,8 @@
 
 /* ---------------------------------------------------------------------------
    Input Group: campo + botão de busca lado a lado
+   Usa a classe nativa Bootstrap 5 .input-group do GLPI.
+   .nm-input-group mantida por compatibilidade retroativa.
 --------------------------------------------------------------------------- */
 .nm-input-group {
     display: flex;
@@ -18,40 +20,7 @@
 }
 
 /* ---------------------------------------------------------------------------
-   Botão de busca inline (CNPJ e CEP)
---------------------------------------------------------------------------- */
-.nm-btn-search {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 5px 12px;
-    font-size: 0.8125rem;
-    font-weight: 500;
-    white-space: nowrap;
-    background-color: var(--color-primary, #01696f);
-    color: #fff;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.18s ease, opacity 0.18s ease;
-    line-height: 1.4;
-}
-
-.nm-btn-search:hover:not(:disabled) {
-    background-color: var(--color-primary-hover, #0c4e54);
-}
-
-.nm-btn-search:active:not(:disabled) {
-    background-color: var(--color-primary-active, #0f3638);
-}
-
-.nm-btn-search:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-/* ---------------------------------------------------------------------------
-   Spinner de loading
+   Spinner de loading (usado no estado de carregamento dos botões Buscar)
 --------------------------------------------------------------------------- */
 @keyframes nm-spin {
     to { transform: rotate(360deg); }
@@ -61,15 +30,17 @@
     display: inline-block;
     width: 12px;
     height: 12px;
-    border: 2px solid rgba(255, 255, 255, 0.4);
-    border-top-color: #fff;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
     border-radius: 50%;
     animation: nm-spin 0.7s linear infinite;
     flex-shrink: 0;
+    opacity: 0.6;
+    vertical-align: middle;
 }
 
 /* ---------------------------------------------------------------------------
-   Feedback de validação (abaixo dos campos)
+   Feedback de validação (abaixo dos campos CNPJ e CEP)
 --------------------------------------------------------------------------- */
 .nm-feedback {
     display: block;
