@@ -101,8 +101,6 @@ class Ipbx extends \CommonDBTM
         echo '<td>' . __('Porta Web', 'newmanagement') . '</td>';
         echo '<td><input type="text" id="nm-ipbx-web_port" autocomplete="off" value="' . $h($fields['web_port']) . '" class="form-control" placeholder="80"></td>';
         echo '<td>' . __('Senha Web', 'newmanagement') . '</td>';
-        // OPÇÃO A: placeholder para injeção dinâmica via JS.
-        // O JS lê data-value e cria o <input type="password"> após o DOM carregar.
         echo '<td><div class="input-group">';
         echo '<div id="nm-ipbx-web_password-slot" data-value="' . $h($fields['web_password']) . '" data-target-id="nm-ipbx-web_password"></div>';
         echo '<button type="button" class="btn btn-outline-secondary nm-btn-eye" data-target="nm-ipbx-web_password"><i class="ti ti-eye"></i></button>';
@@ -185,6 +183,7 @@ class Ipbx extends \CommonDBTM
         echo '<table class="tab_cadre_fixehov" id="nm-ext-table">';
 
         // thead com headerRow noHover — padrão GLPI 10/11
+        // Ordem: Número | Senha | IP Aparelho | Usuário | Grava? | Departamento | Ação
         echo '<thead>';
         echo '<tr class="headerRow noHover">';
         foreach ([
@@ -203,21 +202,22 @@ class Ipbx extends \CommonDBTM
 
         echo '<tbody id="nm-ext-tbody">';
 
-        // Linhas existentes
+        // Linhas existentes — class="tab_bg_1"
         foreach ($rows as $row) {
             echo self::renderExtensionRow((int) $row['id'], $row, $companies_id, $csrf, $action);
         }
 
-        // Linha de adição como última <tr class="tab_bg_2"> dentro do tbody — padrão GLPI
+        // Linha de adição — class="tab_bg_2", sempre a última no tbody — padrão GLPI
         echo '<tr class="tab_bg_2" id="nm-ext-add-row">';
 
+        // Número
         echo '<td>';
         echo '<input type="text" id="nm-ext-number" autocomplete="off"';
         echo ' class="form-control form-control-sm"';
         echo ' placeholder="' . __('Número', 'newmanagement') . '">';
         echo '</td>';
 
-        // Slot de senha — JS injeta <input type="password"> aqui pelo data-target-id
+        // Senha — slot: JS injeta <input type="password"> aqui via data-target-id
         echo '<td>';
         echo '<div id="nm-ext-password-slot"';
         echo ' data-target-id="nm-ext-password"';
@@ -225,17 +225,20 @@ class Ipbx extends \CommonDBTM
         echo '</div>';
         echo '</td>';
 
+        // IP Aparelho
         echo '<td>';
         echo '<input type="text" id="nm-ext-device_ip" autocomplete="off"';
         echo ' class="form-control form-control-sm" placeholder="IP">';
         echo '</td>';
 
+        // Usuário
         echo '<td>';
         echo '<input type="text" id="nm-ext-user_name" autocomplete="off"';
         echo ' class="form-control form-control-sm"';
         echo ' placeholder="' . __('Usuário', 'newmanagement') . '">';
         echo '</td>';
 
+        // Grava?
         echo '<td>';
         echo '<select id="nm-ext-records_calls" class="form-select form-select-sm">';
         echo '<option value="0">' . __('Não', 'newmanagement') . '</option>';
@@ -243,13 +246,14 @@ class Ipbx extends \CommonDBTM
         echo '</select>';
         echo '</td>';
 
+        // Departamento
         echo '<td>';
         echo '<input type="text" id="nm-ext-department" autocomplete="off"';
         echo ' class="form-control form-control-sm"';
         echo ' placeholder="' . __('Departamento', 'newmanagement') . '">';
         echo '</td>';
 
-        // Botão adicionar: btn-outline-secondary + ti ti-plus — padrão GLPI
+        // Botão adicionar — btn-outline-secondary + ti ti-plus — padrão GLPI
         echo '<td>';
         echo '<button type="button"';
         echo ' class="btn btn-sm btn-outline-secondary"';
@@ -271,7 +275,7 @@ class Ipbx extends \CommonDBTM
     {
         $h = fn($v) => htmlspecialchars((string) ($v ?? ''), ENT_QUOTES);
 
-        // Ordem das colunas: Número | Senha | IP Aparelho | Usuário | Grava? | Departamento | Ação
+        // Ordem: Número | Senha | IP Aparelho | Usuário | Grava? | Departamento | Ação
         // Botão excluir: btn-icon sem fundo colorido + ti ti-trash text-danger — padrão GLPI
         return '<tr class="tab_bg_1" id="nm-ext-row-' . $id . '">'
             . '<td>' . $h($row['number']) . '</td>'
@@ -311,7 +315,7 @@ class Ipbx extends \CommonDBTM
         echo '<table class="tab_cadre_fixehov" id="nm-dev-table">';
 
         // thead com headerRow noHover — padrão GLPI 10/11
-        // Ordem das colunas: Tipo | IP | Senha | Ação
+        // Ordem: Tipo | IP | Senha | Ação
         echo '<thead>';
         echo '<tr class="headerRow noHover">';
         foreach ([
@@ -327,25 +331,28 @@ class Ipbx extends \CommonDBTM
 
         echo '<tbody id="nm-dev-tbody">';
 
+        // Linhas existentes — class="tab_bg_1"
         foreach ($rows as $row) {
             echo self::renderDeviceRow((int) $row['id'], $row, $companies_id, $csrf, $action);
         }
 
-        // Linha de adição como última <tr class="tab_bg_2"> dentro do tbody — padrão GLPI
+        // Linha de adição — class="tab_bg_2", sempre a última no tbody — padrão GLPI
         echo '<tr class="tab_bg_2" id="nm-dev-add-row">';
 
+        // Tipo
         echo '<td>';
         echo '<input type="text" id="nm-dev-device_type" autocomplete="off"';
         echo ' class="form-control form-control-sm"';
         echo ' placeholder="' . __('Tipo', 'newmanagement') . '">';
         echo '</td>';
 
+        // IP
         echo '<td>';
         echo '<input type="text" id="nm-dev-ip_address" autocomplete="off"';
         echo ' class="form-control form-control-sm" placeholder="IP">';
         echo '</td>';
 
-        // Slot de senha — JS injeta <input type="password"> aqui pelo data-target-id
+        // Senha — slot: JS injeta <input type="password"> aqui via data-target-id
         // Ordem: Tipo | IP | Senha | Ação
         echo '<td>';
         echo '<div id="nm-dev-password-slot"';
@@ -354,7 +361,7 @@ class Ipbx extends \CommonDBTM
         echo '</div>';
         echo '</td>';
 
-        // Botão adicionar: btn-outline-secondary + ti ti-plus — padrão GLPI
+        // Botão adicionar — btn-outline-secondary + ti ti-plus — padrão GLPI
         echo '<td>';
         echo '<button type="button"';
         echo ' class="btn btn-sm btn-outline-secondary"';
@@ -376,7 +383,7 @@ class Ipbx extends \CommonDBTM
     {
         $h = fn($v) => htmlspecialchars((string) ($v ?? ''), ENT_QUOTES);
 
-        // Ordem das colunas: Tipo | IP | Senha | Ação
+        // Ordem: Tipo | IP | Senha | Ação
         // Botão excluir: btn-icon sem fundo colorido + ti ti-trash text-danger — padrão GLPI
         return '<tr class="tab_bg_1" id="nm-dev-row-' . $id . '">'
             . '<td>' . $h($row['device_type']) . '</td>'
@@ -413,7 +420,7 @@ class Ipbx extends \CommonDBTM
         echo '<table class="tab_cadre_fixehov" id="nm-net-table">';
 
         // thead com headerRow noHover — padrão GLPI 10/11
-        // Ordem das colunas: IP Rede | Máscara | Gateway | DNS Primário | DNS Secundário | Ação
+        // Ordem: IP Rede | Máscara | Gateway | DNS Primário | DNS Secundário | Ação
         echo '<thead>';
         echo '<tr class="headerRow noHover">';
         foreach ([
@@ -431,11 +438,12 @@ class Ipbx extends \CommonDBTM
 
         echo '<tbody id="nm-net-tbody">';
 
+        // Linhas existentes — class="tab_bg_1"
         foreach ($rows as $row) {
             echo self::renderNetworkRow((int) $row['id'], $row, $companies_id, $csrf, $action);
         }
 
-        // Linha de adição como última <tr class="tab_bg_2"> dentro do tbody — padrão GLPI
+        // Linha de adição — class="tab_bg_2", sempre a última no tbody — padrão GLPI
         // Ordem: ip_network | netmask | gateway | dns_primary | dns_secondary | Ação
         echo '<tr class="tab_bg_2" id="nm-net-add-row">';
 
@@ -464,7 +472,7 @@ class Ipbx extends \CommonDBTM
         echo ' class="form-control form-control-sm" placeholder="8.8.4.4">';
         echo '</td>';
 
-        // Botão adicionar: btn-outline-secondary + ti ti-plus — padrão GLPI
+        // Botão adicionar — btn-outline-secondary + ti ti-plus — padrão GLPI
         echo '<td>';
         echo '<button type="button"';
         echo ' class="btn btn-sm btn-outline-secondary"';
@@ -486,7 +494,7 @@ class Ipbx extends \CommonDBTM
     {
         $h = fn($v) => htmlspecialchars((string) ($v ?? ''), ENT_QUOTES);
 
-        // Ordem das colunas: IP Rede | Máscara | Gateway | DNS Primário | DNS Secundário | Ação
+        // Ordem: IP Rede | Máscara | Gateway | DNS Primário | DNS Secundário | Ação
         // Botão excluir: btn-icon sem fundo colorido + ti ti-trash text-danger — padrão GLPI
         return '<tr class="tab_bg_1" id="nm-net-row-' . $id . '">'
             . '<td>' . $h($row['ip_network']) . '</td>'
