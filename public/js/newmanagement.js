@@ -242,9 +242,9 @@ function nmInitIpbxButtons() {
                 ip_local:         nmVal('nm-ipbx-ip_local'),
                 ip_external:      nmVal('nm-ipbx-ip_external'),
                 web_port:         nmVal('nm-ipbx-web_port'),
-                web_password:     nmVal('nm-ipbx-web_password'),
+                web_password:     nmVal('nm-web-password'),
                 ssh_port:         nmVal('nm-ipbx-ssh_port'),
-                ssh_password:     nmVal('nm-ipbx-ssh_password'),
+                ssh_password:     nmVal('nm-ssh-password'),
                 comment:          nmVal('nm-ipbx-comment'),
             };
 
@@ -322,6 +322,7 @@ function nmInitIpbxButtons() {
                 companies_id: getCompaniesId(btnDev),
                 device_type:  nmVal('nm-dev-device_type'),
                 ip_address:   nmVal('nm-dev-ip_address'),
+                login:        nmVal('nm-dev-login'),
                 password:     nmVal('nm-dev-password'),
             };
             try {
@@ -335,11 +336,12 @@ function nmInitIpbxButtons() {
                     tr.innerHTML = `
                         <td>${data.device_type}</td>
                         <td>${data.ip_address}</td>
+                        <td>${data.login}</td>
                         <td>••••••</td>
                         <td>${nmDelBtn('delete_device', result.id, 'nm-dev-row-' + result.id, getCompaniesId(btnDev), getBtnUrl(btnDev), 'Remover dispositivo?')}</td>`;
                     addRow.parentNode.insertBefore(tr, addRow);
                 }
-                nmClear(['nm-dev-device_type', 'nm-dev-ip_address', 'nm-dev-password']);
+                nmClear(['nm-dev-device_type', 'nm-dev-ip_address', 'nm-dev-login', 'nm-dev-password']);
             } catch (error) {
                 alert('Erro ao adicionar dispositivo: ' + error.message);
             }
@@ -361,6 +363,7 @@ function nmInitIpbxButtons() {
                 gateway:       nmVal('nm-net-gateway'),
                 dns_primary:   nmVal('nm-net-dns_primary'),
                 dns_secondary: nmVal('nm-net-dns_secondary'),
+                supplier:      nmVal('nm-net-supplier'),
             };
             try {
                 const result = await nmPost(getBtnUrl(btnNet), data);
@@ -376,22 +379,41 @@ function nmInitIpbxButtons() {
                         <td>${data.gateway}</td>
                         <td>${data.dns_primary}</td>
                         <td>${data.dns_secondary}</td>
+                        <td>${data.supplier}</td>
                         <td>${nmDelBtn('delete_network', result.id, 'nm-net-row-' + result.id, getCompaniesId(btnNet), getBtnUrl(btnNet), 'Remover rede?')}</td>`;
                     addRow.parentNode.insertBefore(tr, addRow);
                 }
-                nmClear(['nm-net-ip_network', 'nm-net-netmask', 'nm-net-gateway', 'nm-net-dns_primary', 'nm-net-dns_secondary']);
+                nmClear(['nm-net-ip_network', 'nm-net-netmask', 'nm-net-gateway', 'nm-net-dns_primary', 'nm-net-dns_secondary', 'nm-net-supplier']);
             } catch (error) {
                 alert('Erro ao adicionar rede: ' + error.message);
             }
         });
     }
 
-    // --- Listeners delegados no document (delete + eye) ---
+    // --- Listeners delegados no document (delete + eye + toggle) ---
     // Registrados UMA única vez via flag nmDelegatedListenersRegistered.
     // Usar o document como alvo garante que botões inseridos dinamicamente
     // também sejam capturados sem precisar re-registrar.
     if (!nmDelegatedListenersRegistered) {
         nmDelegatedListenersRegistered = true;
+
+        // Handler: toggle recolher/expandir seções
+        document.addEventListener('click', function(e) {
+            const btn = e.target.closest('.nm-toggle-section');
+            if (!btn) return;
+            const targetId = btn.dataset.target;
+            const tbody = document.getElementById(targetId);
+            if (!tbody) return;
+            const isExpanded = btn.getAttribute('aria-expanded') === 'true';
+            tbody.style.display = isExpanded ? 'none' : '';
+            btn.setAttribute('aria-expanded', String(!isExpanded));
+            const icon = btn.querySelector('i');
+            if (icon) {
+                icon.className = isExpanded
+                    ? 'ti ti-chevron-down'
+                    : 'ti ti-chevron-up';
+            }
+        });
 
         document.addEventListener('click', async (e) => {
             const btn = e.target.closest('.nm-del-btn, .nm-btn-eye');
