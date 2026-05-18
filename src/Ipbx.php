@@ -70,9 +70,6 @@ class Ipbx extends \CommonDBTM
         $action = \Plugin::getWebDir('newmanagement') . '/ajax/ipbx_sub.php';
         $h      = fn($v) => htmlspecialchars((string) ($v ?? ''), ENT_QUOTES);
 
-        // Senhas são passadas como data-* para o JS injetar dinamicamente.
-        // Isso evita type="password" no HTML estático, eliminando o aviso:
-        // [DOM] Password field is not contained in a form
         echo '<div class="nm-ipbx-tab" data-action-url="' . $h($action) . '" data-companies-id="' . $companies_id . '">';
 
         echo '<div id="nm-ipbx-form">';
@@ -102,8 +99,8 @@ class Ipbx extends \CommonDBTM
         echo '<td><input type="text" id="nm-ipbx-web_port" autocomplete="off" value="' . $h($fields['web_port']) . '" class="form-control" placeholder="80"></td>';
         echo '<td>' . __('Senha Web', 'newmanagement') . '</td>';
         echo '<td><div class="input-group">';
-        echo '<div id="nm-ipbx-web_password-slot" data-value="' . $h($fields['web_password']) . '" data-target-id="nm-ipbx-web_password"></div>';
-        echo '<button type="button" class="btn btn-outline-secondary nm-btn-eye" data-target="nm-ipbx-web_password"><i class="ti ti-eye"></i></button>';
+        echo '<input type="password" id="nm-web-password" class="form-control" autocomplete="new-password" value="' . $h($fields['web_password']) . '">';
+        echo '<button type="button" class="btn btn-sm btn-icon nm-btn-eye" data-target="nm-web-password"><i class="ti ti-eye"></i></button>';
         echo '</div></td>';
         echo '</tr>';
 
@@ -112,8 +109,8 @@ class Ipbx extends \CommonDBTM
         echo '<td><input type="text" id="nm-ipbx-ssh_port" autocomplete="off" value="' . $h($fields['ssh_port']) . '" class="form-control" placeholder="22"></td>';
         echo '<td>' . __('Senha SSH', 'newmanagement') . '</td>';
         echo '<td><div class="input-group">';
-        echo '<div id="nm-ipbx-ssh_password-slot" data-value="' . $h($fields['ssh_password']) . '" data-target-id="nm-ipbx-ssh_password"></div>';
-        echo '<button type="button" class="btn btn-outline-secondary nm-btn-eye" data-target="nm-ipbx-ssh_password"><i class="ti ti-eye"></i></button>';
+        echo '<input type="password" id="nm-ssh-password" class="form-control" autocomplete="new-password" value="' . $h($fields['ssh_password']) . '">';
+        echo '<button type="button" class="btn btn-sm btn-icon nm-btn-eye" data-target="nm-ssh-password"><i class="ti ti-eye"></i></button>';
         echo '</div></td>';
         echo '</tr>';
 
@@ -132,6 +129,13 @@ class Ipbx extends \CommonDBTM
         echo '<span class="fw-bold text-muted text-uppercase" style="font-size:0.75rem;letter-spacing:.05em">';
         echo __('Ramais', 'newmanagement');
         echo '</span>';
+        echo '<button type="button"';
+        echo ' class="btn btn-sm btn-icon ms-auto nm-toggle-section"';
+        echo ' data-target="nm-ext-tbody"';
+        echo ' aria-expanded="true"';
+        echo ' title="Recolher/Expandir">';
+        echo '<i class="ti ti-chevron-up"></i>';
+        echo '</button>';
         echo '</div>';
         $this->renderExtensions($ipbx_id, $companies_id, $csrf, $action);
         echo '</div>';
@@ -143,6 +147,13 @@ class Ipbx extends \CommonDBTM
         echo '<span class="fw-bold text-muted text-uppercase" style="font-size:0.75rem;letter-spacing:.05em">';
         echo __('Dispositivos', 'newmanagement');
         echo '</span>';
+        echo '<button type="button"';
+        echo ' class="btn btn-sm btn-icon ms-auto nm-toggle-section"';
+        echo ' data-target="nm-dev-tbody"';
+        echo ' aria-expanded="true"';
+        echo ' title="Recolher/Expandir">';
+        echo '<i class="ti ti-chevron-up"></i>';
+        echo '</button>';
         echo '</div>';
         $this->renderDevices($ipbx_id, $companies_id, $csrf, $action);
         echo '</div>';
@@ -154,6 +165,13 @@ class Ipbx extends \CommonDBTM
         echo '<span class="fw-bold text-muted text-uppercase" style="font-size:0.75rem;letter-spacing:.05em">';
         echo __('Rede da Empresa', 'newmanagement');
         echo '</span>';
+        echo '<button type="button"';
+        echo ' class="btn btn-sm btn-icon ms-auto nm-toggle-section"';
+        echo ' data-target="nm-net-tbody"';
+        echo ' aria-expanded="true"';
+        echo ' title="Recolher/Expandir">';
+        echo '<i class="ti ti-chevron-up"></i>';
+        echo '</button>';
         echo '</div>';
         $this->renderNetwork($ipbx_id, $companies_id, $csrf, $action);
         echo '</div>';
@@ -182,21 +200,27 @@ class Ipbx extends \CommonDBTM
 
         echo '<table class="tab_cadre_fixehov" id="nm-ext-table">';
 
-        // thead com headerRow noHover — padrão GLPI 10/11
-        // Ordem: Número | Senha | IP Aparelho | Usuário | Grava? | Departamento | Ação
+        // thead — padrão GLPI 10/11
+        // Ordem: Número | Senha | IP Aparelho | Usuário | Grava? | Departamento | [botão no th]
         echo '<thead>';
         echo '<tr class="headerRow noHover">';
-        foreach ([
-            __('Número', 'newmanagement'),
-            __('Senha', 'newmanagement'),
-            __('IP Aparelho', 'newmanagement'),
-            __('Usuário', 'newmanagement'),
-            __('Grava?', 'newmanagement'),
-            __('Departamento', 'newmanagement'),
-            __('Ação', 'newmanagement'),
-        ] as $th) {
-            echo '<th>' . $th . '</th>';
-        }
+        echo '<th>' . __('Número', 'newmanagement') . '</th>';
+        echo '<th>' . __('Senha', 'newmanagement') . '</th>';
+        echo '<th>' . __('IP Aparelho', 'newmanagement') . '</th>';
+        echo '<th>' . __('Usuário', 'newmanagement') . '</th>';
+        echo '<th>' . __('Grava?', 'newmanagement') . '</th>';
+        echo '<th>' . __('Departamento', 'newmanagement') . '</th>';
+        echo '<th style="text-align:right">';
+        echo '<button type="button"';
+        echo ' id="nm-ext-add-btn"';
+        echo ' class="btn btn-sm btn-outline-secondary"';
+        echo ' data-action="add_extension"';
+        echo ' data-ipbx-id="' . $ipbx_id . '"';
+        echo ' data-companies-id="' . $companies_id . '"';
+        echo ' data-url="' . $h($action) . '">';
+        echo '<i class="ti ti-plus"></i> ' . __('Adicionar Ramal', 'newmanagement');
+        echo '</button>';
+        echo '</th>';
         echo '</tr>';
         echo '</thead>';
 
@@ -207,7 +231,7 @@ class Ipbx extends \CommonDBTM
             echo self::renderExtensionRow((int) $row['id'], $row, $companies_id, $csrf, $action);
         }
 
-        // Linha de adição — class="tab_bg_2", sempre a última no tbody — padrão GLPI
+        // Linha de adição — class="tab_bg_2"
         echo '<tr class="tab_bg_2" id="nm-ext-add-row">';
 
         // Número
@@ -217,12 +241,11 @@ class Ipbx extends \CommonDBTM
         echo ' placeholder="' . __('Número', 'newmanagement') . '">';
         echo '</td>';
 
-        // Senha — slot: JS injeta <input type="password"> aqui via data-target-id
+        // Senha — input direto (não usa slot)
         echo '<td>';
-        echo '<div id="nm-ext-password-slot"';
-        echo ' data-target-id="nm-ext-password"';
-        echo ' data-placeholder="' . __('Senha', 'newmanagement') . '">';
-        echo '</div>';
+        echo '<input type="password" id="nm-ext-password"';
+        echo ' class="form-control form-control-sm"';
+        echo ' placeholder="' . __('Senha', 'newmanagement') . '" autocomplete="new-password">';
         echo '</td>';
 
         // IP Aparelho
@@ -253,18 +276,8 @@ class Ipbx extends \CommonDBTM
         echo ' placeholder="' . __('Departamento', 'newmanagement') . '">';
         echo '</td>';
 
-        // Botão adicionar — btn-outline-secondary + ti ti-plus — padrão GLPI
-        echo '<td>';
-        echo '<button type="button"';
-        echo ' class="btn btn-sm btn-outline-secondary"';
-        echo ' id="nm-ext-add-btn"';
-        echo ' data-action="add_extension"';
-        echo ' data-ipbx-id="' . $ipbx_id . '"';
-        echo ' data-companies-id="' . $companies_id . '"';
-        echo ' data-url="' . $h($action) . '">';
-        echo '<i class="ti ti-plus"></i> ' . __('Adicionar Ramal', 'newmanagement');
-        echo '</button>';
-        echo '</td>';
+        // Célula vazia (alinha com o th do botão)
+        echo '<td></td>';
 
         echo '</tr>';
         echo '</tbody>';
@@ -276,7 +289,6 @@ class Ipbx extends \CommonDBTM
         $h = fn($v) => htmlspecialchars((string) ($v ?? ''), ENT_QUOTES);
 
         // Ordem: Número | Senha | IP Aparelho | Usuário | Grava? | Departamento | Ação
-        // Botão excluir: btn-icon sem fundo colorido + ti ti-trash text-danger — padrão GLPI
         return '<tr class="tab_bg_1" id="nm-ext-row-' . $id . '">'
             . '<td>' . $h($row['number']) . '</td>'
             . '<td>••••••</td>'
@@ -314,18 +326,25 @@ class Ipbx extends \CommonDBTM
 
         echo '<table class="tab_cadre_fixehov" id="nm-dev-table">';
 
-        // thead com headerRow noHover — padrão GLPI 10/11
-        // Ordem: Tipo | IP | Senha | Ação
+        // thead — padrão GLPI 10/11
+        // Ordem: Tipo | IP | Login | Senha | [botão no th]
         echo '<thead>';
         echo '<tr class="headerRow noHover">';
-        foreach ([
-            __('Tipo', 'newmanagement'),
-            __('IP', 'newmanagement'),
-            __('Senha', 'newmanagement'),
-            __('Ação', 'newmanagement'),
-        ] as $th) {
-            echo '<th>' . $th . '</th>';
-        }
+        echo '<th>' . __('Tipo', 'newmanagement') . '</th>';
+        echo '<th>' . __('IP', 'newmanagement') . '</th>';
+        echo '<th>' . __('Login', 'newmanagement') . '</th>';
+        echo '<th>' . __('Senha', 'newmanagement') . '</th>';
+        echo '<th style="text-align:right">';
+        echo '<button type="button"';
+        echo ' id="nm-dev-add-btn"';
+        echo ' class="btn btn-sm btn-outline-secondary"';
+        echo ' data-action="add_device"';
+        echo ' data-ipbx-id="' . $ipbx_id . '"';
+        echo ' data-companies-id="' . $companies_id . '"';
+        echo ' data-url="' . $h($action) . '">';
+        echo '<i class="ti ti-plus"></i> ' . __('Adicionar Dispositivo', 'newmanagement');
+        echo '</button>';
+        echo '</th>';
         echo '</tr>';
         echo '</thead>';
 
@@ -336,7 +355,7 @@ class Ipbx extends \CommonDBTM
             echo self::renderDeviceRow((int) $row['id'], $row, $companies_id, $csrf, $action);
         }
 
-        // Linha de adição — class="tab_bg_2", sempre a última no tbody — padrão GLPI
+        // Linha de adição — class="tab_bg_2"
         echo '<tr class="tab_bg_2" id="nm-dev-add-row">';
 
         // Tipo
@@ -352,27 +371,22 @@ class Ipbx extends \CommonDBTM
         echo ' class="form-control form-control-sm" placeholder="IP">';
         echo '</td>';
 
-        // Senha — slot: JS injeta <input type="password"> aqui via data-target-id
-        // Ordem: Tipo | IP | Senha | Ação
+        // Login
         echo '<td>';
-        echo '<div id="nm-dev-password-slot"';
-        echo ' data-target-id="nm-dev-password"';
-        echo ' data-placeholder="' . __('Senha', 'newmanagement') . '">';
-        echo '</div>';
+        echo '<input type="text" id="nm-dev-login" autocomplete="off"';
+        echo ' class="form-control form-control-sm"';
+        echo ' placeholder="' . __('Login', 'newmanagement') . '">';
         echo '</td>';
 
-        // Botão adicionar — btn-outline-secondary + ti ti-plus — padrão GLPI
+        // Senha — input direto
         echo '<td>';
-        echo '<button type="button"';
-        echo ' class="btn btn-sm btn-outline-secondary"';
-        echo ' id="nm-dev-add-btn"';
-        echo ' data-action="add_device"';
-        echo ' data-ipbx-id="' . $ipbx_id . '"';
-        echo ' data-companies-id="' . $companies_id . '"';
-        echo ' data-url="' . $h($action) . '">';
-        echo '<i class="ti ti-plus"></i> ' . __('Adicionar Dispositivo', 'newmanagement');
-        echo '</button>';
+        echo '<input type="password" id="nm-dev-password"';
+        echo ' class="form-control form-control-sm"';
+        echo ' placeholder="' . __('Senha', 'newmanagement') . '" autocomplete="new-password">';
         echo '</td>';
+
+        // Célula vazia (alinha com o th do botão)
+        echo '<td></td>';
 
         echo '</tr>';
         echo '</tbody>';
@@ -383,11 +397,11 @@ class Ipbx extends \CommonDBTM
     {
         $h = fn($v) => htmlspecialchars((string) ($v ?? ''), ENT_QUOTES);
 
-        // Ordem: Tipo | IP | Senha | Ação
-        // Botão excluir: btn-icon sem fundo colorido + ti ti-trash text-danger — padrão GLPI
+        // Ordem: Tipo | IP | Login | Senha | Ação
         return '<tr class="tab_bg_1" id="nm-dev-row-' . $id . '">'
             . '<td>' . $h($row['device_type']) . '</td>'
             . '<td>' . $h($row['ip_address']) . '</td>'
+            . '<td>' . $h($row['login'] ?? '') . '</td>'
             . '<td>••••••</td>'
             . '<td>'
             . '<button type="button"'
@@ -419,20 +433,27 @@ class Ipbx extends \CommonDBTM
 
         echo '<table class="tab_cadre_fixehov" id="nm-net-table">';
 
-        // thead com headerRow noHover — padrão GLPI 10/11
-        // Ordem: IP Rede | Máscara | Gateway | DNS Primário | DNS Secundário | Ação
+        // thead — padrão GLPI 10/11
+        // Ordem: IP Rede | Máscara | Gateway | DNS Primário | DNS Secundário | Fornecedor | [botão no th]
         echo '<thead>';
         echo '<tr class="headerRow noHover">';
-        foreach ([
-            __('IP Rede', 'newmanagement'),
-            __('Máscara', 'newmanagement'),
-            __('Gateway', 'newmanagement'),
-            __('DNS Primário', 'newmanagement'),
-            __('DNS Secundário', 'newmanagement'),
-            __('Ação', 'newmanagement'),
-        ] as $th) {
-            echo '<th>' . $th . '</th>';
-        }
+        echo '<th>' . __('IP Rede', 'newmanagement') . '</th>';
+        echo '<th>' . __('Máscara', 'newmanagement') . '</th>';
+        echo '<th>' . __('Gateway', 'newmanagement') . '</th>';
+        echo '<th>' . __('DNS Primário', 'newmanagement') . '</th>';
+        echo '<th>' . __('DNS Secundário', 'newmanagement') . '</th>';
+        echo '<th>' . __('Fornecedor', 'newmanagement') . '</th>';
+        echo '<th style="text-align:right">';
+        echo '<button type="button"';
+        echo ' id="nm-net-add-btn"';
+        echo ' class="btn btn-sm btn-outline-secondary"';
+        echo ' data-action="add_network"';
+        echo ' data-ipbx-id="' . $ipbx_id . '"';
+        echo ' data-companies-id="' . $companies_id . '"';
+        echo ' data-url="' . $h($action) . '">';
+        echo '<i class="ti ti-plus"></i> ' . __('Adicionar Rede', 'newmanagement');
+        echo '</button>';
+        echo '</th>';
         echo '</tr>';
         echo '</thead>';
 
@@ -443,8 +464,7 @@ class Ipbx extends \CommonDBTM
             echo self::renderNetworkRow((int) $row['id'], $row, $companies_id, $csrf, $action);
         }
 
-        // Linha de adição — class="tab_bg_2", sempre a última no tbody — padrão GLPI
-        // Ordem: ip_network | netmask | gateway | dns_primary | dns_secondary | Ação
+        // Linha de adição — class="tab_bg_2"
         echo '<tr class="tab_bg_2" id="nm-net-add-row">';
 
         echo '<td>';
@@ -472,18 +492,15 @@ class Ipbx extends \CommonDBTM
         echo ' class="form-control form-control-sm" placeholder="8.8.4.4">';
         echo '</td>';
 
-        // Botão adicionar — btn-outline-secondary + ti ti-plus — padrão GLPI
+        // Fornecedor
         echo '<td>';
-        echo '<button type="button"';
-        echo ' class="btn btn-sm btn-outline-secondary"';
-        echo ' id="nm-net-add-btn"';
-        echo ' data-action="add_network"';
-        echo ' data-ipbx-id="' . $ipbx_id . '"';
-        echo ' data-companies-id="' . $companies_id . '"';
-        echo ' data-url="' . $h($action) . '">';
-        echo '<i class="ti ti-plus"></i> ' . __('Adicionar Rede', 'newmanagement');
-        echo '</button>';
+        echo '<input type="text" id="nm-net-supplier" autocomplete="off"';
+        echo ' class="form-control form-control-sm"';
+        echo ' placeholder="' . __('Fornecedor', 'newmanagement') . '">';
         echo '</td>';
+
+        // Célula vazia (alinha com o th do botão)
+        echo '<td></td>';
 
         echo '</tr>';
         echo '</tbody>';
@@ -494,14 +511,14 @@ class Ipbx extends \CommonDBTM
     {
         $h = fn($v) => htmlspecialchars((string) ($v ?? ''), ENT_QUOTES);
 
-        // Ordem: IP Rede | Máscara | Gateway | DNS Primário | DNS Secundário | Ação
-        // Botão excluir: btn-icon sem fundo colorido + ti ti-trash text-danger — padrão GLPI
+        // Ordem: IP Rede | Máscara | Gateway | DNS Primário | DNS Secundário | Fornecedor | Ação
         return '<tr class="tab_bg_1" id="nm-net-row-' . $id . '">'
             . '<td>' . $h($row['ip_network']) . '</td>'
             . '<td>' . $h($row['netmask']) . '</td>'
             . '<td>' . $h($row['gateway']) . '</td>'
             . '<td>' . $h($row['dns_primary']) . '</td>'
             . '<td>' . $h($row['dns_secondary']) . '</td>'
+            . '<td>' . $h($row['supplier'] ?? '') . '</td>'
             . '<td>'
             . '<button type="button"'
             . ' class="btn btn-sm btn-icon nm-del-btn"'
