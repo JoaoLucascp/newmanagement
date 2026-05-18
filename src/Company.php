@@ -135,6 +135,13 @@ class Company extends \CommonDBTM
         $menu['options']['company']['links']['search'] = '/plugins/newmanagement/front/company.php';
         $menu['options']['company']['links']['add']    = '/plugins/newmanagement/front/company.php?action=add';
 
+        // IPBX On-Premise — entrada que estava faltando no menu lateral
+        $menu['options']['ipbx']['title']           = __('IPBX On-Premise', 'newmanagement');
+        $menu['options']['ipbx']['page']            = '/plugins/newmanagement/front/ipbx.php';
+        $menu['options']['ipbx']['icon']            = 'ti ti-server';
+        $menu['options']['ipbx']['links']['search'] = '/plugins/newmanagement/front/ipbx.php';
+        $menu['options']['ipbx']['links']['add']    = '/plugins/newmanagement/front/ipbx.php?action=add';
+
         $menu['options']['ipbxcloud']['title']           = __('IPBX Cloud', 'newmanagement');
         $menu['options']['ipbxcloud']['page']            = '/plugins/newmanagement/front/ipbxcloud.php';
         $menu['options']['ipbxcloud']['icon']            = 'ti ti-cloud';
@@ -165,24 +172,22 @@ class Company extends \CommonDBTM
     /**
      * Abas da ficha de Empresa.
      *
-     * Ordem: Empresa → Servidor IPBX → Chatbot
-     *        → Documentos → Links → Notas → Histórico → Todos
+     * Ordem: Empresa → Servidor IPBX → Linha Fixa → Chatbot
+     *        → Documentos → Links → Notas → Histórico
      */
     public function defineTabs($options = []): array
     {
         $ong = [];
 
-        // Abas do plugin
-        $this->addDefaultFormTab($ong);                          // Empresa
-        $this->addStandardTab(Ipbx::class,      $ong, $options);  // Servidor IPBX
-        $this->addStandardTab(FixedLine::class, $ong, $options);  // Linha Fixa
-        $this->addStandardTab(Chatbot::class,  $ong, $options);  // Chatbot
+        $this->addDefaultFormTab($ong);
+        $this->addStandardTab(Ipbx::class,      $ong, $options);
+        $this->addStandardTab(FixedLine::class, $ong, $options);
+        $this->addStandardTab(Chatbot::class,   $ong, $options);
 
-        // Abas nativas do GLPI (mesmo padrão do layout de Contato)
-        $this->addStandardTab('Document_Item', $ong, $options);   // Documentos
-        $this->addStandardTab('Link',          $ong, $options);   // Links
-        $this->addStandardTab('Notepad',       $ong, $options);   // Notas
-        $this->addStandardTab('Log',           $ong, $options);   // Histórico
+        $this->addStandardTab('Document_Item', $ong, $options);
+        $this->addStandardTab('Link',          $ong, $options);
+        $this->addStandardTab('Notepad',       $ong, $options);
+        $this->addStandardTab('Log',           $ong, $options);
 
         return $ong;
     }
