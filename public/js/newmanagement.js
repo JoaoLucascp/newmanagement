@@ -161,20 +161,20 @@ function nmClear(ids) {
 
 function nmInjectPasswordFields() {
     document.querySelectorAll('[id$="-slot"][data-target-id]').forEach(slot => {
-        const targetId   = slot.dataset.targetId;
-        const value      = slot.dataset.value      || '';
+        const targetId    = slot.dataset.targetId;
+        const value       = slot.dataset.value      || '';
         const placeholder = slot.dataset.placeholder || '';
-        const style      = slot.getAttribute('style') || '';
+        const style       = slot.getAttribute('style') || '';
 
         // Evita reinjeção ao recarregar (ex: glpi:ajaxformloaded)
         if (document.getElementById(targetId)) return;
 
         const input = document.createElement('input');
-        input.type          = 'password';
-        input.id            = targetId;
-        input.value         = value;
-        input.autocomplete  = 'new-password';
-        input.className     = 'form-control' + (slot.closest('.form-control-sm, .nm-add-row') ? ' form-control-sm' : '');
+        input.type         = 'password';
+        input.id           = targetId;
+        input.value        = value;
+        input.autocomplete = 'new-password';
+        input.className    = 'form-control' + (slot.closest('.form-control-sm, .nm-add-row') ? ' form-control-sm' : '');
         if (placeholder) input.placeholder = placeholder;
         if (style)       input.style.cssText = style;
 
@@ -183,13 +183,36 @@ function nmInjectPasswordFields() {
 }
 
 // ---------------------------------------------------------------------------
+// HTML do botão excluir — padrão GLPI (btn-icon, sem fundo colorido)
+// Centralizado aqui para manter consistência entre PHP (renderRow) e JS (innerHTML)
+// ---------------------------------------------------------------------------
+
+function nmDelBtn(action, id, rowId, companiesId, url, confirmMsg, title) {
+    return `<button type="button"
+        class="btn btn-sm btn-icon nm-del-btn"
+        data-action="${action}"
+        data-id="${id}"
+        data-row="${rowId}"
+        data-companies-id="${companiesId}"
+        data-url="${url}"
+        data-confirm="${confirmMsg}"
+        title="${title || 'Remover'}">
+        <i class="ti ti-trash text-danger"></i>
+    </button>`;
+}
+
+// ---------------------------------------------------------------------------
 // Botões Adicionar / Remover — IPBX
 // ---------------------------------------------------------------------------
+
+// Flag que garante registro único dos listeners delegados no document.
+// Resetada a null quando o DOM é destruído (navegação entre abas do GLPI).
+let nmDelegatedListenersRegistered = false;
 
 function nmInitIpbxButtons() {
     const URL = nmGetIpbxActionUrl();
 
-    function getBtnUrl(btn)      { return btn?.dataset.url       || URL; }
+    function getBtnUrl(btn)      { return btn?.dataset.url        || URL; }
     function getCompaniesId(btn) { return btn?.dataset.companiesId || nmGetIpbxCompaniesId(); }
     function checkIpbxSaved(btn) {
         const id = parseInt(btn.dataset.ipbxId || '0', 10);
@@ -200,9 +223,10 @@ function nmInitIpbxButtons() {
         return true;
     }
 
-    // Salvar IPBX — coleta todos os campos via nmVal() (sem FormData de <form>)
+    // --- Salvar IPBX ---
     const btnSaveAll = document.getElementById('nm-save-all');
-    if (btnSaveAll) {
+    if (btnSaveAll && !btnSaveAll._nmBound) {
+        btnSaveAll._nmBound = true;
         btnSaveAll.addEventListener('click', async (event) => {
             event.preventDefault();
 
@@ -242,8 +266,10 @@ function nmInitIpbxButtons() {
         });
     }
 
+    // --- Adicionar Ramal ---
     const btnExt = document.getElementById('nm-ext-add-btn');
-    if (btnExt) {
+    if (btnExt && !btnExt._nmBound) {
+        btnExt._nmBound = true;
         btnExt.addEventListener('click', async () => {
             if (!checkIpbxSaved(btnExt)) return;
             const data = {
@@ -260,8 +286,8 @@ function nmInitIpbxButtons() {
             try {
                 const result = await nmPost(getBtnUrl(btnExt), data);
                 if (!result.success) throw new Error(result.error || 'Erro desconhecido');
-                const tbody = document.getElementById('nm-ext-tbody');
-                if (tbody) {
+                const addRow = document.getElementById('nm-ext-add-row');
+                if (addRow) {
                     const tr = document.createElement('tr');
                     tr.id = 'nm-ext-row-' + result.id;
                     tr.className = 'tab_bg_1';
@@ -272,13 +298,9 @@ function nmInitIpbxButtons() {
                         <td>${data.user_name}</td>
                         <td>${parseInt(data.records_calls, 10) ? 'Sim' : 'Não'}</td>
                         <td>${data.department}</td>
-                        <td><button type="button" class="btn btn-sm btn-danger nm-del-btn"
-                              data-action="delete_extension" data-id="${result.id}"
-                              data-row="nm-ext-row-${result.id}" data-companies-id="${getCompaniesId(btnExt)}"
-                              data-url="${getBtnUrl(btnExt)}"
-                              data-confirm="Remover ramal?">
-                              <i class="ti ti-trash"></i></button></td>`;
-                    tbody.appendChild(tr);
+                        <td>${nmDelBtn('delete_extension', result.id, 'nm-ext-row-' + result.id, getCompaniesId(btnExt), getBtnUrl(btnExt), 'Remover ramal?')}</td>`;
+                    // Insere ANTES da linha de adição, mantendo-a sempre por último
+                    addRow.parentNode.insertBefore(tr, addRow);
                 }
                 nmClear(['nm-ext-number', 'nm-ext-password', 'nm-ext-device_ip', 'nm-ext-user_name', 'nm-ext-department']);
                 const sel = document.getElementById('nm-ext-records_calls'); if (sel) sel.value = '0';
@@ -288,8 +310,10 @@ function nmInitIpbxButtons() {
         });
     }
 
+    // --- Adicionar Dispositivo ---
     const btnDev = document.getElementById('nm-dev-add-btn');
-    if (btnDev) {
+    if (btnDev && !btnDev._nmBound) {
+        btnDev._nmBound = true;
         btnDev.addEventListener('click', async () => {
             if (!checkIpbxSaved(btnDev)) return;
             const data = {
@@ -303,8 +327,8 @@ function nmInitIpbxButtons() {
             try {
                 const result = await nmPost(getBtnUrl(btnDev), data);
                 if (!result.success) throw new Error(result.error || 'Erro desconhecido');
-                const tbody = document.getElementById('nm-dev-tbody');
-                if (tbody) {
+                const addRow = document.getElementById('nm-dev-add-row');
+                if (addRow) {
                     const tr = document.createElement('tr');
                     tr.id = 'nm-dev-row-' + result.id;
                     tr.className = 'tab_bg_1';
@@ -312,13 +336,8 @@ function nmInitIpbxButtons() {
                         <td>${data.device_type}</td>
                         <td>${data.ip_address}</td>
                         <td>••••••</td>
-                        <td><button type="button" class="btn btn-sm btn-danger nm-del-btn"
-                              data-action="delete_device" data-id="${result.id}"
-                              data-row="nm-dev-row-${result.id}" data-companies-id="${getCompaniesId(btnDev)}"
-                              data-url="${getBtnUrl(btnDev)}"
-                              data-confirm="Remover dispositivo?">
-                              <i class="ti ti-trash"></i></button></td>`;
-                    tbody.appendChild(tr);
+                        <td>${nmDelBtn('delete_device', result.id, 'nm-dev-row-' + result.id, getCompaniesId(btnDev), getBtnUrl(btnDev), 'Remover dispositivo?')}</td>`;
+                    addRow.parentNode.insertBefore(tr, addRow);
                 }
                 nmClear(['nm-dev-device_type', 'nm-dev-ip_address', 'nm-dev-password']);
             } catch (error) {
@@ -327,8 +346,10 @@ function nmInitIpbxButtons() {
         });
     }
 
+    // --- Adicionar Rede ---
     const btnNet = document.getElementById('nm-net-add-btn');
-    if (btnNet) {
+    if (btnNet && !btnNet._nmBound) {
+        btnNet._nmBound = true;
         btnNet.addEventListener('click', async () => {
             if (!checkIpbxSaved(btnNet)) return;
             const data = {
@@ -344,8 +365,8 @@ function nmInitIpbxButtons() {
             try {
                 const result = await nmPost(getBtnUrl(btnNet), data);
                 if (!result.success) throw new Error(result.error || 'Erro desconhecido');
-                const tbody = document.getElementById('nm-net-tbody');
-                if (tbody) {
+                const addRow = document.getElementById('nm-net-add-row');
+                if (addRow) {
                     const tr = document.createElement('tr');
                     tr.id = 'nm-net-row-' + result.id;
                     tr.className = 'tab_bg_1';
@@ -355,13 +376,8 @@ function nmInitIpbxButtons() {
                         <td>${data.gateway}</td>
                         <td>${data.dns_primary}</td>
                         <td>${data.dns_secondary}</td>
-                        <td><button type="button" class="btn btn-sm btn-danger nm-del-btn"
-                              data-action="delete_network" data-id="${result.id}"
-                              data-row="nm-net-row-${result.id}" data-companies-id="${getCompaniesId(btnNet)}"
-                              data-url="${getBtnUrl(btnNet)}"
-                              data-confirm="Remover rede?">
-                              <i class="ti ti-trash"></i></button></td>`;
-                    tbody.appendChild(tr);
+                        <td>${nmDelBtn('delete_network', result.id, 'nm-net-row-' + result.id, getCompaniesId(btnNet), getBtnUrl(btnNet), 'Remover rede?')}</td>`;
+                    addRow.parentNode.insertBefore(tr, addRow);
                 }
                 nmClear(['nm-net-ip_network', 'nm-net-netmask', 'nm-net-gateway', 'nm-net-dns_primary', 'nm-net-dns_secondary']);
             } catch (error) {
@@ -370,36 +386,43 @@ function nmInitIpbxButtons() {
         });
     }
 
-    // Delegação: delete e eye para botões IPBX
-    document.addEventListener('click', async (e) => {
-        const btn = e.target.closest('.nm-del-btn, .nm-btn-eye');
-        if (!btn) return;
+    // --- Listeners delegados no document (delete + eye) ---
+    // Registrados UMA única vez via flag nmDelegatedListenersRegistered.
+    // Usar o document como alvo garante que botões inseridos dinamicamente
+    // também sejam capturados sem precisar re-registrar.
+    if (!nmDelegatedListenersRegistered) {
+        nmDelegatedListenersRegistered = true;
 
-        if (btn.classList.contains('nm-btn-eye')) {
-            const target = document.getElementById(btn.dataset.target);
-            if (!target) return;
-            target.type = target.type === 'password' ? 'text' : 'password';
-            const icon = btn.querySelector('i');
-            if (icon) icon.className = target.type === 'password' ? 'ti ti-eye' : 'ti ti-eye-off';
-            return;
-        }
+        document.addEventListener('click', async (e) => {
+            const btn = e.target.closest('.nm-del-btn, .nm-btn-eye');
+            if (!btn) return;
 
-        const action = btn.dataset.action;
-        const id     = btn.dataset.id;
-        if (!action || !id) return;
-        if (!confirm(btn.dataset.confirm || 'Deseja remover este item?')) return;
+            if (btn.classList.contains('nm-btn-eye')) {
+                const target = document.getElementById(btn.dataset.target);
+                if (!target) return;
+                target.type = target.type === 'password' ? 'text' : 'password';
+                const icon = btn.querySelector('i');
+                if (icon) icon.className = target.type === 'password' ? 'ti ti-eye' : 'ti ti-eye-off';
+                return;
+            }
 
-        try {
-            const result = await nmPost(getBtnUrl(btn), {
-                action, id, companies_id: getCompaniesId(btn),
-            });
-            if (!result.success) throw new Error(result.error || 'Erro ao remover');
-            const row = document.getElementById(btn.dataset.row);
-            if (row) row.remove();
-        } catch (error) {
-            alert('Erro ao remover: ' + error.message);
-        }
-    });
+            const action = btn.dataset.action;
+            const id     = btn.dataset.id;
+            if (!action || !id) return;
+            if (!confirm(btn.dataset.confirm || 'Deseja remover este item?')) return;
+
+            try {
+                const result = await nmPost(getBtnUrl(btn), {
+                    action, id, companies_id: btn.dataset.companiesId || nmGetIpbxCompaniesId(),
+                });
+                if (!result.success) throw new Error(result.error || 'Erro ao remover');
+                const row = document.getElementById(btn.dataset.row);
+                if (row) row.remove();
+            } catch (error) {
+                alert('Erro ao remover: ' + error.message);
+            }
+        });
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -408,7 +431,8 @@ function nmInitIpbxButtons() {
 
 function nmInitChatbotButtons() {
     const btnSave = document.getElementById('nm-chatbot-save');
-    if (btnSave) {
+    if (btnSave && !btnSave._nmBound) {
+        btnSave._nmBound = true;
         btnSave.addEventListener('click', async () => {
             const url  = btnSave.dataset.actionUrl;
             const csrf = nmVal('nm-chatbot-csrf') || nmGetCsrfToken();
@@ -452,39 +476,45 @@ function nmInitChatbotButtons() {
         });
     }
 
-    document.addEventListener('click', async (e) => {
-        const eyeBtn = e.target.closest('.nm-btn-eye');
-        if (eyeBtn) {
-            const target = document.getElementById(eyeBtn.dataset.target);
-            if (!target) return;
-            target.type = target.type === 'password' ? 'text' : 'password';
-            const icon = eyeBtn.querySelector('i');
-            if (icon) icon.className = target.type === 'password' ? 'ti ti-eye' : 'ti ti-eye-off';
-            return;
-        }
+    // Listeners delegados para chatbot (eye + delete) — também registrados uma única vez
+    if (!window._nmChatbotDelegated) {
+        window._nmChatbotDelegated = true;
 
-        const btn = e.target.closest('.nm-chatbot-del');
-        if (btn) {
-            if (!confirm(btn.dataset.confirm || 'Remover?')) return;
-            try {
-                const result = await nmPost(btn.dataset.url, {
-                    _glpi_csrf_token: btn.dataset.csrf || nmGetCsrfToken(),
-                    action:           btn.dataset.action,
-                    id:               btn.dataset.id,
-                    companies_id:     btn.dataset.companiesId || '',
-                });
-                if (!result.success) throw new Error(result.error || 'Erro ao remover');
-                const row = document.getElementById(btn.dataset.row);
-                if (row) row.remove();
-            } catch (error) {
-                alert('Erro ao remover: ' + error.message);
+        document.addEventListener('click', async (e) => {
+            const eyeBtn = e.target.closest('.nm-btn-eye');
+            if (eyeBtn) {
+                const target = document.getElementById(eyeBtn.dataset.target);
+                if (!target) return;
+                target.type = target.type === 'password' ? 'text' : 'password';
+                const icon = eyeBtn.querySelector('i');
+                if (icon) icon.className = target.type === 'password' ? 'ti ti-eye' : 'ti ti-eye-off';
+                return;
             }
-            return;
-        }
-    });
+
+            const btn = e.target.closest('.nm-chatbot-del');
+            if (btn) {
+                if (!confirm(btn.dataset.confirm || 'Remover?')) return;
+                try {
+                    const result = await nmPost(btn.dataset.url, {
+                        _glpi_csrf_token: btn.dataset.csrf || nmGetCsrfToken(),
+                        action:           btn.dataset.action,
+                        id:               btn.dataset.id,
+                        companies_id:     btn.dataset.companiesId || '',
+                    });
+                    if (!result.success) throw new Error(result.error || 'Erro ao remover');
+                    const row = document.getElementById(btn.dataset.row);
+                    if (row) row.remove();
+                } catch (error) {
+                    alert('Erro ao remover: ' + error.message);
+                }
+                return;
+            }
+        });
+    }
 
     const btnMcAdd = document.getElementById('nm-mc-add-btn');
-    if (btnMcAdd) {
+    if (btnMcAdd && !btnMcAdd._nmBound) {
+        btnMcAdd._nmBound = true;
         btnMcAdd.addEventListener('click', async () => {
             const data = {
                 _glpi_csrf_token:     btnMcAdd.dataset.csrf || nmGetCsrfToken(),
@@ -533,7 +563,8 @@ function nmInitChatbotButtons() {
     }
 
     const btnWaAdd = document.getElementById('nm-wa-add-btn');
-    if (btnWaAdd) {
+    if (btnWaAdd && !btnWaAdd._nmBound) {
+        btnWaAdd._nmBound = true;
         btnWaAdd.addEventListener('click', async () => {
             const data = {
                 _glpi_csrf_token: btnWaAdd.dataset.csrf || nmGetCsrfToken(),
@@ -574,7 +605,8 @@ function nmInitChatbotButtons() {
     }
 
     const btnCuAdd = document.getElementById('nm-cu-add-btn');
-    if (btnCuAdd) {
+    if (btnCuAdd && !btnCuAdd._nmBound) {
+        btnCuAdd._nmBound = true;
         btnCuAdd.addEventListener('click', async () => {
             const data = {
                 _glpi_csrf_token: btnCuAdd.dataset.csrf || nmGetCsrfToken(),
@@ -719,25 +751,36 @@ function nmInit() {
     nmInjectPasswordFields();
 
     const btnCnpj = document.getElementById('btn-buscar-cnpj');
-    if (btnCnpj) { btnCnpj.removeAttribute('onclick'); btnCnpj.addEventListener('click', nmBuscarCNPJ); }
+    if (btnCnpj && !btnCnpj._nmBound) {
+        btnCnpj._nmBound = true;
+        btnCnpj.removeAttribute('onclick');
+        btnCnpj.addEventListener('click', nmBuscarCNPJ);
+    }
 
     const btnCep = document.getElementById('btn-buscar-cep');
-    if (btnCep) { btnCep.removeAttribute('onclick'); btnCep.addEventListener('click', nmBuscarCEP); }
+    if (btnCep && !btnCep._nmBound) {
+        btnCep._nmBound = true;
+        btnCep.removeAttribute('onclick');
+        btnCep.addEventListener('click', nmBuscarCEP);
+    }
 
     const cnpjInput = document.getElementById('cnpj');
-    if (cnpjInput) {
+    if (cnpjInput && !cnpjInput._nmBound) {
+        cnpjInput._nmBound = true;
         cnpjInput.addEventListener('input', function () { this.value = nmMascaraCNPJ(this.value); });
         cnpjInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); nmBuscarCNPJ(); } });
     }
 
     const cepInput = document.getElementById('cep');
-    if (cepInput) {
+    if (cepInput && !cepInput._nmBound) {
+        cepInput._nmBound = true;
         cepInput.addEventListener('input', function () { this.value = nmMascaraCEP(this.value); });
         cepInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); nmBuscarCEP(); } });
     }
 
     const phoneInput = document.getElementById('phone');
-    if (phoneInput) {
+    if (phoneInput && !phoneInput._nmBound) {
+        phoneInput._nmBound = true;
         phoneInput.addEventListener('input', function () { this.value = nmMascaraTelefone(this.value); });
     }
 
