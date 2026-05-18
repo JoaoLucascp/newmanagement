@@ -93,6 +93,22 @@ class Chatbot extends \CommonDBTM
                 }
             }
             $chatbot_id = (int) $row['id'];
+            
+            // Descriptografar senhas com fallback para valores legados (registros antigos sem criptografia)
+            try {
+                if (!empty($f['admin_password'])) {
+                    $f['admin_password'] = \Toolbox::sodiumDecrypt($f['admin_password']);
+                }
+            } catch (\Throwable $e) {
+                // Fallback: valor já é plain text (registro anterior à criptografia)
+            }
+            try {
+                if (!empty($f['superadmin_password'])) {
+                    $f['superadmin_password'] = \Toolbox::sodiumDecrypt($f['superadmin_password']);
+                }
+            } catch (\Throwable $e) {
+                // Fallback: valor já é plain text (registro anterior à criptografia)
+            }
         }
 
         $csrf     = \Session::getNewCSRFToken();

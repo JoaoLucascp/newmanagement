@@ -174,8 +174,9 @@ class Company extends \CommonDBTM
 
         // Abas do plugin
         $this->addDefaultFormTab($ong);                          // Empresa
-        $this->addStandardTab(Ipbx::class,    $ong, $options);  // Servidor IPBX
-        $this->addStandardTab(Chatbot::class, $ong, $options);  // Chatbot
+        $this->addStandardTab(Ipbx::class,      $ong, $options);  // Servidor IPBX
+        $this->addStandardTab(FixedLine::class, $ong, $options);  // Linha Fixa
+        $this->addStandardTab(Chatbot::class,  $ong, $options);  // Chatbot
 
         // Abas nativas do GLPI (mesmo padrão do layout de Contato)
         $this->addStandardTab('Document_Item', $ong, $options);   // Documentos

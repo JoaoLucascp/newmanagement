@@ -132,180 +132,265 @@ function nmAjaxUrl() {
     return root + '/plugins/newmanagement/ajax/ipbx_sub.php';
 }
 
+function nmGetIpbxActionUrl() {
+    return document.querySelector('.nm-ipbx-tab')?.dataset.actionUrl || nmAjaxUrl();
+}
+
+function nmGetIpbxCompaniesId() {
+    return document.querySelector('.nm-ipbx-tab')?.dataset.companiesId || '';
+}
+
+function nmUpdateIpbxId(newId) {
+    ['nm-ext-add-btn', 'nm-dev-add-btn', 'nm-net-add-btn'].forEach((id) => {
+        const btn = document.getElementById(id);
+        if (btn) btn.dataset.ipbxId = newId;
+    });
+
+    const hiddenLines = document.querySelector('#nm-lines-form input[name="ipbx_id"]');
+    if (hiddenLines) hiddenLines.value = newId;
+
+    const hiddenAction = document.querySelector('#nm-ipbx-form input[name="action"]');
+    if (hiddenAction) hiddenAction.value = 'update_ipbx';
+
+    const hiddenId = document.querySelector('#nm-ipbx-form input[name="id"]');
+    if (hiddenId) hiddenId.value = newId;
+}
+
 // ---------------------------------------------------------------------------
 // Botões Adicionar / Remover — IPBX Company Form
 // ---------------------------------------------------------------------------
 
 function nmInitIpbxButtons() {
-    const URL = nmAjaxUrl();
+    const URL = nmGetIpbxActionUrl();
 
-    // ---- Adicionar Ramal ----
-    const btnRamal = document.getElementById('nm-btn-add-ramal');
-    if (btnRamal) {
-        btnRamal.addEventListener('click', async () => {
-            const ipbxId      = document.getElementById('nm-ipbx-id')?.value || 0;
-            const companiesId = document.getElementById('nm-companies-id')?.value || 0;
-            const number      = document.getElementById('nm-ext-number')?.value.trim();
-            const password    = document.getElementById('nm-ext-password')?.value.trim();
-            const deviceIp    = document.getElementById('nm-ext-ip')?.value.trim();
-            const userName    = document.getElementById('nm-ext-user')?.value.trim();
-            const records     = document.getElementById('nm-ext-records')?.value || 0;
-            const department  = document.getElementById('nm-ext-dept')?.value.trim();
+    function getBtnUrl(btn) {
+        return btn?.dataset.url || URL;
+    }
 
-            if (!number) { alert('Informe o número do ramal.'); return; }
+    function getCompaniesId(btn) {
+        return btn?.dataset.companiesId || nmGetIpbxCompaniesId();
+    }
+
+    function checkIpbxSaved(btn) {
+        const id = parseInt(btn.dataset.ipbxId || '0', 10);
+        if (id <= 0) {
+            alert('Salve o Servidor IPBX primeiro antes de adicionar sub-itens.');
+            return false;
+        }
+        return true;
+    }
+
+    const btnSaveAll = document.getElementById('nm-save-all');
+    if (btnSaveAll) {
+        btnSaveAll.addEventListener('click', async (event) => {
+            event.preventDefault();
+            const ipbxForm = document.getElementById('nm-ipbx-form');
+            const linesForm = document.getElementById('nm-lines-form');
+            if (!ipbxForm || !linesForm) return;
 
             try {
-                const data = await nmPost(URL, {
-                    action: 'add_extension',
-                    ipbx_id: ipbxId,
-                    companies_id: companiesId,
-                    number, password, device_ip: deviceIp,
-                    user_name: userName, records_calls: records, department,
+                const ipbxResponse = await fetch(nmGetIpbxActionUrl(), {
+                    method: 'POST',
+                    headers: { 'X-Glpi-Csrf-Token': nmGetCsrfToken() },
+                    body: new FormData(ipbxForm),
                 });
+                const ipbxData = await ipbxResponse.json();
+                if (ipbxData && ipbxData.id) {
+                    nmUpdateIpbxId(ipbxData.id);
+                    const linesIpbx = linesForm.querySelector('input[name="ipbx_id"]');
+                    if (linesIpbx) linesIpbx.value = ipbxData.id;
+                }
 
-                if (!data.success) throw new Error(data.error || 'Erro desconhecido');
+                const lineResponse = await fetch(nmGetIpbxActionUrl(), {
+                    method: 'POST',
+                    headers: { 'X-Glpi-Csrf-Token': nmGetCsrfToken() },
+                    body: new FormData(linesForm),
+                });
+                const lineData = await lineResponse.json();
+                if (lineData && lineData.id) {
+                    const actionInput = linesForm.querySelector('input[name="action"]');
+                    if (actionInput) actionInput.value = 'update_line';
+                    const idInput = linesForm.querySelector('input[name="id"]');
+                    if (idInput) idInput.value = lineData.id;
+                }
 
-                // Adiciona linha na tabela sem reload
+                btnSaveAll.classList.add('btn-success');
+                btnSaveAll.classList.remove('btn-primary');
+                setTimeout(() => {
+                    btnSaveAll.classList.remove('btn-success');
+                    btnSaveAll.classList.add('btn-primary');
+                }, 2000);
+            } catch (error) {
+                alert('Erro ao salvar IPBX ou Linha Fixa: ' + error.message);
+            }
+        });
+    }
+
+    const btnExt = document.getElementById('nm-ext-add-btn');
+    if (btnExt) {
+        btnExt.addEventListener('click', async () => {
+            if (!checkIpbxSaved(btnExt)) return;
+            const data = {
+                action: btnExt.dataset.action,
+                ipbx_id: btnExt.dataset.ipbxId,
+                companies_id: getCompaniesId(btnExt),
+                number: document.getElementById('nm-ext-number')?.value || '',
+                password: document.getElementById('nm-ext-password')?.value || '',
+                device_ip: document.getElementById('nm-ext-device_ip')?.value || '',
+                user_name: document.getElementById('nm-ext-user_name')?.value || '',
+                records_calls: document.getElementById('nm-ext-records_calls')?.value || '0',
+                department: document.getElementById('nm-ext-department')?.value || '',
+            };
+
+            try {
+                const result = await nmPost(getBtnUrl(btnExt), data);
+                if (!result.success) throw new Error(result.error || 'Erro desconhecido');
                 const tbody = document.getElementById('nm-ext-tbody');
                 if (tbody) {
                     const tr = document.createElement('tr');
-                    tr.dataset.id = data.id;
+                    tr.id = 'nm-ext-row-' + result.id;
+                    tr.className = 'tab_bg_1';
                     tr.innerHTML = `
-                        <td>${number}</td>
-                        <td>${password}</td>
-                        <td>${deviceIp}</td>
-                        <td>${userName}</td>
-                        <td>${parseInt(records) ? 'Sim' : 'Não'}</td>
-                        <td>${department}</td>
-                        <td><button type="button" class="btn btn-sm btn-danger nm-del-ext"
-                              data-id="${data.id}">Remover</button></td>`;
+                        <td>${data.number}</td>
+                        <td>••••••</td>
+                        <td>${data.device_ip}</td>
+                        <td>${data.user_name}</td>
+                        <td>${parseInt(data.records_calls, 10) ? 'Sim' : 'Não'}</td>
+                        <td>${data.department}</td>
+                        <td><button type="button" class="btn btn-sm btn-danger nm-del-btn"
+                              data-action="delete_extension" data-id="${result.id}"
+                              data-row="nm-ext-row-${result.id}" data-companies-id="${getCompaniesId(btnExt)}"
+                              data-url="${getBtnUrl(btnExt)}"
+                              data-confirm="Remover ramal?">
+                              <i class="ti ti-trash"></i></button></td>`;
                     tbody.appendChild(tr);
                 }
-
-                // Limpa campos
-                ['nm-ext-number','nm-ext-password','nm-ext-ip','nm-ext-user','nm-ext-dept']
+                ['nm-ext-number', 'nm-ext-password', 'nm-ext-device_ip', 'nm-ext-user_name', 'nm-ext-department']
                     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-
-            } catch (e) {
-                alert('Erro ao adicionar ramal: ' + e.message);
+                const sel = document.getElementById('nm-ext-records_calls'); if (sel) sel.value = '0';
+            } catch (error) {
+                alert('Erro ao adicionar ramal: ' + error.message);
             }
         });
     }
 
-    // ---- Adicionar Dispositivo ----
-    const btnDev = document.getElementById('nm-btn-add-device');
+    const btnDev = document.getElementById('nm-dev-add-btn');
     if (btnDev) {
         btnDev.addEventListener('click', async () => {
-            const ipbxId      = document.getElementById('nm-ipbx-id')?.value || 0;
-            const companiesId = document.getElementById('nm-companies-id')?.value || 0;
-            const deviceType  = document.getElementById('nm-dev-type')?.value.trim();
-            const ipAddress   = document.getElementById('nm-dev-ip')?.value.trim();
-            const password    = document.getElementById('nm-dev-password')?.value.trim();
-
-            if (!deviceType) { alert('Informe o tipo do dispositivo.'); return; }
+            if (!checkIpbxSaved(btnDev)) return;
+            const data = {
+                action: btnDev.dataset.action,
+                ipbx_id: btnDev.dataset.ipbxId,
+                companies_id: getCompaniesId(btnDev),
+                device_type: document.getElementById('nm-dev-device_type')?.value || '',
+                ip_address: document.getElementById('nm-dev-ip_address')?.value || '',
+                password: document.getElementById('nm-dev-password')?.value || '',
+            };
 
             try {
-                const data = await nmPost(URL, {
-                    action: 'add_device',
-                    ipbx_id: ipbxId,
-                    companies_id: companiesId,
-                    device_type: deviceType, ip_address: ipAddress, password,
-                });
-
-                if (!data.success) throw new Error(data.error || 'Erro desconhecido');
-
+                const result = await nmPost(getBtnUrl(btnDev), data);
+                if (!result.success) throw new Error(result.error || 'Erro desconhecido');
                 const tbody = document.getElementById('nm-dev-tbody');
                 if (tbody) {
                     const tr = document.createElement('tr');
-                    tr.dataset.id = data.id;
+                    tr.id = 'nm-dev-row-' + result.id;
+                    tr.className = 'tab_bg_1';
                     tr.innerHTML = `
-                        <td>${deviceType}</td>
-                        <td>${ipAddress}</td>
-                        <td>${password}</td>
-                        <td><button type="button" class="btn btn-sm btn-danger nm-del-dev"
-                              data-id="${data.id}">Remover</button></td>`;
+                        <td>${data.device_type}</td>
+                        <td>${data.ip_address}</td>
+                        <td>••••••</td>
+                        <td><button type="button" class="btn btn-sm btn-danger nm-del-btn"
+                              data-action="delete_device" data-id="${result.id}"
+                              data-row="nm-dev-row-${result.id}" data-companies-id="${getCompaniesId(btnDev)}"
+                              data-url="${getBtnUrl(btnDev)}"
+                              data-confirm="Remover dispositivo?">
+                              <i class="ti ti-trash"></i></button></td>`;
                     tbody.appendChild(tr);
                 }
-
-                ['nm-dev-type','nm-dev-ip','nm-dev-password']
+                ['nm-dev-device_type', 'nm-dev-ip_address', 'nm-dev-password']
                     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-
-            } catch (e) {
-                alert('Erro ao adicionar dispositivo: ' + e.message);
+            } catch (error) {
+                alert('Erro ao adicionar dispositivo: ' + error.message);
             }
         });
     }
 
-    // ---- Adicionar Rede ----
-    const btnNet = document.getElementById('nm-btn-add-network');
+    const btnNet = document.getElementById('nm-net-add-btn');
     if (btnNet) {
         btnNet.addEventListener('click', async () => {
-            const ipbxId      = document.getElementById('nm-ipbx-id')?.value || 0;
-            const companiesId = document.getElementById('nm-companies-id')?.value || 0;
-            const ipNetwork   = document.getElementById('nm-net-ip')?.value.trim();
-            const netmask     = document.getElementById('nm-net-mask')?.value.trim();
-            const gateway     = document.getElementById('nm-net-gw')?.value.trim();
-            const dnsPrimary  = document.getElementById('nm-net-dns1')?.value.trim();
-            const dnsSecondary = document.getElementById('nm-net-dns2')?.value.trim();
-
-            if (!ipNetwork) { alert('Informe o IP da rede.'); return; }
+            if (!checkIpbxSaved(btnNet)) return;
+            const data = {
+                action: btnNet.dataset.action,
+                ipbx_id: btnNet.dataset.ipbxId,
+                companies_id: getCompaniesId(btnNet),
+                ip_network: document.getElementById('nm-net-ip_network')?.value || '',
+                netmask: document.getElementById('nm-net-netmask')?.value || '',
+                gateway: document.getElementById('nm-net-gateway')?.value || '',
+                dns_primary: document.getElementById('nm-net-dns_primary')?.value || '',
+                dns_secondary: document.getElementById('nm-net-dns_secondary')?.value || '',
+            };
 
             try {
-                const data = await nmPost(URL, {
-                    action: 'add_network',
-                    ipbx_id: ipbxId,
-                    companies_id: companiesId,
-                    ip_network: ipNetwork, netmask, gateway,
-                    dns_primary: dnsPrimary, dns_secondary: dnsSecondary,
-                });
-
-                if (!data.success) throw new Error(data.error || 'Erro desconhecido');
-
+                const result = await nmPost(getBtnUrl(btnNet), data);
+                if (!result.success) throw new Error(result.error || 'Erro desconhecido');
                 const tbody = document.getElementById('nm-net-tbody');
                 if (tbody) {
                     const tr = document.createElement('tr');
-                    tr.dataset.id = data.id;
+                    tr.id = 'nm-net-row-' + result.id;
+                    tr.className = 'tab_bg_1';
                     tr.innerHTML = `
-                        <td>${ipNetwork}</td>
-                        <td>${netmask}</td>
-                        <td>${gateway}</td>
-                        <td>${dnsPrimary}</td>
-                        <td>${dnsSecondary}</td>
-                        <td><button type="button" class="btn btn-sm btn-danger nm-del-net"
-                              data-id="${data.id}">Remover</button></td>`;
+                        <td>${data.ip_network}</td>
+                        <td>${data.netmask}</td>
+                        <td>${data.gateway}</td>
+                        <td>${data.dns_primary}</td>
+                        <td>${data.dns_secondary}</td>
+                        <td><button type="button" class="btn btn-sm btn-danger nm-del-btn"
+                              data-action="delete_network" data-id="${result.id}"
+                              data-row="nm-net-row-${result.id}" data-companies-id="${getCompaniesId(btnNet)}"
+                              data-url="${getBtnUrl(btnNet)}"
+                              data-confirm="Remover rede?">
+                              <i class="ti ti-trash"></i></button></td>`;
                     tbody.appendChild(tr);
                 }
-
-                ['nm-net-ip','nm-net-mask','nm-net-gw','nm-net-dns1','nm-net-dns2']
+                ['nm-net-ip_network', 'nm-net-netmask', 'nm-net-gateway', 'nm-net-dns_primary', 'nm-net-dns_secondary']
                     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-
-            } catch (e) {
-                alert('Erro ao adicionar rede: ' + e.message);
+            } catch (error) {
+                alert('Erro ao adicionar rede: ' + error.message);
             }
         });
     }
 
-    // ---- Delegação para botões Remover (criados dinamicamente) ----
     document.addEventListener('click', async (e) => {
-        const btn = e.target.closest('.nm-del-ext, .nm-del-dev, .nm-del-net');
+        const btn = e.target.closest('.nm-del-btn, .nm-btn-eye');
         if (!btn) return;
 
+        if (btn.classList.contains('nm-btn-eye')) {
+            const target = document.getElementById(btn.dataset.target);
+            if (!target) return;
+            target.type = target.type === 'password' ? 'text' : 'password';
+            const icon = btn.querySelector('i');
+            if (icon) {
+                icon.className = target.type === 'password' ? 'ti ti-eye' : 'ti ti-eye-off';
+            }
+            return;
+        }
+
+        const action = btn.dataset.action;
         const id = btn.dataset.id;
-        if (!id) return;
-
-        let actionName;
-        if (btn.classList.contains('nm-del-ext')) actionName = 'delete_extension';
-        else if (btn.classList.contains('nm-del-dev')) actionName = 'delete_device';
-        else actionName = 'delete_network';
-
-        if (!confirm('Deseja remover este item?')) return;
+        if (!action || !id) return;
+        if (!confirm(btn.dataset.confirm || 'Deseja remover este item?')) return;
 
         try {
-            const data = await nmPost(URL, { action: actionName, id });
-            if (!data.success) throw new Error(data.error || 'Erro ao remover');
-            btn.closest('tr').remove();
-        } catch (e) {
-            alert('Erro ao remover: ' + e.message);
+            const result = await nmPost(getBtnUrl(btn), {
+                action,
+                id,
+                companies_id: getCompaniesId(btn),
+            });
+            if (!result.success) throw new Error(result.error || 'Erro ao remover');
+            const row = document.getElementById(btn.dataset.row);
+            if (row) row.remove();
+        } catch (error) {
+            alert('Erro ao remover: ' + error.message);
         }
     });
 }

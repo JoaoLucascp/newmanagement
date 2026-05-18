@@ -50,7 +50,25 @@ class Ipbx extends \CommonDBTM
         $rows   = $DB->request(['FROM' => self::getTable(), 'WHERE' => ['companies_id' => $companies_id, 'is_deleted' => 0], 'LIMIT' => 1]);
         $ipbx_id = 0;
         $fields  = ['id' => 0, 'companies_id' => $companies_id, 'model' => '', 'server_version' => '', 'ip_local' => '', 'ip_external' => '', 'web_port' => '', 'web_password' => '', 'ssh_port' => '', 'ssh_password' => '', 'comment' => ''];
-        foreach ($rows as $row) { $fields = $row; $ipbx_id = (int)$row['id']; }
+        foreach ($rows as $row) {
+            $fields = $row;
+            $ipbx_id = (int)$row['id'];
+            // Descriptografar senhas com fallback para valores legados (registros antigos sem criptografia)
+            try {
+                if (!empty($fields['web_password'])) {
+                    $fields['web_password'] = \Toolbox::sodiumDecrypt($fields['web_password']);
+                }
+            } catch (\Throwable $e) {
+                // Fallback: valor já é plain text (registro anterior à criptografia)
+            }
+            try {
+                if (!empty($fields['ssh_password'])) {
+                    $fields['ssh_password'] = \Toolbox::sodiumDecrypt($fields['ssh_password']);
+                }
+            } catch (\Throwable $e) {
+                // Fallback: valor já é plain text (registro anterior à criptografia)
+            }
+        }
 
         $csrf   = \Session::getNewCSRFToken();
         $action = \Plugin::getWebDir('newmanagement') . '/ajax/ipbx_sub.php';
@@ -108,13 +126,7 @@ class Ipbx extends \CommonDBTM
         $this->renderNetwork($ipbx_id, $companies_id, $csrf, $action);
         echo '</div>';
 
-        // ---- Linha Fixa ----
-        echo '<div class="nm-subsection mt-3">';
-        echo '<h5><i class="ti ti-phone"></i> ' . __('Linha Fixa', 'newmanagement') . '</h5>';
-        $this->renderLines($ipbx_id, $companies_id, $csrf, $action);
-        echo '</div>';
-
-        // ---- Botão Salvar (IPBX + Linha Fixa) — fora dos forms ----
+        // ---- Botão Salvar (IPBX) — fora dos forms ----
         echo '<div class="text-end mt-3 mb-3">';
         echo '<button type="button" id="nm-save-all" class="btn btn-primary"'
             . ' data-action-url="' . $h($action) . '">'
@@ -122,8 +134,6 @@ class Ipbx extends \CommonDBTM
         echo '</div>';
 
         echo '</div>'; // .nm-ipbx-tab
-
-        $this->renderJS($csrf, $action);
     }
 
     // ======================================================================
@@ -143,7 +153,7 @@ class Ipbx extends \CommonDBTM
         }
         echo '</tr></thead><tbody id="nm-ext-tbody">';
         foreach ($rows as $row) {
-            echo $this->extRow((int)$row['id'], $row, $companies_id, $csrf, $action);
+            echo self::renderExtensionRow((int)$row['id'], $row, $companies_id, $csrf, $action);
         }
         echo '</tbody></table>';
 
@@ -161,14 +171,13 @@ class Ipbx extends \CommonDBTM
             . ' data-action="add_extension"'
             . ' data-ipbx-id="' . $ipbx_id . '"'
             . ' data-companies-id="' . $companies_id . '"'
-            . ' data-csrf="' . $csrf . '"'
             . ' data-url="' . htmlspecialchars($action, ENT_QUOTES) . '">'
             . '<i class="ti ti-plus"></i> ' . __('Adicionar Ramal','newmanagement') . '</button>';
         echo '</div>';
         echo '</form>';
     }
 
-    private function extRow(int $id, array $row, int $companies_id, string $csrf, string $action): string
+    public static function renderExtensionRow(int $id, array $row, int $companies_id, string $csrf, string $action): string
     {
         $h = fn($v) => htmlspecialchars((string)($v ?? ''), ENT_QUOTES);
         return '<tr class="tab_bg_1" id="nm-ext-row-' . $id . '">'
@@ -182,7 +191,6 @@ class Ipbx extends \CommonDBTM
             . ' data-action="delete_extension" data-id="' . $id . '"'
             . ' data-row="nm-ext-row-' . $id . '"'
             . ' data-companies-id="' . $companies_id . '"'
-            . ' data-csrf="' . $csrf . '"'
             . ' data-url="' . htmlspecialchars($action, ENT_QUOTES) . '"'
             . ' data-confirm="' . __('Remover ramal?','newmanagement') . '">'
             . '<i class="ti ti-trash"></i></button></td></tr>';
@@ -205,7 +213,7 @@ class Ipbx extends \CommonDBTM
         }
         echo '</tr></thead><tbody id="nm-dev-tbody">';
         foreach ($rows as $row) {
-            echo $this->devRow((int)$row['id'], $row, $companies_id, $csrf, $action);
+            echo self::renderDeviceRow((int)$row['id'], $row, $companies_id, $csrf, $action);
         }
         echo '</tbody></table>';
 
@@ -219,14 +227,13 @@ class Ipbx extends \CommonDBTM
             . ' data-action="add_device"'
             . ' data-ipbx-id="' . $ipbx_id . '"'
             . ' data-companies-id="' . $companies_id . '"'
-            . ' data-csrf="' . $csrf . '"'
             . ' data-url="' . htmlspecialchars($action, ENT_QUOTES) . '">'
             . '<i class="ti ti-plus"></i> ' . __('Adicionar Dispositivo','newmanagement') . '</button>';
         echo '</div>';
         echo '</form>';
     }
 
-    private function devRow(int $id, array $row, int $companies_id, string $csrf, string $action): string
+    public static function renderDeviceRow(int $id, array $row, int $companies_id, string $csrf, string $action): string
     {
         $h = fn($v) => htmlspecialchars((string)($v ?? ''), ENT_QUOTES);
         return '<tr class="tab_bg_1" id="nm-dev-row-' . $id . '">'
@@ -237,7 +244,6 @@ class Ipbx extends \CommonDBTM
             . ' data-action="delete_device" data-id="' . $id . '"'
             . ' data-row="nm-dev-row-' . $id . '"'
             . ' data-companies-id="' . $companies_id . '"'
-            . ' data-csrf="' . $csrf . '"'
             . ' data-url="' . htmlspecialchars($action, ENT_QUOTES) . '"'
             . ' data-confirm="' . __('Remover dispositivo?','newmanagement') . '">'
             . '<i class="ti ti-trash"></i></button></td></tr>';
@@ -260,7 +266,7 @@ class Ipbx extends \CommonDBTM
         }
         echo '</tr></thead><tbody id="nm-net-tbody">';
         foreach ($rows as $row) {
-            echo $this->netRow((int)$row['id'], $row, $companies_id, $csrf, $action);
+            echo self::renderNetworkRow((int)$row['id'], $row, $companies_id, $csrf, $action);
         }
         echo '</tbody></table>';
 
@@ -274,13 +280,12 @@ class Ipbx extends \CommonDBTM
             . ' data-action="add_network"'
             . ' data-ipbx-id="' . $ipbx_id . '"'
             . ' data-companies-id="' . $companies_id . '"'
-            . ' data-csrf="' . $csrf . '"'
             . ' data-url="' . htmlspecialchars($action, ENT_QUOTES) . '">'
             . '<i class="ti ti-plus"></i> ' . __('Adicionar Rede','newmanagement') . '</button>';
         echo '</div>';
     }
 
-    private function netRow(int $id, array $row, int $companies_id, string $csrf, string $action): string
+    public static function renderNetworkRow(int $id, array $row, int $companies_id, string $csrf, string $action): string
     {
         $h = fn($v) => htmlspecialchars((string)($v ?? ''), ENT_QUOTES);
         return '<tr class="tab_bg_1" id="nm-net-row-' . $id . '">'
@@ -293,327 +298,10 @@ class Ipbx extends \CommonDBTM
             . ' data-action="delete_network" data-id="' . $id . '"'
             . ' data-row="nm-net-row-' . $id . '"'
             . ' data-companies-id="' . $companies_id . '"'
-            . ' data-csrf="' . $csrf . '"'
             . ' data-url="' . htmlspecialchars($action, ENT_QUOTES) . '"'
             . ' data-confirm="' . __('Remover rede?','newmanagement') . '">'
             . '<i class="ti ti-trash"></i></button></td></tr>';
     }
 
-    // ======================================================================
-    // Linha Fixa
-    // ======================================================================
-    private function renderLines(int $ipbx_id, int $companies_id, string $csrf, string $action): void
-    {
-        global $DB;
-        $line_id = 0;
-        $f = ['pilot_number' => '', 'ddr_count' => '', 'status' => 1, 'operator' => '', 'channels' => '', 'proxy_ip' => '', 'line_type' => '', 'audio_ip' => '', 'proxy_port' => '', 'portability_date' => '', 'previous_operator' => '', 'activation_date' => '', 'expiration_date' => '', 'comment' => ''];
 
-        if ($ipbx_id > 0) {
-            foreach ($DB->request(['FROM' => 'glpi_plugin_newmanagement_ipbx_lines', 'WHERE' => ['ipbx_id' => $ipbx_id], 'LIMIT' => 1]) as $row) {
-                $line_id = (int)$row['id'];
-                foreach (array_keys($f) as $k) { if (isset($row[$k])) $f[$k] = $row[$k]; }
-            }
-        }
-
-        $v = fn($k) => htmlspecialchars((string)($f[$k] ?? ''), ENT_QUOTES);
-        $form_action = $line_id > 0 ? 'update_line' : 'add_line';
-        $status_opts = [1 => __('Ativo','newmanagement'), 2 => __('Cancelado','newmanagement')];
-
-        // FIX: sem method/action — submit é 100% via fetch() no JS.
-        // Isso impede que o Chrome rastreie este form como candidato a
-        // salvar senha e dispare o aviso sobre múltiplos forms.
-        echo '<form id="nm-lines-form" autocomplete="off" onsubmit="return false;">';
-        echo '<input type="hidden" name="_glpi_csrf_token" value="' . $csrf . '">';
-        echo '<input type="hidden" name="action" value="' . $form_action . '">';
-        echo '<input type="hidden" name="id" value="' . $line_id . '">';
-        echo '<input type="hidden" name="ipbx_id" value="' . $ipbx_id . '">';
-        echo '<input type="hidden" name="companies_id" value="' . $companies_id . '">';
-        echo '<table class="tab_cadre_fixe">';
-
-        echo '<tr class="tab_bg_1"><td>' . __('Número Piloto','newmanagement') . '</td><td><input type="text" name="pilot_number" autocomplete="off" value="' . $v('pilot_number') . '" class="form-control" placeholder="Ex: 1131000000"></td>';
-        echo '<td>' . __('Quantidade de DDR','newmanagement') . '</td><td><input type="number" name="ddr_count" autocomplete="off" value="' . $v('ddr_count') . '" class="form-control" min="0" placeholder="0"></td>';
-        echo '<td>' . __('Status','newmanagement') . '</td><td><select name="status" class="form-select">';
-        foreach ($status_opts as $val => $lbl) { echo '<option value="' . $val . '"' . ((int)$f['status'] === $val ? ' selected' : '') . '>' . $lbl . '</option>'; }
-        echo '</select></td></tr>';
-
-        echo '<tr class="tab_bg_1"><td>' . __('Operadora','newmanagement') . '</td><td><input type="text" name="operator" autocomplete="off" value="' . $v('operator') . '" class="form-control" placeholder="Ex: Vivo"></td>';
-        echo '<td>' . __('Quantidade de Canais','newmanagement') . '</td><td><input type="number" name="channels" autocomplete="off" value="' . $v('channels') . '" class="form-control" min="0" placeholder="0"></td>';
-        echo '<td>' . __('IP Proxy','newmanagement') . '</td><td><input type="text" name="proxy_ip" autocomplete="off" value="' . $v('proxy_ip') . '" class="form-control" placeholder="Ex: 200.x.x.x"></td></tr>';
-
-        echo '<tr class="tab_bg_1"><td>' . __('Tipo','newmanagement') . '</td><td><input type="text" name="line_type" autocomplete="off" value="' . $v('line_type') . '" class="form-control" placeholder="Ex: SIP, E1"></td>';
-        echo '<td>' . __('IP Tráfego Áudio','newmanagement') . '</td><td><input type="text" name="audio_ip" autocomplete="off" value="' . $v('audio_ip') . '" class="form-control" placeholder="Ex: 200.x.x.x"></td>';
-        echo '<td>' . __('Porta Proxy','newmanagement') . '</td><td><input type="text" name="proxy_port" autocomplete="off" value="' . $v('proxy_port') . '" class="form-control" placeholder="Ex: 5060"></td></tr>';
-
-        echo '<tr class="tab_bg_1"><td>' . __('Data Portabilidade','newmanagement') . '</td><td><input type="date" name="portability_date" autocomplete="off" value="' . $v('portability_date') . '" class="form-control"></td>';
-        echo '<td>' . __('Operadora Anterior','newmanagement') . '</td><td><input type="text" name="previous_operator" autocomplete="off" value="' . $v('previous_operator') . '" class="form-control" placeholder="Ex: Claro"></td>';
-        echo '<td colspan="2"></td></tr>';
-
-        echo '<tr class="tab_bg_1"><td>' . __('Data de Ativação','newmanagement') . '</td><td><input type="date" name="activation_date" autocomplete="off" value="' . $v('activation_date') . '" class="form-control"></td>';
-        echo '<td>' . __('Data de Vencimento','newmanagement') . '</td><td><input type="date" name="expiration_date" autocomplete="off" value="' . $v('expiration_date') . '" class="form-control"></td>';
-        echo '<td colspan="2"></td></tr>';
-
-        echo '<tr class="tab_bg_1"><td>' . __('Comentário','newmanagement') . '</td><td colspan="5"><textarea name="comment" class="form-control" rows="2">' . $v('comment') . '</textarea></td></tr>';
-        echo '</table></form>';
-    }
-
-    // ======================================================================
-    // JavaScript centralizado
-    // ======================================================================
-    private function renderJS(string $csrf, string $action): void
-    {
-        $actionEscaped = htmlspecialchars($action, ENT_QUOTES);
-        echo <<<HTML
-<script>
-(function(){
-  'use strict';
-
-  // URL do endpoint — lida do data-action-url do botão salvar
-  // para não depender de method/action no <form>.
-  var NM_ACTION_URL = '{$actionEscaped}';
-
-  // -----------------------------------------------------------------------
-  // CSRF: envia o token no header X-Glpi-Csrf-Token (GLPI 11 / Symfony)
-  // e também no body para retrocompatibilidade.
-  // -----------------------------------------------------------------------
-  function nmPost(url, data) {
-    var fd = new FormData();
-    Object.keys(data).forEach(function(k){ fd.append(k, data[k]); });
-
-    var token = data['_glpi_csrf_token'] || '';
-    if (!token) {
-      var meta = document.querySelector('meta[name="glpi-csrf-token"]');
-      if (meta) token = meta.getAttribute('content');
-    }
-
-    return fetch(url, {
-      method: 'POST',
-      headers: { 'X-Glpi-Csrf-Token': token },
-      body: fd
-    });
-  }
-
-  function getCsrf(btn) { return btn.dataset.csrf || ''; }
-  function getUrl(btn)  { return btn.dataset.url  || NM_ACTION_URL; }
-
-  // -----------------------------------------------------------------------
-  // Atualiza ipbx_id em todos os botões de sub-itens após gravar IPBX novo
-  // -----------------------------------------------------------------------
-  function nmUpdateIpbxId(newId) {
-    ['#nm-ext-add-btn','#nm-dev-add-btn','#nm-net-add-btn'].forEach(function(sel){
-      var el = document.querySelector(sel);
-      if (el) el.dataset.ipbxId = newId;
-    });
-    var hiddenLines = document.querySelector('#nm-lines-form input[name="ipbx_id"]');
-    if (hiddenLines) hiddenLines.value = newId;
-
-    var hiddenAction = document.querySelector('#nm-ipbx-form input[name="action"]');
-    if (hiddenAction) hiddenAction.value = 'update_ipbx';
-    var hiddenId = document.querySelector('#nm-ipbx-form input[name="id"]');
-    if (hiddenId) hiddenId.value = newId;
-  }
-
-  // -----------------------------------------------------------------------
-  // Botão Salvar: grava IPBX via fetch → depois grava Linha Fixa via fetch
-  // (os forms NÃO têm method/action — submit feito 100% aqui)
-  // -----------------------------------------------------------------------
-  document.addEventListener('click', function(e){
-    if (!e.target.closest('#nm-save-all')) return;
-    e.preventDefault();
-
-    var ipbxForm  = document.getElementById('nm-ipbx-form');
-    var linesForm = document.getElementById('nm-lines-form');
-    if (!ipbxForm || !linesForm) return;
-
-    var fd    = new FormData(ipbxForm);
-    var token = fd.get('_glpi_csrf_token') || '';
-    var meta  = document.querySelector('meta[name="glpi-csrf-token"]');
-    if (!token && meta) token = meta.getAttribute('content');
-
-    fetch(NM_ACTION_URL, {
-      method: 'POST',
-      headers: { 'X-Glpi-Csrf-Token': token },
-      body: fd
-    })
-    .then(function(r){ return r.json(); })
-    .then(function(json){
-      if (json && json.id) {
-        nmUpdateIpbxId(json.id);
-        var hl = linesForm.querySelector('input[name="ipbx_id"]');
-        if (hl) hl.value = json.id;
-      }
-
-      var lfd  = new FormData(linesForm);
-      var ltok = lfd.get('_glpi_csrf_token') || token;
-      fetch(NM_ACTION_URL, {
-        method: 'POST',
-        headers: { 'X-Glpi-Csrf-Token': ltok },
-        body: lfd
-      })
-      .then(function(lr){ return lr.json(); })
-      .then(function(lj){
-        if (lj && lj.id) {
-          var la = linesForm.querySelector('input[name="action"]');
-          if (la) la.value = 'update_line';
-          var li = linesForm.querySelector('input[name="id"]');
-          if (li) li.value = lj.id;
-        }
-        var btn = document.getElementById('nm-save-all');
-        if (btn) {
-          btn.classList.add('btn-success');
-          btn.classList.remove('btn-primary');
-          setTimeout(function(){
-            btn.classList.remove('btn-success');
-            btn.classList.add('btn-primary');
-          }, 2000);
-        }
-      })
-      .catch(function(){ alert('Erro ao salvar Linha Fixa.'); });
-    })
-    .catch(function(){ alert('Erro ao salvar IPBX.'); });
-  });
-
-  // -----------------------------------------------------------------------
-  // Deletar (qualquer tabela)
-  // -----------------------------------------------------------------------
-  document.addEventListener('click', function(e){
-    var btn = e.target.closest('.nm-del-btn');
-    if (!btn) return;
-    if (!confirm(btn.dataset.confirm || 'Confirmar?')) return;
-    nmPost(getUrl(btn), {
-      '_glpi_csrf_token': getCsrf(btn),
-      action: btn.dataset.action,
-      id: btn.dataset.id,
-      companies_id: btn.dataset.companiesId
-    }).then(function(r){ return r.json(); })
-      .then(function(json){
-        if (json && json.success) {
-          var row = document.getElementById(btn.dataset.row);
-          if (row) row.remove();
-        } else {
-          alert('Erro ao remover.');
-        }
-      }).catch(function(){ alert('Erro ao remover.'); });
-  });
-
-  // -----------------------------------------------------------------------
-  // Valida ipbx_id antes de adicionar sub-item
-  // -----------------------------------------------------------------------
-  function checkIpbxSaved(btn) {
-    var id = parseInt(btn.dataset.ipbxId || '0', 10);
-    if (id <= 0) {
-      alert('Salve o Servidor IPBX primeiro antes de adicionar sub-itens.');
-      return false;
-    }
-    return true;
-  }
-
-  // -----------------------------------------------------------------------
-  // Adicionar Ramal
-  // -----------------------------------------------------------------------
-  document.addEventListener('click', function(e){
-    var btn = e.target.closest('#nm-ext-add-btn');
-    if (!btn) return;
-    if (!checkIpbxSaved(btn)) return;
-    var data = {
-      '_glpi_csrf_token': getCsrf(btn),
-      action: btn.dataset.action,
-      ipbx_id: btn.dataset.ipbxId,
-      companies_id: btn.dataset.companiesId
-    };
-    ['number','password','device_ip','user_name','records_calls','department'].forEach(function(f){
-      var el = document.getElementById('nm-ext-' + f);
-      if (el) data[f] = el.value;
-    });
-    nmPost(getUrl(btn), data)
-      .then(function(r){ return r.json(); })
-      .then(function(json){
-        if (json && json.success && json.html) {
-          document.getElementById('nm-ext-tbody').insertAdjacentHTML('beforeend', json.html);
-          ['number','password','device_ip','user_name','department'].forEach(function(f){
-            var el = document.getElementById('nm-ext-' + f); if(el) el.value='';
-          });
-          var sel = document.getElementById('nm-ext-records_calls'); if(sel) sel.value='0';
-        } else {
-          alert(json && json.error ? json.error : 'Erro ao adicionar ramal.');
-        }
-      }).catch(function(){ alert('Erro ao adicionar ramal.'); });
-  });
-
-  // -----------------------------------------------------------------------
-  // Adicionar Dispositivo
-  // -----------------------------------------------------------------------
-  document.addEventListener('click', function(e){
-    var btn = e.target.closest('#nm-dev-add-btn');
-    if (!btn) return;
-    if (!checkIpbxSaved(btn)) return;
-    var data = {
-      '_glpi_csrf_token': getCsrf(btn),
-      action: btn.dataset.action,
-      ipbx_id: btn.dataset.ipbxId,
-      companies_id: btn.dataset.companiesId
-    };
-    ['device_type','ip_address','password'].forEach(function(f){
-      var el = document.getElementById('nm-dev-' + f); if(el) data[f] = el.value;
-    });
-    nmPost(getUrl(btn), data)
-      .then(function(r){ return r.json(); })
-      .then(function(json){
-        if (json && json.success && json.html) {
-          document.getElementById('nm-dev-tbody').insertAdjacentHTML('beforeend', json.html);
-          ['device_type','ip_address','password'].forEach(function(f){
-            var el = document.getElementById('nm-dev-' + f); if(el) el.value='';
-          });
-        } else {
-          alert(json && json.error ? json.error : 'Erro ao adicionar dispositivo.');
-        }
-      }).catch(function(){ alert('Erro ao adicionar dispositivo.'); });
-  });
-
-  // -----------------------------------------------------------------------
-  // Adicionar Rede
-  // -----------------------------------------------------------------------
-  document.addEventListener('click', function(e){
-    var btn = e.target.closest('#nm-net-add-btn');
-    if (!btn) return;
-    if (!checkIpbxSaved(btn)) return;
-    var data = {
-      '_glpi_csrf_token': getCsrf(btn),
-      action: btn.dataset.action,
-      ipbx_id: btn.dataset.ipbxId,
-      companies_id: btn.dataset.companiesId
-    };
-    ['ip_network','netmask','gateway','dns_primary','dns_secondary'].forEach(function(f){
-      var el = document.getElementById('nm-net-' + f); if(el) data[f] = el.value;
-    });
-    nmPost(getUrl(btn), data)
-      .then(function(r){ return r.json(); })
-      .then(function(json){
-        if (json && json.success && json.html) {
-          document.getElementById('nm-net-tbody').insertAdjacentHTML('beforeend', json.html);
-          ['ip_network','netmask','gateway','dns_primary','dns_secondary'].forEach(function(f){
-            var el = document.getElementById('nm-net-' + f); if(el) el.value='';
-          });
-        } else {
-          alert(json && json.error ? json.error : 'Erro ao adicionar rede.');
-        }
-      }).catch(function(){ alert('Erro ao adicionar rede.'); });
-  });
-
-  // -----------------------------------------------------------------------
-  // Mostrar/Ocultar senha
-  // -----------------------------------------------------------------------
-  document.addEventListener('click', function(e){
-    var btn = e.target.closest('.nm-btn-eye');
-    if (!btn) return;
-    var inp = document.getElementById(btn.dataset.target);
-    if (!inp) return;
-    inp.type = inp.type === 'password' ? 'text' : 'password';
-    var icon = btn.querySelector('i');
-    if (icon) { icon.className = inp.type === 'password' ? 'ti ti-eye' : 'ti ti-eye-off'; }
-  });
-
-})();
-</script>
-HTML;
-    }
 }
