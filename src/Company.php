@@ -269,6 +269,168 @@ class Company extends \CommonDBTM
         echo '</tr>';
 
         $this->showFormButtons($options);
+
+        // -----------------------------------------------------------------------
+        // Injeção dinâmica via JavaScript — BrasilAPI (CNPJ + CEP)
+        // Toda a lógica de busca é client-side; nenhum dado trafega pelo servidor.
+        // -----------------------------------------------------------------------
+        echo <<<'JS'
+<style>
+.nm-input-group          { display:flex; gap:6px; align-items:center; }
+.nm-btn-search           { display:inline-flex; align-items:center; gap:4px; padding:4px 10px;
+                           font-size:.85rem; border-radius:4px; border:1px solid #aaa;
+                           background:#f5f5f5; cursor:pointer; white-space:nowrap; }
+.nm-btn-search:hover     { background:#e0e0e0; }
+.nm-btn-search:disabled  { opacity:.5; cursor:not-allowed; }
+.nm-feedback             { font-size:.8rem; margin-top:2px; display:block; min-height:1.2em; }
+.nm-feedback.ok          { color:#2e7d32; }
+.nm-feedback.erro        { color:#c62828; }
+</style>
+
+<script>
+(function () {
+    'use strict';
+
+    /* ── utilitários ── */
+    function soDigitos(v) { return v.replace(/\D/g, ''); }
+
+    function setFeedback(id, msg, tipo) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.textContent = msg;
+        el.className = 'nm-feedback ' + (tipo || '');
+    }
+
+    function setLoading(btnId, loading) {
+        const btn = document.getElementById(btnId);
+        if (!btn) return;
+        btn.disabled = loading;
+        btn.innerHTML = loading
+            ? '<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Buscando…'
+            : '<i class="ti ti-search"></i> Buscar';
+    }
+
+    /* ── máscara automática CNPJ ── */
+    document.getElementById('cnpj')?.addEventListener('input', function () {
+        let v = soDigitos(this.value).slice(0, 14);
+        if (v.length > 12) v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+        else if (v.length > 8) v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})/, '$1.$2.$3/$4');
+        else if (v.length > 5) v = v.replace(/^(\d{2})(\d{3})(\d{3})/, '$1.$2.$3');
+        else if (v.length > 2) v = v.replace(/^(\d{2})(\d+)/, '$1.$2');
+        this.value = v;
+    });
+
+    /* ── máscara automática CEP ── */
+    document.getElementById('cep')?.addEventListener('input', function () {
+        let v = soDigitos(this.value).slice(0, 8);
+        if (v.length > 5) v = v.replace(/^(\d{5})(\d+)/, '$1-$2');
+        this.value = v;
+    });
+
+    /* ── busca CNPJ (BrasilAPI) ── */
+    document.getElementById('btn-buscar-cnpj')?.addEventListener('click', async function () {
+        const raw = soDigitos(document.getElementById('cnpj')?.value || '');
+        if (raw.length !== 14) {
+            setFeedback('cnpj-feedback', 'CNPJ deve ter 14 dígitos.', 'erro');
+            return;
+        }
+
+        setLoading('btn-buscar-cnpj', true);
+        setFeedback('cnpj-feedback', '', '');
+
+        try {
+            const res  = await fetch('https://brasilapi.com.br/api/cnpj/v1/' + raw);
+            const data = await res.json();
+
+            if (!res.ok) {
+                setFeedback('cnpj-feedback', data.message || 'CNPJ não encontrado.', 'erro');
+                return;
+            }
+
+            /* preenche campos */
+            const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+
+            set('razao_social', data.razao_social);
+            set('email',        data.email);
+            set('phone',        data.ddd_telefone_1
+                                    ? '(' + data.ddd_telefone_1.slice(0,2) + ') ' + data.ddd_telefone_1.slice(2)
+                                    : '');
+
+            /* monta endereço completo */
+            const partes = [
+                data.logradouro  ? data.descricao_tipo_de_logradouro + ' ' + data.logradouro : '',
+                data.numero      ? 'Nº ' + data.numero : '',
+                data.complemento || '',
+                data.bairro      || '',
+                data.municipio   ? data.municipio + (data.uf ? ' - ' + data.uf : '') : '',
+            ].filter(Boolean);
+            set('address', partes.join(', '));
+
+            /* aplica máscara no CEP retornado */
+            if (data.cep) {
+                const cepLimpo = soDigitos(data.cep).slice(0, 8);
+                set('cep', cepLimpo.length === 8
+                    ? cepLimpo.replace(/^(\d{5})(\d{3})$/, '$1-$2')
+                    : cepLimpo);
+            }
+
+            setFeedback('cnpj-feedback', '✔ Dados preenchidos com sucesso.', 'ok');
+
+        } catch (err) {
+            setFeedback('cnpj-feedback', 'Erro de conexão com a BrasilAPI.', 'erro');
+            console.error('[NM] CNPJ fetch error:', err);
+        } finally {
+            setLoading('btn-buscar-cnpj', false);
+        }
+    });
+
+    /* ── busca CEP (BrasilAPI) ── */
+    document.getElementById('btn-buscar-cep')?.addEventListener('click', async function () {
+        const raw = soDigitos(document.getElementById('cep')?.value || '');
+        if (raw.length !== 8) {
+            setFeedback('cep-feedback', 'CEP deve ter 8 dígitos.', 'erro');
+            return;
+        }
+
+        setLoading('btn-buscar-cep', true);
+        setFeedback('cep-feedback', '', '');
+
+        try {
+            const res  = await fetch('https://brasilapi.com.br/api/cep/v2/' + raw);
+            const data = await res.json();
+
+            if (!res.ok) {
+                setFeedback('cep-feedback', data.message || 'CEP não encontrado.', 'erro');
+                return;
+            }
+
+            const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+
+            const partes = [
+                data.street      || '',
+                data.neighborhood || '',
+                data.city        ? data.city + (data.state ? ' - ' + data.state : '') : '',
+            ].filter(Boolean);
+            set('address', partes.join(', '));
+
+            setFeedback('cep-feedback', '✔ Endereço preenchido.', 'ok');
+
+        } catch (err) {
+            setFeedback('cep-feedback', 'Erro de conexão com a BrasilAPI.', 'erro');
+            console.error('[NM] CEP fetch error:', err);
+        } finally {
+            setLoading('btn-buscar-cep', false);
+        }
+    });
+
+    /* ── animação do ícone de loading ── */
+    const style = document.createElement('style');
+    style.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';
+    document.head.appendChild(style);
+})();
+</script>
+JS;
+
         return true;
     }
 }
