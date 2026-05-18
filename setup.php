@@ -39,9 +39,12 @@ function plugin_init_newmanagement()
     \Plugin::registerClass(\GlpiPlugin\Newmanagement\FixedLine::class);
     \Plugin::registerClass(\GlpiPlugin\Newmanagement\Task::class);
 
-    // Nota: o menu lateral é gerenciado exclusivamente por
-    // Company::getMenuContent() — não usar MENU_TOADD aqui
-    // para evitar duplicidade e comportamento indefinido no GLPI 11.
+    // GLPI 11 — registra o menu lateral via MENU_TOADD.
+    // A chave 'plugins' faz o menu aparecer na seção Plug-ins do topo.
+    // Company::getMenuContent() define os sub-itens (Empresas, IPBX, Chatbots…).
+    $PLUGIN_HOOKS[\Glpi\Plugin\Hooks::MENU_TOADD]['newmanagement'] = [
+        'plugins' => [\GlpiPlugin\Newmanagement\Company::class],
+    ];
 }
 
 /**
