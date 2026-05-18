@@ -10,7 +10,7 @@
 
 define('PLUGIN_NEWMANAGEMENT_VERSION', '1.0.0');
 
-// Padronizado para GLPI 11 (corrige inconsistência com README anterior)
+// Padronizado para GLPI 11
 define('PLUGIN_NEWMANAGEMENT_MIN_GLPI_VERSION', '11.0.0');
 define('PLUGIN_NEWMANAGEMENT_MAX_GLPI_VERSION', '11.0.99');
 
@@ -39,10 +39,9 @@ function plugin_init_newmanagement()
     \Plugin::registerClass(\GlpiPlugin\Newmanagement\FixedLine::class);
     \Plugin::registerClass(\GlpiPlugin\Newmanagement\Task::class);
 
-    // Menu lateral — GLPI 11: o menu vem de getMenuContent() na classe Company
-    $PLUGIN_HOOKS[\Glpi\Plugin\Hooks::MENU_TOADD]['newmanagement'] = [
-        'plugins' => [\GlpiPlugin\Newmanagement\Company::class],
-    ];
+    // Nota: o menu lateral é gerenciado exclusivamente por
+    // Company::getMenuContent() — não usar MENU_TOADD aqui
+    // para evitar duplicidade e comportamento indefinido no GLPI 11.
 }
 
 /**
