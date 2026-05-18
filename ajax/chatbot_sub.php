@@ -69,7 +69,9 @@ try {
                 'date_mod'                => $now,
                 'is_deleted'              => 0,
             ];
-            $newId = $DB->insert('glpi_plugin_newmanagement_chatbots', $data);
+            $DB->insert('glpi_plugin_newmanagement_chatbots', $data);
+            $newId = $DB->insertId();
+            if (!$newId) nmJson(false, ['error' => 'Falha ao inserir chatbot no banco']);
             nmJson(true, ['id' => $newId]);
 
         case 'update_chatbot':
@@ -108,7 +110,7 @@ try {
             Session::checkRight('plugin_newmanagement_chatbot', CREATE);
             $chatbot_id = $i('chatbot_id');
             if ($chatbot_id <= 0) nmJson(false, ['error' => 'chatbot_id inválido']);
-            $newId = $DB->insert('glpi_plugin_newmanagement_chatbot_mass_comm', [
+            $DB->insert('glpi_plugin_newmanagement_chatbot_mass_comm', [
                 'chatbot_id'           => $chatbot_id,
                 'companies_id'         => $companies_id,
                 'system_name'          => $s('system_name'),
@@ -122,6 +124,8 @@ try {
                 'date_creation'        => $now,
                 'date_mod'             => $now,
             ]);
+            $newId = $DB->insertId();
+            if (!$newId) nmJson(false, ['error' => 'Falha ao inserir comunicação em massa']);
             nmJson(true, ['id' => $newId]);
 
         case 'delete_mass_comm':
@@ -136,7 +140,7 @@ try {
             Session::checkRight('plugin_newmanagement_chatbot', CREATE);
             $chatbot_id = $i('chatbot_id');
             if ($chatbot_id <= 0) nmJson(false, ['error' => 'chatbot_id inválido']);
-            $newId = $DB->insert('glpi_plugin_newmanagement_chatbot_wa_restrictions', [
+            $DB->insert('glpi_plugin_newmanagement_chatbot_wa_restrictions', [
                 'chatbot_id'       => $chatbot_id,
                 'companies_id'     => $companies_id,
                 'whatsapp_number'  => $s('whatsapp_number'),
@@ -145,6 +149,8 @@ try {
                 'date_creation'    => $now,
                 'date_mod'         => $now,
             ]);
+            $newId = $DB->insertId();
+            if (!$newId) nmJson(false, ['error' => 'Falha ao inserir restrição WA']);
             nmJson(true, ['id' => $newId]);
 
         case 'delete_wa_restriction':
@@ -159,7 +165,7 @@ try {
             Session::checkRight('plugin_newmanagement_chatbot', CREATE);
             $chatbot_id = $i('chatbot_id');
             if ($chatbot_id <= 0) nmJson(false, ['error' => 'chatbot_id inválido']);
-            $newId = $DB->insert('glpi_plugin_newmanagement_chatbot_users', [
+            $DB->insert('glpi_plugin_newmanagement_chatbot_users', [
                 'chatbot_id'    => $chatbot_id,
                 'companies_id'  => $companies_id,
                 'user_name'     => $s('user_name'),
@@ -170,6 +176,8 @@ try {
                 'date_creation' => $now,
                 'date_mod'      => $now,
             ]);
+            $newId = $DB->insertId();
+            if (!$newId) nmJson(false, ['error' => 'Falha ao inserir usuário do chatbot']);
             nmJson(true, ['id' => $newId]);
 
         case 'delete_chatbot_user':
