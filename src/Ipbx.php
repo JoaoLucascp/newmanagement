@@ -129,19 +129,34 @@ class Ipbx extends \CommonDBTM
 
         // ---- Ramais ----
         echo '<div class="nm-subsection mt-3">';
-        echo '<h5><i class="ti ti-phone-call"></i> ' . __('Ramais', 'newmanagement') . '</h5>';
+        echo '<div class="d-flex align-items-center mb-2">';
+        echo '<i class="ti ti-phone-call me-2 fs-5 text-muted"></i>';
+        echo '<span class="fw-bold text-muted text-uppercase" style="font-size:0.75rem;letter-spacing:.05em">';
+        echo __('Ramais', 'newmanagement');
+        echo '</span>';
+        echo '</div>';
         $this->renderExtensions($ipbx_id, $companies_id, $csrf, $action);
         echo '</div>';
 
         // ---- Dispositivos ----
         echo '<div class="nm-subsection mt-3">';
-        echo '<h5><i class="ti ti-device-desktop"></i> ' . __('Dispositivos', 'newmanagement') . '</h5>';
+        echo '<div class="d-flex align-items-center mb-2">';
+        echo '<i class="ti ti-device-desktop me-2 fs-5 text-muted"></i>';
+        echo '<span class="fw-bold text-muted text-uppercase" style="font-size:0.75rem;letter-spacing:.05em">';
+        echo __('Dispositivos', 'newmanagement');
+        echo '</span>';
+        echo '</div>';
         $this->renderDevices($ipbx_id, $companies_id, $csrf, $action);
         echo '</div>';
 
         // ---- Rede ----
         echo '<div class="nm-subsection mt-3">';
-        echo '<h5><i class="ti ti-network"></i> ' . __('Rede da Empresa', 'newmanagement') . '</h5>';
+        echo '<div class="d-flex align-items-center mb-2">';
+        echo '<i class="ti ti-network me-2 fs-5 text-muted"></i>';
+        echo '<span class="fw-bold text-muted text-uppercase" style="font-size:0.75rem;letter-spacing:.05em">';
+        echo __('Rede da Empresa', 'newmanagement');
+        echo '</span>';
+        echo '</div>';
         $this->renderNetwork($ipbx_id, $companies_id, $csrf, $action);
         echo '</div>';
 
@@ -165,37 +180,98 @@ class Ipbx extends \CommonDBTM
             ? $DB->request(['FROM' => 'glpi_plugin_newmanagement_ipbx_extensions', 'WHERE' => ['ipbx_id' => $ipbx_id], 'ORDER' => 'number ASC'])
             : [];
 
+        $h = fn($v) => htmlspecialchars((string) ($v ?? ''), ENT_QUOTES);
+
         echo '<table class="tab_cadre_fixehov" id="nm-ext-table">';
-        echo '<thead><tr class="noHover">';
-        foreach ([__('Número', 'newmanagement'), __('Senha', 'newmanagement'), __('IP Aparelho', 'newmanagement'), __('Usuário', 'newmanagement'), __('Grava?', 'newmanagement'), __('Departamento', 'newmanagement'), __('Ação', 'newmanagement')] as $th) {
+
+        // thead com headerRow noHover — padrão GLPI 10/11
+        echo '<thead>';
+        echo '<tr class="headerRow noHover">';
+        foreach ([
+            __('Número', 'newmanagement'),
+            __('Senha', 'newmanagement'),
+            __('IP Aparelho', 'newmanagement'),
+            __('Usuário', 'newmanagement'),
+            __('Grava?', 'newmanagement'),
+            __('Departamento', 'newmanagement'),
+            __('Ação', 'newmanagement'),
+        ] as $th) {
             echo '<th>' . $th . '</th>';
         }
-        echo '</tr></thead><tbody id="nm-ext-tbody">';
+        echo '</tr>';
+        echo '</thead>';
+
+        echo '<tbody id="nm-ext-tbody">';
+
+        // Linhas existentes
         foreach ($rows as $row) {
             echo self::renderExtensionRow((int) $row['id'], $row, $companies_id, $csrf, $action);
         }
-        echo '</tbody></table>';
 
-        echo '<div class="nm-add-row d-flex flex-wrap gap-2 align-items-center mt-2" id="nm-ext-add">';
-        echo '<input type="text" id="nm-ext-number"     autocomplete="off" class="form-control form-control-sm" placeholder="' . __('Número', 'newmanagement') . '" style="width:110px">';
-        // OPÇÃO A: slot — JS injeta <input type="password"> aqui
-        echo '<div id="nm-ext-password-slot" data-target-id="nm-ext-password" data-placeholder="' . __('Senha', 'newmanagement') . '" style="width:110px"></div>';
-        echo '<input type="text" id="nm-ext-device_ip"  autocomplete="off" class="form-control form-control-sm" placeholder="IP" style="width:120px">';
-        echo '<input type="text" id="nm-ext-user_name"  autocomplete="off" class="form-control form-control-sm" placeholder="' . __('Usuário', 'newmanagement') . '" style="width:120px">';
-        echo '<select id="nm-ext-records_calls" class="form-select form-select-sm" style="width:90px"><option value="0">' . __('Não', 'newmanagement') . '</option><option value="1">' . __('Sim', 'newmanagement') . '</option></select>';
-        echo '<input type="text" id="nm-ext-department" autocomplete="off" class="form-control form-control-sm" placeholder="' . __('Departamento', 'newmanagement') . '" style="width:140px">';
-        echo '<button type="button" class="btn btn-sm btn-success" id="nm-ext-add-btn"'
-            . ' data-action="add_extension"'
-            . ' data-ipbx-id="' . $ipbx_id . '"'
-            . ' data-companies-id="' . $companies_id . '"'
-            . ' data-url="' . htmlspecialchars($action, ENT_QUOTES) . '">'
-            . '<i class="ti ti-plus"></i> ' . __('Adicionar Ramal', 'newmanagement') . '</button>';
+        // Linha de adição como última <tr class="tab_bg_2"> dentro do tbody — padrão GLPI
+        echo '<tr class="tab_bg_2" id="nm-ext-add-row">';
+
+        echo '<td>';
+        echo '<input type="text" id="nm-ext-number" autocomplete="off"';
+        echo ' class="form-control form-control-sm"';
+        echo ' placeholder="' . __('Número', 'newmanagement') . '">';
+        echo '</td>';
+
+        // Slot de senha — JS injeta <input type="password"> aqui pelo data-target-id
+        echo '<td>';
+        echo '<div id="nm-ext-password-slot"';
+        echo ' data-target-id="nm-ext-password"';
+        echo ' data-placeholder="' . __('Senha', 'newmanagement') . '">';
         echo '</div>';
+        echo '</td>';
+
+        echo '<td>';
+        echo '<input type="text" id="nm-ext-device_ip" autocomplete="off"';
+        echo ' class="form-control form-control-sm" placeholder="IP">';
+        echo '</td>';
+
+        echo '<td>';
+        echo '<input type="text" id="nm-ext-user_name" autocomplete="off"';
+        echo ' class="form-control form-control-sm"';
+        echo ' placeholder="' . __('Usuário', 'newmanagement') . '">';
+        echo '</td>';
+
+        echo '<td>';
+        echo '<select id="nm-ext-records_calls" class="form-select form-select-sm">';
+        echo '<option value="0">' . __('Não', 'newmanagement') . '</option>';
+        echo '<option value="1">' . __('Sim', 'newmanagement') . '</option>';
+        echo '</select>';
+        echo '</td>';
+
+        echo '<td>';
+        echo '<input type="text" id="nm-ext-department" autocomplete="off"';
+        echo ' class="form-control form-control-sm"';
+        echo ' placeholder="' . __('Departamento', 'newmanagement') . '">';
+        echo '</td>';
+
+        // Botão adicionar: btn-outline-secondary + ti ti-plus — padrão GLPI
+        echo '<td>';
+        echo '<button type="button"';
+        echo ' class="btn btn-sm btn-outline-secondary"';
+        echo ' id="nm-ext-add-btn"';
+        echo ' data-action="add_extension"';
+        echo ' data-ipbx-id="' . $ipbx_id . '"';
+        echo ' data-companies-id="' . $companies_id . '"';
+        echo ' data-url="' . $h($action) . '">';
+        echo '<i class="ti ti-plus"></i> ' . __('Adicionar Ramal', 'newmanagement');
+        echo '</button>';
+        echo '</td>';
+
+        echo '</tr>';
+        echo '</tbody>';
+        echo '</table>';
     }
 
     public static function renderExtensionRow(int $id, array $row, int $companies_id, string $csrf, string $action): string
     {
         $h = fn($v) => htmlspecialchars((string) ($v ?? ''), ENT_QUOTES);
+
+        // Botão excluir: btn-icon sem fundo colorido + ti ti-trash text-danger — padrão GLPI
         return '<tr class="tab_bg_1" id="nm-ext-row-' . $id . '">'
             . '<td>' . $h($row['number']) . '</td>'
             . '<td>••••••</td>'
@@ -203,13 +279,20 @@ class Ipbx extends \CommonDBTM
             . '<td>' . $h($row['user_name']) . '</td>'
             . '<td>' . ($row['records_calls'] ? __('Sim', 'newmanagement') : __('Não', 'newmanagement')) . '</td>'
             . '<td>' . $h($row['department']) . '</td>'
-            . '<td><button type="button" class="btn btn-sm btn-danger nm-del-btn"'
-            . ' data-action="delete_extension" data-id="' . $id . '"'
+            . '<td>'
+            . '<button type="button"'
+            . ' class="btn btn-sm btn-icon nm-del-btn"'
+            . ' data-action="delete_extension"'
+            . ' data-id="' . $id . '"'
             . ' data-row="nm-ext-row-' . $id . '"'
             . ' data-companies-id="' . $companies_id . '"'
             . ' data-url="' . htmlspecialchars($action, ENT_QUOTES) . '"'
-            . ' data-confirm="' . __('Remover ramal?', 'newmanagement') . '">'
-            . '<i class="ti ti-trash"></i></button></td></tr>';
+            . ' data-confirm="' . __('Remover ramal?', 'newmanagement') . '"'
+            . ' title="' . __('Remover', 'newmanagement') . '">'
+            . '<i class="ti ti-trash text-danger"></i>'
+            . '</button>'
+            . '</td>'
+            . '</tr>';
     }
 
     // ======================================================================
@@ -222,45 +305,92 @@ class Ipbx extends \CommonDBTM
             ? $DB->request(['FROM' => 'glpi_plugin_newmanagement_ipbx_devices', 'WHERE' => ['ipbx_id' => $ipbx_id], 'ORDER' => 'device_type ASC'])
             : [];
 
+        $h = fn($v) => htmlspecialchars((string) ($v ?? ''), ENT_QUOTES);
+
         echo '<table class="tab_cadre_fixehov" id="nm-dev-table">';
-        echo '<thead><tr class="noHover">';
-        foreach ([__('Tipo', 'newmanagement'), __('IP', 'newmanagement'), __('Senha', 'newmanagement'), __('Ação', 'newmanagement')] as $th) {
+
+        echo '<thead>';
+        echo '<tr class="headerRow noHover">';
+        foreach ([
+            __('Tipo', 'newmanagement'),
+            __('IP', 'newmanagement'),
+            __('Senha', 'newmanagement'),
+            __('Ação', 'newmanagement'),
+        ] as $th) {
             echo '<th>' . $th . '</th>';
         }
-        echo '</tr></thead><tbody id="nm-dev-tbody">';
+        echo '</tr>';
+        echo '</thead>';
+
+        echo '<tbody id="nm-dev-tbody">';
+
         foreach ($rows as $row) {
             echo self::renderDeviceRow((int) $row['id'], $row, $companies_id, $csrf, $action);
         }
-        echo '</tbody></table>';
 
-        echo '<div class="nm-add-row d-flex flex-wrap gap-2 align-items-center mt-2" id="nm-dev-add">';
-        echo '<input type="text" id="nm-dev-device_type" autocomplete="off" class="form-control form-control-sm" placeholder="' . __('Tipo', 'newmanagement') . '" style="width:160px">';
-        echo '<input type="text" id="nm-dev-ip_address"  autocomplete="off" class="form-control form-control-sm" placeholder="IP" style="width:160px">';
-        // OPÇÃO A: slot — JS injeta <input type="password"> aqui
-        echo '<div id="nm-dev-password-slot" data-target-id="nm-dev-password" data-placeholder="' . __('Senha', 'newmanagement') . '" style="width:140px"></div>';
-        echo '<button type="button" class="btn btn-sm btn-success" id="nm-dev-add-btn"'
-            . ' data-action="add_device"'
-            . ' data-ipbx-id="' . $ipbx_id . '"'
-            . ' data-companies-id="' . $companies_id . '"'
-            . ' data-url="' . htmlspecialchars($action, ENT_QUOTES) . '">'
-            . '<i class="ti ti-plus"></i> ' . __('Adicionar Dispositivo', 'newmanagement') . '</button>';
+        // Linha de adição como última <tr class="tab_bg_2"> dentro do tbody — padrão GLPI
+        echo '<tr class="tab_bg_2" id="nm-dev-add-row">';
+
+        echo '<td>';
+        echo '<input type="text" id="nm-dev-device_type" autocomplete="off"';
+        echo ' class="form-control form-control-sm"';
+        echo ' placeholder="' . __('Tipo', 'newmanagement') . '">';
+        echo '</td>';
+
+        echo '<td>';
+        echo '<input type="text" id="nm-dev-ip_address" autocomplete="off"';
+        echo ' class="form-control form-control-sm" placeholder="IP">';
+        echo '</td>';
+
+        // Slot de senha — JS injeta <input type="password"> aqui pelo data-target-id
+        echo '<td>';
+        echo '<div id="nm-dev-password-slot"';
+        echo ' data-target-id="nm-dev-password"';
+        echo ' data-placeholder="' . __('Senha', 'newmanagement') . '">';
         echo '</div>';
+        echo '</td>';
+
+        // Botão adicionar: btn-outline-secondary + ti ti-plus — padrão GLPI
+        echo '<td>';
+        echo '<button type="button"';
+        echo ' class="btn btn-sm btn-outline-secondary"';
+        echo ' id="nm-dev-add-btn"';
+        echo ' data-action="add_device"';
+        echo ' data-ipbx-id="' . $ipbx_id . '"';
+        echo ' data-companies-id="' . $companies_id . '"';
+        echo ' data-url="' . $h($action) . '">';
+        echo '<i class="ti ti-plus"></i> ' . __('Adicionar Dispositivo', 'newmanagement');
+        echo '</button>';
+        echo '</td>';
+
+        echo '</tr>';
+        echo '</tbody>';
+        echo '</table>';
     }
 
     public static function renderDeviceRow(int $id, array $row, int $companies_id, string $csrf, string $action): string
     {
         $h = fn($v) => htmlspecialchars((string) ($v ?? ''), ENT_QUOTES);
+
+        // Botão excluir: btn-icon sem fundo colorido + ti ti-trash text-danger — padrão GLPI
         return '<tr class="tab_bg_1" id="nm-dev-row-' . $id . '">'
             . '<td>' . $h($row['device_type']) . '</td>'
             . '<td>' . $h($row['ip_address']) . '</td>'
             . '<td>••••••</td>'
-            . '<td><button type="button" class="btn btn-sm btn-danger nm-del-btn"'
-            . ' data-action="delete_device" data-id="' . $id . '"'
+            . '<td>'
+            . '<button type="button"'
+            . ' class="btn btn-sm btn-icon nm-del-btn"'
+            . ' data-action="delete_device"'
+            . ' data-id="' . $id . '"'
             . ' data-row="nm-dev-row-' . $id . '"'
             . ' data-companies-id="' . $companies_id . '"'
             . ' data-url="' . htmlspecialchars($action, ENT_QUOTES) . '"'
-            . ' data-confirm="' . __('Remover dispositivo?', 'newmanagement') . '">'
-            . '<i class="ti ti-trash"></i></button></td></tr>';
+            . ' data-confirm="' . __('Remover dispositivo?', 'newmanagement') . '"'
+            . ' title="' . __('Remover', 'newmanagement') . '">'
+            . '<i class="ti ti-trash text-danger"></i>'
+            . '</button>'
+            . '</td>'
+            . '</tr>';
     }
 
     // ======================================================================
@@ -273,47 +403,101 @@ class Ipbx extends \CommonDBTM
             ? $DB->request(['FROM' => 'glpi_plugin_newmanagement_ipbx_network', 'WHERE' => ['ipbx_id' => $ipbx_id]])
             : [];
 
+        $h = fn($v) => htmlspecialchars((string) ($v ?? ''), ENT_QUOTES);
+
         echo '<table class="tab_cadre_fixehov" id="nm-net-table">';
-        echo '<thead><tr class="noHover">';
-        foreach ([__('IP Rede', 'newmanagement'), __('Máscara', 'newmanagement'), __('Gateway', 'newmanagement'), __('DNS Primário', 'newmanagement'), __('DNS Secundário', 'newmanagement'), __('Ação', 'newmanagement')] as $th) {
+
+        echo '<thead>';
+        echo '<tr class="headerRow noHover">';
+        foreach ([
+            __('IP Rede', 'newmanagement'),
+            __('Máscara', 'newmanagement'),
+            __('Gateway', 'newmanagement'),
+            __('DNS Primário', 'newmanagement'),
+            __('DNS Secundário', 'newmanagement'),
+            __('Ação', 'newmanagement'),
+        ] as $th) {
             echo '<th>' . $th . '</th>';
         }
-        echo '</tr></thead><tbody id="nm-net-tbody">';
+        echo '</tr>';
+        echo '</thead>';
+
+        echo '<tbody id="nm-net-tbody">';
+
         foreach ($rows as $row) {
             echo self::renderNetworkRow((int) $row['id'], $row, $companies_id, $csrf, $action);
         }
-        echo '</tbody></table>';
 
-        echo '<div class="nm-add-row d-flex flex-wrap gap-2 align-items-center mt-2" id="nm-net-add">';
-        echo '<input type="text" id="nm-net-ip_network"    autocomplete="off" class="form-control form-control-sm" placeholder="192.168.1.0" style="width:140px">';
-        echo '<input type="text" id="nm-net-netmask"       autocomplete="off" class="form-control form-control-sm" placeholder="255.255.255.0" style="width:140px">';
-        echo '<input type="text" id="nm-net-gateway"       autocomplete="off" class="form-control form-control-sm" placeholder="192.168.1.1" style="width:130px">';
-        echo '<input type="text" id="nm-net-dns_primary"   autocomplete="off" class="form-control form-control-sm" placeholder="8.8.8.8" style="width:120px">';
-        echo '<input type="text" id="nm-net-dns_secondary" autocomplete="off" class="form-control form-control-sm" placeholder="8.8.4.4" style="width:120px">';
-        echo '<button type="button" class="btn btn-sm btn-success" id="nm-net-add-btn"'
-            . ' data-action="add_network"'
-            . ' data-ipbx-id="' . $ipbx_id . '"'
-            . ' data-companies-id="' . $companies_id . '"'
-            . ' data-url="' . htmlspecialchars($action, ENT_QUOTES) . '">'
-            . '<i class="ti ti-plus"></i> ' . __('Adicionar Rede', 'newmanagement') . '</button>';
-        echo '</div>';
+        // Linha de adição como última <tr class="tab_bg_2"> dentro do tbody — padrão GLPI
+        echo '<tr class="tab_bg_2" id="nm-net-add-row">';
+
+        echo '<td>';
+        echo '<input type="text" id="nm-net-ip_network" autocomplete="off"';
+        echo ' class="form-control form-control-sm" placeholder="192.168.1.0">';
+        echo '</td>';
+
+        echo '<td>';
+        echo '<input type="text" id="nm-net-netmask" autocomplete="off"';
+        echo ' class="form-control form-control-sm" placeholder="255.255.255.0">';
+        echo '</td>';
+
+        echo '<td>';
+        echo '<input type="text" id="nm-net-gateway" autocomplete="off"';
+        echo ' class="form-control form-control-sm" placeholder="192.168.1.1">';
+        echo '</td>';
+
+        echo '<td>';
+        echo '<input type="text" id="nm-net-dns_primary" autocomplete="off"';
+        echo ' class="form-control form-control-sm" placeholder="8.8.8.8">';
+        echo '</td>';
+
+        echo '<td>';
+        echo '<input type="text" id="nm-net-dns_secondary" autocomplete="off"';
+        echo ' class="form-control form-control-sm" placeholder="8.8.4.4">';
+        echo '</td>';
+
+        // Botão adicionar: btn-outline-secondary + ti ti-plus — padrão GLPI
+        echo '<td>';
+        echo '<button type="button"';
+        echo ' class="btn btn-sm btn-outline-secondary"';
+        echo ' id="nm-net-add-btn"';
+        echo ' data-action="add_network"';
+        echo ' data-ipbx-id="' . $ipbx_id . '"';
+        echo ' data-companies-id="' . $companies_id . '"';
+        echo ' data-url="' . $h($action) . '">';
+        echo '<i class="ti ti-plus"></i> ' . __('Adicionar Rede', 'newmanagement');
+        echo '</button>';
+        echo '</td>';
+
+        echo '</tr>';
+        echo '</tbody>';
+        echo '</table>';
     }
 
     public static function renderNetworkRow(int $id, array $row, int $companies_id, string $csrf, string $action): string
     {
         $h = fn($v) => htmlspecialchars((string) ($v ?? ''), ENT_QUOTES);
+
+        // Botão excluir: btn-icon sem fundo colorido + ti ti-trash text-danger — padrão GLPI
         return '<tr class="tab_bg_1" id="nm-net-row-' . $id . '">'
             . '<td>' . $h($row['ip_network']) . '</td>'
             . '<td>' . $h($row['netmask']) . '</td>'
             . '<td>' . $h($row['gateway']) . '</td>'
             . '<td>' . $h($row['dns_primary']) . '</td>'
             . '<td>' . $h($row['dns_secondary']) . '</td>'
-            . '<td><button type="button" class="btn btn-sm btn-danger nm-del-btn"'
-            . ' data-action="delete_network" data-id="' . $id . '"'
+            . '<td>'
+            . '<button type="button"'
+            . ' class="btn btn-sm btn-icon nm-del-btn"'
+            . ' data-action="delete_network"'
+            . ' data-id="' . $id . '"'
             . ' data-row="nm-net-row-' . $id . '"'
             . ' data-companies-id="' . $companies_id . '"'
             . ' data-url="' . htmlspecialchars($action, ENT_QUOTES) . '"'
-            . ' data-confirm="' . __('Remover rede?', 'newmanagement') . '">'
-            . '<i class="ti ti-trash"></i></button></td></tr>';
+            . ' data-confirm="' . __('Remover rede?', 'newmanagement') . '"'
+            . ' title="' . __('Remover', 'newmanagement') . '">'
+            . '<i class="ti ti-trash text-danger"></i>'
+            . '</button>'
+            . '</td>'
+            . '</tr>';
     }
 }
