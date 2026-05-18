@@ -165,19 +165,26 @@ class Chatbot extends \CommonDBTM
         echo '<td>' . __('Login Admin', 'newmanagement') . '</td>';
         echo '<td><input type="text" id="nm-chatbot-admin_login" value="' . $v('admin_login') . '" class="form-control" autocomplete="off"></td>';
         echo '<td>' . __('Senha Admin', 'newmanagement') . '</td>';
-        // OPÇÃO A: slot — JS injeta <input type="password"> após DOM carregar
-        echo '<td><div class="nm-input-group">';
-        echo '<div id="nm-chatbot-admin_password-slot" data-value="' . $v('admin_password') . '" data-target-id="nm-chatbot-admin_password"></div>';
-        echo '<button type="button" class="nm-btn-eye" data-target="nm-chatbot-admin_password" title="Mostrar/Ocultar"><i class="ti ti-eye"></i></button>';
+        echo '<td><div class="input-group">';
+        echo '<input type="password" id="nm-chatbot-admin_password"';
+        echo ' class="form-control" autocomplete="new-password"';
+        echo ' value="' . $v('admin_password') . '">';
+        echo '<button type="button" class="btn btn-sm btn-icon nm-btn-eye"';
+        echo ' data-target="nm-chatbot-admin_password">';
+        echo '<i class="ti ti-eye"></i></button>';
         echo '</div></td></tr>';
 
         echo '<tr class="tab_bg_1">';
         echo '<td>' . __('Login Super-Admin', 'newmanagement') . '</td>';
         echo '<td><input type="text" id="nm-chatbot-superadmin_login" value="' . $v('superadmin_login') . '" class="form-control" autocomplete="off"></td>';
         echo '<td>' . __('Senha Super-Admin', 'newmanagement') . '</td>';
-        echo '<td><div class="nm-input-group">';
-        echo '<div id="nm-chatbot-superadmin_password-slot" data-value="' . $v('superadmin_password') . '" data-target-id="nm-chatbot-superadmin_password"></div>';
-        echo '<button type="button" class="nm-btn-eye" data-target="nm-chatbot-superadmin_password" title="Mostrar/Ocultar"><i class="ti ti-eye"></i></button>';
+        echo '<td><div class="input-group">';
+        echo '<input type="password" id="nm-chatbot-superadmin_password"';
+        echo ' class="form-control" autocomplete="new-password"';
+        echo ' value="' . $v('superadmin_password') . '">';
+        echo '<button type="button" class="btn btn-sm btn-icon nm-btn-eye"';
+        echo ' data-target="nm-chatbot-superadmin_password">';
+        echo '<i class="ti ti-eye"></i></button>';
         echo '</div></td></tr>';
 
         echo '<tr class="noHover"><th colspan="4">' . __('Responsável pelo Chatbot', 'newmanagement') . '</th></tr>';
@@ -202,20 +209,41 @@ class Chatbot extends \CommonDBTM
         echo '</table>';
         echo '</div>'; // #nm-chatbot-form-wrapper
 
+        // --- Seção: Comunicação em Massa ---
         echo '<div class="nm-subsection">';
-        echo '<div class="nm-subsection-header"><h4><i class="ti ti-send"></i> ' . __('Comunicação em Massa', 'newmanagement') . '</h4></div>';
+        echo '<div class="d-flex align-items-center mb-2">';
+        echo '<i class="ti ti-send me-2 fs-5 text-muted"></i>';
+        echo '<span class="fw-bold text-muted text-uppercase" style="font-size:0.75rem;letter-spacing:.05em">Comunicação em Massa</span>';
+        echo '<button type="button" class="btn btn-sm btn-icon ms-auto nm-toggle-section" data-target="nm-mc-tbody" aria-expanded="true" title="Recolher/Expandir">';
+        echo '<i class="ti ti-chevron-up"></i>';
+        echo '</button>';
+        echo '</div>';
         echo '<div class="nm-subsection-body">';
         $this->renderMassCommTable($chatbot_id, $companies_id, $csrf, $action);
         echo '</div></div>';
 
+        // --- Seção: Números Restritos pela Meta ---
         echo '<div class="nm-subsection">';
-        echo '<div class="nm-subsection-header"><h4><i class="ti ti-ban"></i> ' . __('Números Restritos pela Meta', 'newmanagement') . '</h4></div>';
+        echo '<div class="d-flex align-items-center mb-2">';
+        echo '<i class="ti ti-ban me-2 fs-5 text-muted"></i>';
+        echo '<span class="fw-bold text-muted text-uppercase" style="font-size:0.75rem;letter-spacing:.05em">Números Restritos pela Meta</span>';
+        echo '<button type="button" class="btn btn-sm btn-icon ms-auto nm-toggle-section" data-target="nm-wa-tbody" aria-expanded="true" title="Recolher/Expandir">';
+        echo '<i class="ti ti-chevron-up"></i>';
+        echo '</button>';
+        echo '</div>';
         echo '<div class="nm-subsection-body">';
         $this->renderWhatsappRestrictionsTable($chatbot_id, $companies_id, $csrf, $action);
         echo '</div></div>';
 
+        // --- Seção: Usuários Cadastrados no Chatbot ---
         echo '<div class="nm-subsection">';
-        echo '<div class="nm-subsection-header"><h4><i class="ti ti-users"></i> ' . __('Usuários Cadastrados no Chatbot', 'newmanagement') . '</h4></div>';
+        echo '<div class="d-flex align-items-center mb-2">';
+        echo '<i class="ti ti-users me-2 fs-5 text-muted"></i>';
+        echo '<span class="fw-bold text-muted text-uppercase" style="font-size:0.75rem;letter-spacing:.05em">Usuários Cadastrados no Chatbot</span>';
+        echo '<button type="button" class="btn btn-sm btn-icon ms-auto nm-toggle-section" data-target="nm-cu-tbody" aria-expanded="true" title="Recolher/Expandir">';
+        echo '<i class="ti ti-chevron-up"></i>';
+        echo '</button>';
+        echo '</div>';
         echo '<div class="nm-subsection-body">';
         $this->renderUsersTable($chatbot_id, $companies_id, $csrf, $action);
         echo '</div></div>';
@@ -239,13 +267,29 @@ class Chatbot extends \CommonDBTM
         $h  = fn($v) => htmlspecialchars((string) ($v ?? ''), ENT_QUOTES);
         $au = $h($action);
 
-        echo '<table class="tab_cadre_fixehov nm-table">';
-        echo '<tr class="noHover">';
-        foreach (['Nome do Sistema', 'Data Ativação', 'Número Autenticado', 'Tipo Homologação', 'Link de Acesso', 'Login', 'Responsável', 'Ação'] as $th) {
-            echo '<th>' . __($th, 'newmanagement') . '</th>';
-        }
+        echo '<table class="tab_cadre_fixehov" id="nm-mc-table">';
+        echo '<thead>';
+        echo '<tr class="headerRow noHover">';
+        echo '<th>' . __('Nome do Sistema', 'newmanagement') . '</th>';
+        echo '<th>' . __('Data Ativação', 'newmanagement') . '</th>';
+        echo '<th>' . __('Número Autenticado', 'newmanagement') . '</th>';
+        echo '<th>' . __('Tipo Homologação', 'newmanagement') . '</th>';
+        echo '<th>' . __('Link de Acesso', 'newmanagement') . '</th>';
+        echo '<th>' . __('Login', 'newmanagement') . '</th>';
+        echo '<th>' . __('Senha', 'newmanagement') . '</th>';
+        echo '<th style="text-align:right">';
+        echo '<button type="button" id="nm-mc-add-btn" class="btn btn-sm btn-outline-secondary"'
+            . ' data-action="add_mass_comm"'
+            . ' data-chatbot-id="' . $chatbot_id . '"'
+            . ' data-companies-id="' . $companies_id . '"'
+            . ' data-url="' . $au . '"'
+            . ' data-csrf="' . $h($csrf) . '">';
+        echo '<i class="ti ti-plus"></i> ' . __('Adicionar', 'newmanagement') . '</button>';
+        echo '</th>';
         echo '</tr>';
+        echo '</thead>';
 
+        echo '<tbody id="nm-mc-tbody">';
         foreach ($rows as $row) {
             $rid = (int) $row['id'];
             echo '<tr class="tab_bg_1" id="nm-mc-row-' . $rid . '">';
@@ -255,7 +299,7 @@ class Chatbot extends \CommonDBTM
             echo '<td>' . $h($row['homologation_type']    ?? '') . '</td>';
             echo '<td>' . (!empty($row['access_link']) ? '<a href="' . $h($row['access_link']) . '" target="_blank" rel="noopener"><i class="ti ti-external-link"></i></a>' : '') . '</td>';
             echo '<td>' . $h($row['login']                ?? '') . '</td>';
-            echo '<td>' . $h($row['manager']              ?? '') . '</td>';
+            echo '<td>••••••</td>';
             echo '<td><button type="button" class="btn btn-sm btn-danger nm-chatbot-del"'
                 . ' data-action="delete_mass_comm" data-id="' . $rid . '"'
                 . ' data-row="nm-mc-row-' . $rid . '"'
@@ -274,15 +318,10 @@ class Chatbot extends \CommonDBTM
         echo '<td><input type="text" id="nm-mc-homologation_type"    class="form-control form-control-sm" placeholder="Ex: BSP"></td>';
         echo '<td><input type="url"  id="nm-mc-access_link"          class="form-control form-control-sm" placeholder="https://"></td>';
         echo '<td><input type="text" id="nm-mc-login"                class="form-control form-control-sm"></td>';
-        echo '<td><input type="text" id="nm-mc-manager"              class="form-control form-control-sm"></td>';
-        echo '<td><button type="button" id="nm-mc-add-btn" class="btn btn-sm btn-success"'
-            . ' data-action="add_mass_comm"'
-            . ' data-chatbot-id="' . $chatbot_id . '"'
-            . ' data-companies-id="' . $companies_id . '"'
-            . ' data-url="' . $au . '"'
-            . ' data-csrf="' . $h($csrf) . '">'
-            . '<i class="ti ti-plus"></i> ' . __('Adicionar', 'newmanagement') . '</button></td>';
+        echo '<td><input type="password" id="nm-mc-password"         class="form-control form-control-sm" placeholder="' . __('Senha', 'newmanagement') . '" autocomplete="new-password"></td>';
+        echo '<td></td>';
         echo '</tr>';
+        echo '</tbody>';
 
         echo '</table>';
     }
@@ -297,19 +336,33 @@ class Chatbot extends \CommonDBTM
         $h  = fn($v) => htmlspecialchars((string) ($v ?? ''), ENT_QUOTES);
         $au = $h($action);
 
-        echo '<table class="tab_cadre_fixehov nm-table">';
-        echo '<tr class="noHover">';
-        foreach (['Número WhatsApp', 'Data da Restrição', 'Tempo de Restrição', 'Ação'] as $th) {
-            echo '<th>' . __($th, 'newmanagement') . '</th>';
-        }
+        echo '<table class="tab_cadre_fixehov" id="nm-wa-table">';
+        echo '<thead>';
+        echo '<tr class="headerRow noHover">';
+        echo '<th>' . __('Número WhatsApp', 'newmanagement') . '</th>';
+        echo '<th>' . __('Data Início', 'newmanagement') . '</th>';
+        echo '<th>' . __('Tempo de Restrição', 'newmanagement') . '</th>';
+        echo '<th>' . __('Data Fim', 'newmanagement') . '</th>';
+        echo '<th style="text-align:right">';
+        echo '<button type="button" id="nm-wa-add-btn" class="btn btn-sm btn-outline-secondary"'
+            . ' data-action="add_wa_restriction"'
+            . ' data-chatbot-id="' . $chatbot_id . '"'
+            . ' data-companies-id="' . $companies_id . '"'
+            . ' data-url="' . $au . '"'
+            . ' data-csrf="' . $h($csrf) . '">';
+        echo '<i class="ti ti-plus"></i> ' . __('Adicionar', 'newmanagement') . '</button>';
+        echo '</th>';
         echo '</tr>';
+        echo '</thead>';
 
+        echo '<tbody id="nm-wa-tbody">';
         foreach ($rows as $row) {
             $rid = (int) $row['id'];
             echo '<tr class="tab_bg_1" id="nm-wa-row-' . $rid . '">';
             echo '<td>' . $h($row['whatsapp_number']  ?? '') . '</td>';
             echo '<td>' . $h($row['restriction_date'] ?? '') . '</td>';
             echo '<td>' . $h($row['restriction_time'] ?? '') . '</td>';
+            echo '<td>' . $h($row['end_date']         ?? '') . '</td>';
             echo '<td><button type="button" class="btn btn-sm btn-danger nm-chatbot-del"'
                 . ' data-action="delete_wa_restriction" data-id="' . $rid . '"'
                 . ' data-row="nm-wa-row-' . $rid . '"'
@@ -325,14 +378,10 @@ class Chatbot extends \CommonDBTM
         echo '<td><input type="text" id="nm-wa-whatsapp_number"  class="form-control form-control-sm" placeholder="5511..."></td>';
         echo '<td><input type="date" id="nm-wa-restriction_date" class="form-control form-control-sm"></td>';
         echo '<td><input type="text" id="nm-wa-restriction_time" class="form-control form-control-sm" placeholder="Ex: 24h, 7 dias"></td>';
-        echo '<td><button type="button" id="nm-wa-add-btn" class="btn btn-sm btn-success"'
-            . ' data-action="add_wa_restriction"'
-            . ' data-chatbot-id="' . $chatbot_id . '"'
-            . ' data-companies-id="' . $companies_id . '"'
-            . ' data-url="' . $au . '"'
-            . ' data-csrf="' . $h($csrf) . '">'
-            . '<i class="ti ti-plus"></i> ' . __('Adicionar', 'newmanagement') . '</button></td>';
+        echo '<td><input type="date" id="nm-wa-end_date"         class="form-control form-control-sm"></td>';
+        echo '<td></td>';
         echo '</tr>';
+        echo '</tbody>';
 
         echo '</table>';
     }
@@ -347,13 +396,27 @@ class Chatbot extends \CommonDBTM
         $h  = fn($v) => htmlspecialchars((string) ($v ?? ''), ENT_QUOTES);
         $au = $h($action);
 
-        echo '<table class="tab_cadre_fixehov nm-table">';
-        echo '<tr class="noHover">';
-        foreach (['Nome', 'Login', 'Senha', 'E-mail', 'Tipo', 'Ação'] as $th) {
-            echo '<th>' . __($th, 'newmanagement') . '</th>';
-        }
+        echo '<table class="tab_cadre_fixehov" id="nm-cu-table">';
+        echo '<thead>';
+        echo '<tr class="headerRow noHover">';
+        echo '<th>' . __('Nome', 'newmanagement') . '</th>';
+        echo '<th>' . __('Login', 'newmanagement') . '</th>';
+        echo '<th>' . __('Senha', 'newmanagement') . '</th>';
+        echo '<th>' . __('E-mail', 'newmanagement') . '</th>';
+        echo '<th>' . __('Tipo', 'newmanagement') . '</th>';
+        echo '<th style="text-align:right">';
+        echo '<button type="button" id="nm-cu-add-btn" class="btn btn-sm btn-outline-secondary"'
+            . ' data-action="add_chatbot_user"'
+            . ' data-chatbot-id="' . $chatbot_id . '"'
+            . ' data-companies-id="' . $companies_id . '"'
+            . ' data-url="' . $au . '"'
+            . ' data-csrf="' . $h($csrf) . '">';
+        echo '<i class="ti ti-plus"></i> ' . __('Adicionar', 'newmanagement') . '</button>';
+        echo '</th>';
         echo '</tr>';
+        echo '</thead>';
 
+        echo '<tbody id="nm-cu-tbody">';
         foreach ($rows as $row) {
             $rid = (int) $row['id'];
             echo '<tr class="tab_bg_1" id="nm-cu-row-' . $rid . '">';
@@ -374,24 +437,18 @@ class Chatbot extends \CommonDBTM
         }
 
         echo '<tr class="tab_bg_2 nm-add-row" id="nm-cu-add-row">';
-        echo '<td><input type="text"  id="nm-cu-user_name" class="form-control form-control-sm" placeholder="' . __('Nome', 'newmanagement') . '"></td>';
-        echo '<td><input type="text"  id="nm-cu-login"     class="form-control form-control-sm" placeholder="' . __('Login', 'newmanagement') . '"></td>';
-        // OPÇÃO A: slot — JS injeta <input type="password"> após DOM carregar
-        echo '<td><div id="nm-cu-password-slot" data-target-id="nm-cu-password" data-placeholder="' . __('Senha', 'newmanagement') . '"></div></td>';
-        echo '<td><input type="email" id="nm-cu-email"     class="form-control form-control-sm" placeholder="email@"></td>';
+        echo '<td><input type="text"     id="nm-cu-user_name" class="form-control form-control-sm" placeholder="' . __('Nome', 'newmanagement') . '"></td>';
+        echo '<td><input type="text"     id="nm-cu-login"     class="form-control form-control-sm" placeholder="' . __('Login', 'newmanagement') . '"></td>';
+        echo '<td><input type="password" id="nm-cu-password"  class="form-control form-control-sm" placeholder="' . __('Senha', 'newmanagement') . '" autocomplete="new-password"></td>';
+        echo '<td><input type="email"    id="nm-cu-email"     class="form-control form-control-sm" placeholder="email@"></td>';
         echo '<td><select id="nm-cu-user_type" class="form-select form-select-sm">';
         echo '  <option value="usuario">'       . __('Usuário',       'newmanagement') . '</option>';
         echo '  <option value="supervisor">'    . __('Supervisor',    'newmanagement') . '</option>';
         echo '  <option value="administrador">' . __('Administrador', 'newmanagement') . '</option>';
         echo '</select></td>';
-        echo '<td><button type="button" id="nm-cu-add-btn" class="btn btn-sm btn-success"'
-            . ' data-action="add_chatbot_user"'
-            . ' data-chatbot-id="' . $chatbot_id . '"'
-            . ' data-companies-id="' . $companies_id . '"'
-            . ' data-url="' . $au . '"'
-            . ' data-csrf="' . $h($csrf) . '">'
-            . '<i class="ti ti-plus"></i> ' . __('Adicionar', 'newmanagement') . '</button></td>';
+        echo '<td></td>';
         echo '</tr>';
+        echo '</tbody>';
 
         echo '</table>';
     }
