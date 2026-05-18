@@ -7,8 +7,14 @@
  * Retorna: JSON { "email": "financeiro@empresa.com.br" } ou { "email": null }
  */
 
-define('GLPI_ROOT', dirname(dirname(dirname(dirname(__FILE__)))));
-require GLPI_ROOT . '/inc/includes.php';
+// No GLPI 11 (Symfony), GLPI_ROOT já é definido pelo bootstrap antes
+// de carregar qualquer arquivo de plugin. O define() direto causava o
+// Warning "Constant GLPI_ROOT already defined".
+// Solução: só define se ainda não estiver definido.
+if (!defined('GLPI_ROOT')) {
+    define('GLPI_ROOT', dirname(dirname(dirname(dirname(__FILE__)))));
+    require GLPI_ROOT . '/inc/includes.php';
+}
 
 // Apenas usuarios autenticados podem usar este endpoint
 Session::checkLoginUser();
