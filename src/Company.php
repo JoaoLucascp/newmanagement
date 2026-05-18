@@ -170,8 +170,7 @@ class Company extends \CommonDBTM
 
     /**
      * Abas da ficha de Empresa.
-     *
-     * Ordem: Empresa → Servidor IPBX → Linha Fixa → Chatbot
+     * Ordem: Empresa → IPBX → Linha Fixa → Chatbot
      *        → Documentos → Links → Notas → Histórico
      */
     public function defineTabs($options = []): array
@@ -196,82 +195,138 @@ class Company extends \CommonDBTM
         $this->initForm($ID, $options);
         $this->showFormHeader($options);
 
-        $name            = htmlspecialchars($this->fields['name']            ?? '', ENT_QUOTES);
-        $cnpj            = htmlspecialchars($this->fields['cnpj']            ?? '', ENT_QUOTES);
-        $razao_social    = htmlspecialchars($this->fields['razao_social']    ?? '', ENT_QUOTES);
-        $email           = htmlspecialchars($this->fields['email']           ?? '', ENT_QUOTES);
-        $phone           = htmlspecialchars($this->fields['phone']           ?? '', ENT_QUOTES);
-        $cep             = htmlspecialchars($this->fields['cep']             ?? '', ENT_QUOTES);
-        $address         = htmlspecialchars($this->fields['address']         ?? '', ENT_QUOTES);
-        $comment         = htmlspecialchars($this->fields['comment']         ?? '', ENT_QUOTES);
+        // ------------------------------------------------------------------
+        // Linha 1: Nome (obrigatório) | ID (somente leitura)
+        // Html::autocompletionTextField() gera <input type="text"> com as
+        // classes, autocomplete e atributos padrão do GLPI.
+        // ------------------------------------------------------------------
+        echo '<tr class="tab_bg_1">';
+        echo '<td>' . __('Nome', 'newmanagement') . ' <span class="required">*</span></td>';
+        echo '<td>';
+        \Html::autocompletionTextField($this, 'name', [
+            'required' => true,
+        ]);
+        echo '</td>';
+        echo '<td>' . __('ID', 'newmanagement') . '</td>';
+        echo '<td>';
+        echo '<input type="text" class="form-control" value="'
+            . ($ID > 0 ? $ID : __('Gerado automaticamente', 'newmanagement'))
+            . '" disabled>';
+        echo '</td>';
+        echo '</tr>';
+
+        // ------------------------------------------------------------------
+        // Linha 2: CNPJ (input-group com botão Buscar) | Razão Social
+        // CNPJ precisa do botão de busca — mantido como HTML manual.
+        // Razão Social é simples → usa autocompletionTextField.
+        // ------------------------------------------------------------------
+        $cnpj = htmlspecialchars($this->fields['cnpj'] ?? '', ENT_QUOTES);
+
+        echo '<tr class="tab_bg_1">';
+        echo '<td>' . __('CNPJ', 'newmanagement') . '</td>';
+        echo '<td>';
+        echo '<div class="input-group">';
+        echo '<input type="text" id="cnpj" name="cnpj" value="' . $cnpj . '"
+               class="form-control" placeholder="00.000.000/0000-00" maxlength="18">';
+        echo '<button type="button" class="btn btn-outline-secondary btn-sm"
+                id="btn-buscar-cnpj" title="' . __('Buscar CNPJ na BrasilAPI', 'newmanagement') . '">';
+        echo '<i class="ti ti-search"></i> ' . __('Buscar', 'newmanagement');
+        echo '</button>';
+        echo '</div>';
+        echo '<span id="cnpj-feedback" class="nm-feedback"></span>';
+        echo '</td>';
+        echo '<td>' . __('Razao Social', 'newmanagement') . '</td>';
+        echo '<td>';
+        \Html::autocompletionTextField($this, 'razao_social');
+        echo '</td>';
+        echo '</tr>';
+
+        // ------------------------------------------------------------------
+        // Linha 3: E-mail | Telefone
+        // autocompletionTextField cuida de value, name, id e classes.
+        // ------------------------------------------------------------------
+        echo '<tr class="tab_bg_1">';
+        echo '<td>' . __('E-mail', 'newmanagement') . '</td>';
+        echo '<td>';
+        \Html::autocompletionTextField($this, 'email');
+        echo '</td>';
+        echo '<td>' . __('Telefone', 'newmanagement') . '</td>';
+        echo '<td>';
+        \Html::autocompletionTextField($this, 'phone', [
+            'placeholder' => '(00) 00000-0000',
+        ]);
+        echo '</td>';
+        echo '</tr>';
+
+        // ------------------------------------------------------------------
+        // Linha 4: CEP (input-group com botão Buscar) | Status do Contrato
+        // CEP mantém botão manual; Status usa Dropdown::showFromArray().
+        // ------------------------------------------------------------------
+        $cep             = htmlspecialchars($this->fields['cep'] ?? '', ENT_QUOTES);
         $contract_status = (int) ($this->fields['contract_status'] ?? self::CONTRACT_NO_CONTRACT);
 
         echo '<tr class="tab_bg_1">';
-        echo '<td><label for="name">' . __('Nome', 'newmanagement') . ' <span style="color:red">*</span></label></td>';
-        echo '<td><input type="text" id="name" name="name" value="' . $name . '" class="form-control" required></td>';
-        echo '<td>' . __('ID', 'newmanagement') . '</td>';
-        echo '<td><input type="text" value="' . ($ID > 0 ? $ID : __('Gerado automaticamente', 'newmanagement')) . '" class="form-control" disabled></td>';
-        echo '</tr>';
-
-        echo '<tr class="tab_bg_1">';
-        echo '<td><label for="cnpj">' . __('CNPJ', 'newmanagement') . '</label></td>';
+        echo '<td>' . __('CEP', 'newmanagement') . '</td>';
         echo '<td>';
-        echo '  <div class="input-group">';
-        echo '    <input type="text" id="cnpj" name="cnpj" value="' . $cnpj . '" class="form-control" placeholder="00.000.000/0000-00" maxlength="18">';
-        echo '    <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-buscar-cnpj" title="Buscar CNPJ na BrasilAPI">';
-        echo '      <i class="ti ti-search"></i> ' . __('Buscar', 'newmanagement');
-        echo '    </button>';
-        echo '  </div>';
-        echo '  <span id="cnpj-feedback" class="nm-feedback"></span>';
+        echo '<div class="input-group">';
+        echo '<input type="text" id="cep" name="cep" value="' . $cep . '"
+               class="form-control" placeholder="00000-000" maxlength="9">';
+        echo '<button type="button" class="btn btn-outline-secondary btn-sm"
+                id="btn-buscar-cep" title="' . __('Buscar CEP na BrasilAPI', 'newmanagement') . '">';
+        echo '<i class="ti ti-search"></i> ' . __('Buscar', 'newmanagement');
+        echo '</button>';
+        echo '</div>';
+        echo '<span id="cep-feedback" class="nm-feedback"></span>';
         echo '</td>';
-        echo '<td><label for="razao_social">' . __('Razao Social', 'newmanagement') . '</label></td>';
-        echo '<td><input type="text" id="razao_social" name="razao_social" value="' . $razao_social . '" class="form-control"></td>';
-        echo '</tr>';
-
-        echo '<tr class="tab_bg_1">';
-        echo '<td><label for="email">' . __('E-mail', 'newmanagement') . '</label></td>';
-        echo '<td><input type="email" id="email" name="email" value="' . $email . '" class="form-control"></td>';
-        echo '<td><label for="phone">' . __('Telefone', 'newmanagement') . '</label></td>';
-        echo '<td><input type="text" id="phone" name="phone" value="' . $phone . '" class="form-control" placeholder="(00) 00000-0000"></td>';
-        echo '</tr>';
-
-        echo '<tr class="tab_bg_1">';
-        echo '<td><label for="cep">' . __('CEP', 'newmanagement') . '</label></td>';
+        echo '<td>' . __('Status do Contrato', 'newmanagement') . '</td>';
         echo '<td>';
-        echo '  <div class="input-group">';
-        echo '    <input type="text" id="cep" name="cep" value="' . $cep . '" class="form-control" placeholder="00000-000" maxlength="9">';
-        echo '    <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-buscar-cep" title="Buscar CEP na BrasilAPI">';
-        echo '      <i class="ti ti-search"></i> ' . __('Buscar', 'newmanagement');
-        echo '    </button>';
-        echo '  </div>';
-        echo '  <span id="cep-feedback" class="nm-feedback"></span>';
-        echo '</td>';
-        echo '<td><label for="contract_status">' . __('Status do Contrato', 'newmanagement') . '</label></td>';
-        echo '<td>';
-        echo '  <select id="contract_status" name="contract_status" class="form-select">';
-        foreach (self::getContractStatusOptions() as $value => $label) {
-            $selected = ($contract_status === $value) ? ' selected' : '';
-            echo '    <option value="' . $value . '"' . $selected . '>' . htmlspecialchars($label, ENT_QUOTES) . '</option>';
-        }
-        echo '  </select>';
+        // Dropdown::showFromArray() gera <select class="form-select"> nativo do GLPI
+        \Dropdown::showFromArray('contract_status', self::getContractStatusOptions(), [
+            'value'               => $contract_status,
+            'display_emptychoice' => false,
+        ]);
         echo '</td>';
         echo '</tr>';
 
+        // ------------------------------------------------------------------
+        // Linha 5: Endereço (textarea — colspan 3 para ocupar 3 colunas)
+        // Html::textarea() gera <textarea class="form-control"> padrão GLPI.
+        // ------------------------------------------------------------------
         echo '<tr class="tab_bg_1">';
-        echo '<td><label for="address">' . __('Endereco', 'newmanagement') . '</label></td>';
-        echo '<td colspan="3"><textarea id="address" name="address" class="form-control" rows="2">' . $address . '</textarea></td>';
+        echo '<td>' . __('Endereco', 'newmanagement') . '</td>';
+        echo '<td colspan="3">';
+        \Html::textarea([
+            'name'    => 'address',
+            'value'   => $this->fields['address'] ?? '',
+            'rows'    => 2,
+            'cols'    => 80,
+            'display' => true,
+        ]);
+        echo '</td>';
         echo '</tr>';
 
+        // ------------------------------------------------------------------
+        // Linha 6: Comentário (textarea)
+        // ------------------------------------------------------------------
         echo '<tr class="tab_bg_1">';
-        echo '<td><label for="comment">' . __('Comentario', 'newmanagement') . '</label></td>';
-        echo '<td colspan="3"><textarea id="comment" name="comment" class="form-control" rows="3">' . $comment . '</textarea></td>';
+        echo '<td>' . __('Comentario', 'newmanagement') . '</td>';
+        echo '<td colspan="3">';
+        \Html::textarea([
+            'name'    => 'comment',
+            'value'   => $this->fields['comment'] ?? '',
+            'rows'    => 3,
+            'cols'    => 80,
+            'display' => true,
+        ]);
+        echo '</td>';
         echo '</tr>';
 
         $this->showFormButtons($options);
 
-        // -----------------------------------------------------------------------
-        // JavaScript — BrasilAPI (CNPJ + CEP) — sem <style> inline (CSS no .css)
-        // -----------------------------------------------------------------------
+        // ------------------------------------------------------------------
+        // JavaScript — BrasilAPI (CNPJ + CEP)
+        // Máscaras e buscas client-side; nenhum dado trafega pelo servidor.
+        // ------------------------------------------------------------------
         echo <<<'JS'
 <script>
 (function () {
@@ -296,7 +351,7 @@ class Company extends \CommonDBTM
             : '<i class="ti ti-search"></i> Buscar';
     }
 
-    /* ── máscara automática CNPJ ── */
+    /* ── máscara CNPJ ── */
     document.getElementById('cnpj')?.addEventListener('input', function () {
         let v = soDigitos(this.value).slice(0, 14);
         if (v.length > 12) v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
@@ -306,40 +361,31 @@ class Company extends \CommonDBTM
         this.value = v;
     });
 
-    /* ── máscara automática CEP ── */
+    /* ── máscara CEP ── */
     document.getElementById('cep')?.addEventListener('input', function () {
         let v = soDigitos(this.value).slice(0, 8);
         if (v.length > 5) v = v.replace(/^(\d{5})(\d+)/, '$1-$2');
         this.value = v;
     });
 
-    /* ── busca CNPJ (BrasilAPI) ── */
+    /* ── busca CNPJ ── */
     document.getElementById('btn-buscar-cnpj')?.addEventListener('click', async function () {
         const raw = soDigitos(document.getElementById('cnpj')?.value || '');
         if (raw.length !== 14) {
             setFeedback('cnpj-feedback', 'CNPJ deve ter 14 d\u00edgitos.', 'error');
             return;
         }
-
         setLoading('btn-buscar-cnpj', true);
         setFeedback('cnpj-feedback', '', '');
-
         try {
             const res  = await fetch('https://brasilapi.com.br/api/cnpj/v1/' + raw);
             const data = await res.json();
-
-            if (!res.ok) {
-                setFeedback('cnpj-feedback', data.message || 'CNPJ n\u00e3o encontrado.', 'error');
-                return;
-            }
+            if (!res.ok) { setFeedback('cnpj-feedback', data.message || 'CNPJ n\u00e3o encontrado.', 'error'); return; }
 
             const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
-
             set('razao_social', data.razao_social);
-            set('email',        data.email);
-            set('phone',        data.ddd_telefone_1
-                                    ? '(' + data.ddd_telefone_1.slice(0,2) + ') ' + data.ddd_telefone_1.slice(2)
-                                    : '');
+            set('email',  data.email);
+            set('phone',  data.ddd_telefone_1 ? '(' + data.ddd_telefone_1.slice(0,2) + ') ' + data.ddd_telefone_1.slice(2) : '');
 
             const partes = [
                 data.logradouro  ? data.descricao_tipo_de_logradouro + ' ' + data.logradouro : '',
@@ -351,14 +397,10 @@ class Company extends \CommonDBTM
             set('address', partes.join(', '));
 
             if (data.cep) {
-                const cepLimpo = soDigitos(data.cep).slice(0, 8);
-                set('cep', cepLimpo.length === 8
-                    ? cepLimpo.replace(/^(\d{5})(\d{3})$/, '$1-$2')
-                    : cepLimpo);
+                const c = soDigitos(data.cep).slice(0, 8);
+                set('cep', c.length === 8 ? c.replace(/^(\d{5})(\d{3})$/, '$1-$2') : c);
             }
-
             setFeedback('cnpj-feedback', '\u2714 Dados preenchidos com sucesso.', 'success');
-
         } catch (err) {
             setFeedback('cnpj-feedback', 'Erro de conex\u00e3o com a BrasilAPI.', 'error');
             console.error('[NM] CNPJ fetch error:', err);
@@ -367,37 +409,28 @@ class Company extends \CommonDBTM
         }
     });
 
-    /* ── busca CEP (BrasilAPI) ── */
+    /* ── busca CEP ── */
     document.getElementById('btn-buscar-cep')?.addEventListener('click', async function () {
         const raw = soDigitos(document.getElementById('cep')?.value || '');
         if (raw.length !== 8) {
             setFeedback('cep-feedback', 'CEP deve ter 8 d\u00edgitos.', 'error');
             return;
         }
-
         setLoading('btn-buscar-cep', true);
         setFeedback('cep-feedback', '', '');
-
         try {
             const res  = await fetch('https://brasilapi.com.br/api/cep/v2/' + raw);
             const data = await res.json();
-
-            if (!res.ok) {
-                setFeedback('cep-feedback', data.message || 'CEP n\u00e3o encontrado.', 'error');
-                return;
-            }
+            if (!res.ok) { setFeedback('cep-feedback', data.message || 'CEP n\u00e3o encontrado.', 'error'); return; }
 
             const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
-
             const partes = [
                 data.street       || '',
                 data.neighborhood || '',
                 data.city         ? data.city + (data.state ? ' - ' + data.state : '') : '',
             ].filter(Boolean);
             set('address', partes.join(', '));
-
             setFeedback('cep-feedback', '\u2714 Endere\u00e7o preenchido.', 'success');
-
         } catch (err) {
             setFeedback('cep-feedback', 'Erro de conex\u00e3o com a BrasilAPI.', 'error');
             console.error('[NM] CEP fetch error:', err);
