@@ -279,8 +279,8 @@ class Company extends \CommonDBTM
 .nm-input-group          { display:flex; gap:6px; align-items:center; }
 .nm-btn-search           { display:inline-flex; align-items:center; gap:4px; padding:4px 10px;
                            font-size:.85rem; border-radius:4px; border:1px solid #aaa;
-                           background:#f5f5f5; cursor:pointer; white-space:nowrap; }
-.nm-btn-search:hover     { background:#e0e0e0; }
+                           background:#f5f5f5; color:#1d1d1b !important; cursor:pointer; white-space:nowrap; }
+.nm-btn-search:hover     { background:#e0e0e0; color:#1d1d1b !important; }
 .nm-btn-search:disabled  { opacity:.5; cursor:not-allowed; }
 .nm-feedback             { font-size:.8rem; margin-top:2px; display:block; min-height:1.2em; }
 .nm-feedback.ok          { color:#2e7d32; }
