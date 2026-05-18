@@ -58,35 +58,27 @@ class Ipbx extends \CommonDBTM
                 if (!empty($fields['web_password'])) {
                     $fields['web_password'] = \Toolbox::sodiumDecrypt($fields['web_password']);
                 }
-            } catch (\Throwable $e) {
-                // fallback: plain text legado
-            }
+            } catch (\Throwable $e) {}
             try {
                 if (!empty($fields['ssh_password'])) {
                     $fields['ssh_password'] = \Toolbox::sodiumDecrypt($fields['ssh_password']);
                 }
-            } catch (\Throwable $e) {
-                // fallback: plain text legado
-            }
+            } catch (\Throwable $e) {}
         }
 
         $csrf   = \Session::getNewCSRFToken();
         $action = \Plugin::getWebDir('newmanagement') . '/ajax/ipbx_sub.php';
         $h      = fn($v) => htmlspecialchars((string) ($v ?? ''), ENT_QUOTES);
 
+        // Senhas são passadas como data-* para o JS injetar dinamicamente.
+        // Isso evita type="password" no HTML estático, eliminando o aviso:
+        // [DOM] Password field is not contained in a form
         echo '<div class="nm-ipbx-tab" data-action-url="' . $h($action) . '" data-companies-id="' . $companies_id . '">';
 
-        // ---- Dados do servidor IPBX ----------------------------------------
-        // FIX: substituído <form id="nm-ipbx-form"> por <div id="nm-ipbx-form">
-        // O GLPI já emite um <form> externo que envolve toda a página de item.
-        // Formulários aninhados são HTML inválido (spec W3C) e causam:
-        //   [DOM] Multiple forms should be contained in their own form elements
-        //   [DOM] Password field is not contained in a form
-        // O envio é 100% via fetch() + X-Glpi-Csrf-Token no JS (nm-save-all).
         echo '<div id="nm-ipbx-form">';
-        echo '<input type="hidden" id="nm-ipbx-csrf"        value="' . $csrf . '">';
-        echo '<input type="hidden" id="nm-ipbx-action"      value="' . ($ipbx_id > 0 ? 'update_ipbx' : 'add_ipbx') . '">';
-        echo '<input type="hidden" id="nm-ipbx-id"          value="' . $ipbx_id . '">';
+        echo '<input type="hidden" id="nm-ipbx-csrf"         value="' . $csrf . '">';
+        echo '<input type="hidden" id="nm-ipbx-action"       value="' . ($ipbx_id > 0 ? 'update_ipbx' : 'add_ipbx') . '">';
+        echo '<input type="hidden" id="nm-ipbx-id"           value="' . $ipbx_id . '">';
         echo '<input type="hidden" id="nm-ipbx-companies-id" value="' . $companies_id . '">';
 
         echo '<table class="tab_cadre_fixe">';
@@ -109,22 +101,22 @@ class Ipbx extends \CommonDBTM
         echo '<td>' . __('Porta Web', 'newmanagement') . '</td>';
         echo '<td><input type="text" id="nm-ipbx-web_port" autocomplete="off" value="' . $h($fields['web_port']) . '" class="form-control" placeholder="80"></td>';
         echo '<td>' . __('Senha Web', 'newmanagement') . '</td>';
-        // FIX: fieldset role="presentation" isola o campo password do detector
-        // de formularios do Chrome sem criar um <form> real aninhado.
-        echo '<td><fieldset role="presentation" style="border:none;padding:0;margin:0"><div class="input-group">';
-        echo '<input type="password" id="nm-ipbx-web_password" autocomplete="new-password" value="' . $h($fields['web_password']) . '" class="form-control">';
+        // OPÇÃO A: placeholder para injeção dinâmica via JS.
+        // O JS lê data-value e cria o <input type="password"> após o DOM carregar.
+        echo '<td><div class="input-group">';
+        echo '<div id="nm-ipbx-web_password-slot" data-value="' . $h($fields['web_password']) . '" data-target-id="nm-ipbx-web_password"></div>';
         echo '<button type="button" class="btn btn-outline-secondary nm-btn-eye" data-target="nm-ipbx-web_password"><i class="ti ti-eye"></i></button>';
-        echo '</div></fieldset></td>';
+        echo '</div></td>';
         echo '</tr>';
 
         echo '<tr class="tab_bg_1">';
         echo '<td>' . __('Porta SSH', 'newmanagement') . '</td>';
         echo '<td><input type="text" id="nm-ipbx-ssh_port" autocomplete="off" value="' . $h($fields['ssh_port']) . '" class="form-control" placeholder="22"></td>';
         echo '<td>' . __('Senha SSH', 'newmanagement') . '</td>';
-        echo '<td><fieldset role="presentation" style="border:none;padding:0;margin:0"><div class="input-group">';
-        echo '<input type="password" id="nm-ipbx-ssh_password" autocomplete="new-password" value="' . $h($fields['ssh_password']) . '" class="form-control">';
+        echo '<td><div class="input-group">';
+        echo '<div id="nm-ipbx-ssh_password-slot" data-value="' . $h($fields['ssh_password']) . '" data-target-id="nm-ipbx-ssh_password"></div>';
         echo '<button type="button" class="btn btn-outline-secondary nm-btn-eye" data-target="nm-ipbx-ssh_password"><i class="ti ti-eye"></i></button>';
-        echo '</div></fieldset></td>';
+        echo '</div></td>';
         echo '</tr>';
 
         echo '<tr class="tab_bg_1">';
@@ -184,15 +176,14 @@ class Ipbx extends \CommonDBTM
         }
         echo '</tbody></table>';
 
-        // FIX: fieldset role="presentation" isola o campo password
-        echo '<fieldset role="presentation" style="border:none;padding:0;margin:0">';
         echo '<div class="nm-add-row d-flex flex-wrap gap-2 align-items-center mt-2" id="nm-ext-add">';
-        echo '<input type="text"     id="nm-ext-number"       autocomplete="off"       class="form-control form-control-sm" placeholder="' . __('Número', 'newmanagement') . '" style="width:110px">';
-        echo '<input type="password" id="nm-ext-password"     autocomplete="new-password" class="form-control form-control-sm" placeholder="' . __('Senha', 'newmanagement') . '" style="width:110px">';
-        echo '<input type="text"     id="nm-ext-device_ip"    autocomplete="off"       class="form-control form-control-sm" placeholder="IP" style="width:120px">';
-        echo '<input type="text"     id="nm-ext-user_name"    autocomplete="off"       class="form-control form-control-sm" placeholder="' . __('Usuário', 'newmanagement') . '" style="width:120px">';
+        echo '<input type="text" id="nm-ext-number"     autocomplete="off" class="form-control form-control-sm" placeholder="' . __('Número', 'newmanagement') . '" style="width:110px">';
+        // OPÇÃO A: slot — JS injeta <input type="password"> aqui
+        echo '<div id="nm-ext-password-slot" data-target-id="nm-ext-password" data-placeholder="' . __('Senha', 'newmanagement') . '" style="width:110px"></div>';
+        echo '<input type="text" id="nm-ext-device_ip"  autocomplete="off" class="form-control form-control-sm" placeholder="IP" style="width:120px">';
+        echo '<input type="text" id="nm-ext-user_name"  autocomplete="off" class="form-control form-control-sm" placeholder="' . __('Usuário', 'newmanagement') . '" style="width:120px">';
         echo '<select id="nm-ext-records_calls" class="form-select form-select-sm" style="width:90px"><option value="0">' . __('Não', 'newmanagement') . '</option><option value="1">' . __('Sim', 'newmanagement') . '</option></select>';
-        echo '<input type="text"     id="nm-ext-department"   autocomplete="off"       class="form-control form-control-sm" placeholder="' . __('Departamento', 'newmanagement') . '" style="width:140px">';
+        echo '<input type="text" id="nm-ext-department" autocomplete="off" class="form-control form-control-sm" placeholder="' . __('Departamento', 'newmanagement') . '" style="width:140px">';
         echo '<button type="button" class="btn btn-sm btn-success" id="nm-ext-add-btn"'
             . ' data-action="add_extension"'
             . ' data-ipbx-id="' . $ipbx_id . '"'
@@ -200,7 +191,6 @@ class Ipbx extends \CommonDBTM
             . ' data-url="' . htmlspecialchars($action, ENT_QUOTES) . '">'
             . '<i class="ti ti-plus"></i> ' . __('Adicionar Ramal', 'newmanagement') . '</button>';
         echo '</div>';
-        echo '</fieldset>';
     }
 
     public static function renderExtensionRow(int $id, array $row, int $companies_id, string $csrf, string $action): string
@@ -243,12 +233,11 @@ class Ipbx extends \CommonDBTM
         }
         echo '</tbody></table>';
 
-        // FIX: fieldset role="presentation" isola o campo password
-        echo '<fieldset role="presentation" style="border:none;padding:0;margin:0">';
         echo '<div class="nm-add-row d-flex flex-wrap gap-2 align-items-center mt-2" id="nm-dev-add">';
-        echo '<input type="text"     id="nm-dev-device_type" autocomplete="off"       class="form-control form-control-sm" placeholder="' . __('Tipo', 'newmanagement') . '" style="width:160px">';
-        echo '<input type="text"     id="nm-dev-ip_address"  autocomplete="off"       class="form-control form-control-sm" placeholder="IP" style="width:160px">';
-        echo '<input type="password" id="nm-dev-password"    autocomplete="new-password" class="form-control form-control-sm" placeholder="' . __('Senha', 'newmanagement') . '" style="width:140px">';
+        echo '<input type="text" id="nm-dev-device_type" autocomplete="off" class="form-control form-control-sm" placeholder="' . __('Tipo', 'newmanagement') . '" style="width:160px">';
+        echo '<input type="text" id="nm-dev-ip_address"  autocomplete="off" class="form-control form-control-sm" placeholder="IP" style="width:160px">';
+        // OPÇÃO A: slot — JS injeta <input type="password"> aqui
+        echo '<div id="nm-dev-password-slot" data-target-id="nm-dev-password" data-placeholder="' . __('Senha', 'newmanagement') . '" style="width:140px"></div>';
         echo '<button type="button" class="btn btn-sm btn-success" id="nm-dev-add-btn"'
             . ' data-action="add_device"'
             . ' data-ipbx-id="' . $ipbx_id . '"'
@@ -256,7 +245,6 @@ class Ipbx extends \CommonDBTM
             . ' data-url="' . htmlspecialchars($action, ENT_QUOTES) . '">'
             . '<i class="ti ti-plus"></i> ' . __('Adicionar Dispositivo', 'newmanagement') . '</button>';
         echo '</div>';
-        echo '</fieldset>';
     }
 
     public static function renderDeviceRow(int $id, array $row, int $companies_id, string $csrf, string $action): string
