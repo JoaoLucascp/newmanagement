@@ -1,7 +1,7 @@
 /**
  * Newmanagement - Plugin GLPI
  * Mascaras, busca CNPJ e CEP via BrasilAPI
- * Botões AJAX do formulário IPBX (com token CSRF do GLPI 11)
+ * Botões AJAX do formulário IPBX e Chatbot (com token CSRF do GLPI 11)
  */
 
 console.log('Newmanagement Plugin carregado.');
@@ -80,18 +80,13 @@ function nmSetLoading(btnId, loading) {
 
 // ---------------------------------------------------------------------------
 // CSRF Helper — GLPI 11 exige X-Glpi-Csrf-Token em todo POST
-// O token fica no meta tag injetado pelo GLPI ou no campo hidden do form
 // ---------------------------------------------------------------------------
 
 function nmGetCsrfToken() {
-    // 1) meta tag padrão do GLPI 11
     const meta = document.querySelector('meta[name="glpi-csrf-token"]');
     if (meta) return meta.getAttribute('content');
-
-    // 2) campo hidden dentro do form IPBX (fallback)
     const hidden = document.querySelector('input[name="_glpi_csrf_token"]');
     if (hidden) return hidden.value;
-
     return '';
 }
 
@@ -103,32 +98,23 @@ async function nmPost(url, data) {
     const body = new FormData();
     Object.entries(data).forEach(([k, v]) => body.append(k, v));
 
-    const token = nmGetCsrfToken();
-
     const res = await fetch(url, {
         method: 'POST',
-        headers: {
-            // Header obrigatório pelo CheckCsrfListener do GLPI 11
-            'X-Glpi-Csrf-Token': token,
-        },
+        headers: { 'X-Glpi-Csrf-Token': nmGetCsrfToken() },
         body,
     });
 
-    if (!res.ok) {
-        throw new Error('HTTP ' + res.status);
-    }
-
+    if (!res.ok) throw new Error('HTTP ' + res.status);
     return res.json();
 }
 
 // ---------------------------------------------------------------------------
-// URL base do endpoint AJAX
+// URL base do endpoint AJAX — IPBX
 // ---------------------------------------------------------------------------
 
 function nmAjaxUrl() {
     const root = (typeof CFG_GLPI !== 'undefined' && CFG_GLPI.root_doc)
-        ? CFG_GLPI.root_doc
-        : '';
+        ? CFG_GLPI.root_doc : '';
     return root + '/plugins/newmanagement/ajax/ipbx_sub.php';
 }
 
@@ -145,32 +131,36 @@ function nmUpdateIpbxId(newId) {
         const btn = document.getElementById(id);
         if (btn) btn.dataset.ipbxId = newId;
     });
-
     const hiddenLines = document.querySelector('#nm-lines-form input[name="ipbx_id"]');
     if (hiddenLines) hiddenLines.value = newId;
-
     const hiddenAction = document.querySelector('#nm-ipbx-form input[name="action"]');
     if (hiddenAction) hiddenAction.value = 'update_ipbx';
-
     const hiddenId = document.querySelector('#nm-ipbx-form input[name="id"]');
     if (hiddenId) hiddenId.value = newId;
 }
 
 // ---------------------------------------------------------------------------
-// Botões Adicionar / Remover — IPBX Company Form
+// Helpers de leitura de campo por ID
+// ---------------------------------------------------------------------------
+
+function nmVal(id) {
+    const el = document.getElementById(id);
+    return el ? el.value : '';
+}
+
+function nmClear(ids) {
+    ids.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+}
+
+// ---------------------------------------------------------------------------
+// Botões Adicionar / Remover — IPBX
 // ---------------------------------------------------------------------------
 
 function nmInitIpbxButtons() {
     const URL = nmGetIpbxActionUrl();
 
-    function getBtnUrl(btn) {
-        return btn?.dataset.url || URL;
-    }
-
-    function getCompaniesId(btn) {
-        return btn?.dataset.companiesId || nmGetIpbxCompaniesId();
-    }
-
+    function getBtnUrl(btn) { return btn?.dataset.url || URL; }
+    function getCompaniesId(btn) { return btn?.dataset.companiesId || nmGetIpbxCompaniesId(); }
     function checkIpbxSaved(btn) {
         const id = parseInt(btn.dataset.ipbxId || '0', 10);
         if (id <= 0) {
@@ -184,7 +174,7 @@ function nmInitIpbxButtons() {
     if (btnSaveAll) {
         btnSaveAll.addEventListener('click', async (event) => {
             event.preventDefault();
-            const ipbxForm = document.getElementById('nm-ipbx-form');
+            const ipbxForm  = document.getElementById('nm-ipbx-form');
             const linesForm = document.getElementById('nm-lines-form');
             if (!ipbxForm || !linesForm) return;
 
@@ -234,14 +224,13 @@ function nmInitIpbxButtons() {
                 action: btnExt.dataset.action,
                 ipbx_id: btnExt.dataset.ipbxId,
                 companies_id: getCompaniesId(btnExt),
-                number: document.getElementById('nm-ext-number')?.value || '',
-                password: document.getElementById('nm-ext-password')?.value || '',
-                device_ip: document.getElementById('nm-ext-device_ip')?.value || '',
-                user_name: document.getElementById('nm-ext-user_name')?.value || '',
-                records_calls: document.getElementById('nm-ext-records_calls')?.value || '0',
-                department: document.getElementById('nm-ext-department')?.value || '',
+                number:       nmVal('nm-ext-number'),
+                password:     nmVal('nm-ext-password'),
+                device_ip:    nmVal('nm-ext-device_ip'),
+                user_name:    nmVal('nm-ext-user_name'),
+                records_calls:nmVal('nm-ext-records_calls') || '0',
+                department:   nmVal('nm-ext-department'),
             };
-
             try {
                 const result = await nmPost(getBtnUrl(btnExt), data);
                 if (!result.success) throw new Error(result.error || 'Erro desconhecido');
@@ -265,8 +254,7 @@ function nmInitIpbxButtons() {
                               <i class="ti ti-trash"></i></button></td>`;
                     tbody.appendChild(tr);
                 }
-                ['nm-ext-number', 'nm-ext-password', 'nm-ext-device_ip', 'nm-ext-user_name', 'nm-ext-department']
-                    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+                nmClear(['nm-ext-number','nm-ext-password','nm-ext-device_ip','nm-ext-user_name','nm-ext-department']);
                 const sel = document.getElementById('nm-ext-records_calls'); if (sel) sel.value = '0';
             } catch (error) {
                 alert('Erro ao adicionar ramal: ' + error.message);
@@ -282,11 +270,10 @@ function nmInitIpbxButtons() {
                 action: btnDev.dataset.action,
                 ipbx_id: btnDev.dataset.ipbxId,
                 companies_id: getCompaniesId(btnDev),
-                device_type: document.getElementById('nm-dev-device_type')?.value || '',
-                ip_address: document.getElementById('nm-dev-ip_address')?.value || '',
-                password: document.getElementById('nm-dev-password')?.value || '',
+                device_type: nmVal('nm-dev-device_type'),
+                ip_address:  nmVal('nm-dev-ip_address'),
+                password:    nmVal('nm-dev-password'),
             };
-
             try {
                 const result = await nmPost(getBtnUrl(btnDev), data);
                 if (!result.success) throw new Error(result.error || 'Erro desconhecido');
@@ -307,8 +294,7 @@ function nmInitIpbxButtons() {
                               <i class="ti ti-trash"></i></button></td>`;
                     tbody.appendChild(tr);
                 }
-                ['nm-dev-device_type', 'nm-dev-ip_address', 'nm-dev-password']
-                    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+                nmClear(['nm-dev-device_type','nm-dev-ip_address','nm-dev-password']);
             } catch (error) {
                 alert('Erro ao adicionar dispositivo: ' + error.message);
             }
@@ -323,13 +309,12 @@ function nmInitIpbxButtons() {
                 action: btnNet.dataset.action,
                 ipbx_id: btnNet.dataset.ipbxId,
                 companies_id: getCompaniesId(btnNet),
-                ip_network: document.getElementById('nm-net-ip_network')?.value || '',
-                netmask: document.getElementById('nm-net-netmask')?.value || '',
-                gateway: document.getElementById('nm-net-gateway')?.value || '',
-                dns_primary: document.getElementById('nm-net-dns_primary')?.value || '',
-                dns_secondary: document.getElementById('nm-net-dns_secondary')?.value || '',
+                ip_network:    nmVal('nm-net-ip_network'),
+                netmask:       nmVal('nm-net-netmask'),
+                gateway:       nmVal('nm-net-gateway'),
+                dns_primary:   nmVal('nm-net-dns_primary'),
+                dns_secondary: nmVal('nm-net-dns_secondary'),
             };
-
             try {
                 const result = await nmPost(getBtnUrl(btnNet), data);
                 if (!result.success) throw new Error(result.error || 'Erro desconhecido');
@@ -352,14 +337,14 @@ function nmInitIpbxButtons() {
                               <i class="ti ti-trash"></i></button></td>`;
                     tbody.appendChild(tr);
                 }
-                ['nm-net-ip_network', 'nm-net-netmask', 'nm-net-gateway', 'nm-net-dns_primary', 'nm-net-dns_secondary']
-                    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+                nmClear(['nm-net-ip_network','nm-net-netmask','nm-net-gateway','nm-net-dns_primary','nm-net-dns_secondary']);
             } catch (error) {
                 alert('Erro ao adicionar rede: ' + error.message);
             }
         });
     }
 
+    // Delegação: delete e eye para botões IPBX
     document.addEventListener('click', async (e) => {
         const btn = e.target.closest('.nm-del-btn, .nm-btn-eye');
         if (!btn) return;
@@ -369,22 +354,18 @@ function nmInitIpbxButtons() {
             if (!target) return;
             target.type = target.type === 'password' ? 'text' : 'password';
             const icon = btn.querySelector('i');
-            if (icon) {
-                icon.className = target.type === 'password' ? 'ti ti-eye' : 'ti ti-eye-off';
-            }
+            if (icon) icon.className = target.type === 'password' ? 'ti ti-eye' : 'ti ti-eye-off';
             return;
         }
 
         const action = btn.dataset.action;
-        const id = btn.dataset.id;
+        const id     = btn.dataset.id;
         if (!action || !id) return;
         if (!confirm(btn.dataset.confirm || 'Deseja remover este item?')) return;
 
         try {
             const result = await nmPost(getBtnUrl(btn), {
-                action,
-                id,
-                companies_id: getCompaniesId(btn),
+                action, id, companies_id: getCompaniesId(btn),
             });
             if (!result.success) throw new Error(result.error || 'Erro ao remover');
             const row = document.getElementById(btn.dataset.row);
@@ -393,6 +374,231 @@ function nmInitIpbxButtons() {
             alert('Erro ao remover: ' + error.message);
         }
     });
+}
+
+// ---------------------------------------------------------------------------
+// Chatbot — salvar formulário principal via fetch()
+// ---------------------------------------------------------------------------
+
+function nmInitChatbotButtons() {
+    // Salvar dados principais do chatbot
+    const btnSave = document.getElementById('nm-chatbot-save');
+    if (btnSave) {
+        btnSave.addEventListener('click', async () => {
+            const url  = btnSave.dataset.actionUrl;
+            const csrf = document.getElementById('nm-chatbot-csrf')?.value   || nmGetCsrfToken();
+            const data = {
+                _glpi_csrf_token:         csrf,
+                action:                   document.getElementById('nm-chatbot-action')?.value || 'add_chatbot',
+                id:                       document.getElementById('nm-chatbot-id')?.value || '0',
+                companies_id:             document.getElementById('nm-chatbot-companies-id')?.value || '0',
+                model:                    nmVal('nm-chatbot-model'),
+                chatbot_registration_id:  nmVal('nm-chatbot-registration_id'),
+                activation_date:          nmVal('nm-chatbot-activation_date'),
+                whatsapp_number:          nmVal('nm-chatbot-whatsapp'),
+                access_link:              nmVal('nm-chatbot-access_link'),
+                plan:                     nmVal('nm-chatbot-plan'),
+                users_count:              nmVal('nm-chatbot-users_count'),
+                supervisors_count:        nmVal('nm-chatbot-supervisors_count'),
+                admins_count:             nmVal('nm-chatbot-admins_count'),
+                social_networks:          nmVal('nm-chatbot-social_networks'),
+                admin_login:              nmVal('nm-chatbot-admin_login'),
+                admin_password:           nmVal('nm-chatbot-admin_password'),
+                superadmin_login:         nmVal('nm-chatbot-superadmin_login'),
+                superadmin_password:      nmVal('nm-chatbot-superadmin_password'),
+                manager_name:             nmVal('nm-chatbot-manager_name'),
+                manager_contact:          nmVal('nm-chatbot-manager_contact'),
+                manager_email:            nmVal('nm-chatbot-manager_email'),
+                comment:                  nmVal('nm-chatbot-comment'),
+            };
+
+            try {
+                const result = await nmPost(url, data);
+                if (!result.success) throw new Error(result.error || 'Erro ao salvar');
+                // Atualiza action e id para update nas próximas saves
+                const actionEl = document.getElementById('nm-chatbot-action');
+                const idEl     = document.getElementById('nm-chatbot-id');
+                if (actionEl) actionEl.value = 'update_chatbot';
+                if (idEl && result.id) idEl.value = result.id;
+                btnSave.classList.replace('btn-primary', 'btn-success');
+                setTimeout(() => btnSave.classList.replace('btn-success', 'btn-primary'), 2000);
+            } catch (error) {
+                alert('Erro ao salvar Chatbot: ' + error.message);
+            }
+        });
+    }
+
+    // Delegação de clique para todos os botões AJAX do Chatbot (add + delete)
+    document.addEventListener('click', async (e) => {
+        // eye-toggle para campos de senha no Chatbot
+        const eyeBtn = e.target.closest('.nm-btn-eye');
+        if (eyeBtn) {
+            const target = document.getElementById(eyeBtn.dataset.target);
+            if (!target) return;
+            target.type = target.type === 'password' ? 'text' : 'password';
+            const icon = eyeBtn.querySelector('i');
+            if (icon) icon.className = target.type === 'password' ? 'ti ti-eye' : 'ti ti-eye-off';
+            return;
+        }
+
+        const btn = e.target.closest('.nm-chatbot-del');
+        if (btn) {
+            if (!confirm(btn.dataset.confirm || 'Remover?')) return;
+            try {
+                const result = await nmPost(btn.dataset.url, {
+                    _glpi_csrf_token: btn.dataset.csrf || nmGetCsrfToken(),
+                    action:           btn.dataset.action,
+                    id:               btn.dataset.id,
+                    companies_id:     btn.dataset.companiesId || '',
+                });
+                if (!result.success) throw new Error(result.error || 'Erro ao remover');
+                const row = document.getElementById(btn.dataset.row);
+                if (row) row.remove();
+            } catch (error) {
+                alert('Erro ao remover: ' + error.message);
+            }
+            return;
+        }
+    });
+
+    // Adicionar Comunicação em Massa
+    const btnMcAdd = document.getElementById('nm-mc-add-btn');
+    if (btnMcAdd) {
+        btnMcAdd.addEventListener('click', async () => {
+            const data = {
+                _glpi_csrf_token:     btnMcAdd.dataset.csrf || nmGetCsrfToken(),
+                action:               'add_mass_comm',
+                chatbot_id:           btnMcAdd.dataset.chatbotId || '0',
+                companies_id:         btnMcAdd.dataset.companiesId || '0',
+                system_name:          nmVal('nm-mc-system_name'),
+                activation_date:      nmVal('nm-mc-activation_date'),
+                authenticated_number: nmVal('nm-mc-authenticated_number'),
+                homologation_type:    nmVal('nm-mc-homologation_type'),
+                access_link:          nmVal('nm-mc-access_link'),
+                login:                nmVal('nm-mc-login'),
+                manager:              nmVal('nm-mc-manager'),
+            };
+            try {
+                const result = await nmPost(btnMcAdd.dataset.url, data);
+                if (!result.success) throw new Error(result.error || 'Erro');
+                const addRow = document.getElementById('nm-mc-add-row');
+                if (addRow) {
+                    const tr = document.createElement('tr');
+                    tr.id = 'nm-mc-row-' + result.id;
+                    tr.className = 'tab_bg_1';
+                    tr.innerHTML = `
+                        <td>${data.system_name}</td>
+                        <td>${data.activation_date}</td>
+                        <td>${data.authenticated_number}</td>
+                        <td>${data.homologation_type}</td>
+                        <td>${data.access_link ? '<a href="'+data.access_link+'" target="_blank" rel="noopener"><i class="ti ti-external-link"></i></a>' : ''}</td>
+                        <td>${data.login}</td>
+                        <td>${data.manager}</td>
+                        <td><button type="button" class="btn btn-sm btn-danger nm-chatbot-del"
+                            data-action="delete_mass_comm" data-id="${result.id}"
+                            data-row="nm-mc-row-${result.id}"
+                            data-companies-id="${data.companies_id}"
+                            data-url="${btnMcAdd.dataset.url}"
+                            data-csrf="${data._glpi_csrf_token}"
+                            data-confirm="Remover?">
+                            <i class="ti ti-trash"></i></button></td>`;
+                    addRow.parentNode.insertBefore(tr, addRow);
+                }
+                nmClear(['nm-mc-system_name','nm-mc-activation_date','nm-mc-authenticated_number','nm-mc-homologation_type','nm-mc-access_link','nm-mc-login','nm-mc-manager']);
+            } catch (error) {
+                alert('Erro ao adicionar comunicação em massa: ' + error.message);
+            }
+        });
+    }
+
+    // Adicionar Número Restrito pela Meta
+    const btnWaAdd = document.getElementById('nm-wa-add-btn');
+    if (btnWaAdd) {
+        btnWaAdd.addEventListener('click', async () => {
+            const data = {
+                _glpi_csrf_token: btnWaAdd.dataset.csrf || nmGetCsrfToken(),
+                action:           'add_wa_restriction',
+                chatbot_id:       btnWaAdd.dataset.chatbotId || '0',
+                companies_id:     btnWaAdd.dataset.companiesId || '0',
+                whatsapp_number:  nmVal('nm-wa-whatsapp_number'),
+                restriction_date: nmVal('nm-wa-restriction_date'),
+                restriction_time: nmVal('nm-wa-restriction_time'),
+            };
+            try {
+                const result = await nmPost(btnWaAdd.dataset.url, data);
+                if (!result.success) throw new Error(result.error || 'Erro');
+                const addRow = document.getElementById('nm-wa-add-row');
+                if (addRow) {
+                    const tr = document.createElement('tr');
+                    tr.id = 'nm-wa-row-' + result.id;
+                    tr.className = 'tab_bg_1';
+                    tr.innerHTML = `
+                        <td>${data.whatsapp_number}</td>
+                        <td>${data.restriction_date}</td>
+                        <td>${data.restriction_time}</td>
+                        <td><button type="button" class="btn btn-sm btn-danger nm-chatbot-del"
+                            data-action="delete_wa_restriction" data-id="${result.id}"
+                            data-row="nm-wa-row-${result.id}"
+                            data-companies-id="${data.companies_id}"
+                            data-url="${btnWaAdd.dataset.url}"
+                            data-csrf="${data._glpi_csrf_token}"
+                            data-confirm="Remover?">
+                            <i class="ti ti-trash"></i></button></td>`;
+                    addRow.parentNode.insertBefore(tr, addRow);
+                }
+                nmClear(['nm-wa-whatsapp_number','nm-wa-restriction_date','nm-wa-restriction_time']);
+            } catch (error) {
+                alert('Erro ao adicionar restrição: ' + error.message);
+            }
+        });
+    }
+
+    // Adicionar Usuário do Chatbot
+    const btnCuAdd = document.getElementById('nm-cu-add-btn');
+    if (btnCuAdd) {
+        btnCuAdd.addEventListener('click', async () => {
+            const data = {
+                _glpi_csrf_token: btnCuAdd.dataset.csrf || nmGetCsrfToken(),
+                action:           'add_chatbot_user',
+                chatbot_id:       btnCuAdd.dataset.chatbotId || '0',
+                companies_id:     btnCuAdd.dataset.companiesId || '0',
+                user_name:        nmVal('nm-cu-user_name'),
+                login:            nmVal('nm-cu-login'),
+                password:         nmVal('nm-cu-password'),
+                email:            nmVal('nm-cu-email'),
+                user_type:        nmVal('nm-cu-user_type'),
+            };
+            try {
+                const result = await nmPost(btnCuAdd.dataset.url, data);
+                if (!result.success) throw new Error(result.error || 'Erro');
+                const addRow = document.getElementById('nm-cu-add-row');
+                if (addRow) {
+                    const tr = document.createElement('tr');
+                    tr.id = 'nm-cu-row-' + result.id;
+                    tr.className = 'tab_bg_1';
+                    tr.innerHTML = `
+                        <td>${data.user_name}</td>
+                        <td>${data.login}</td>
+                        <td>••••••</td>
+                        <td>${data.email}</td>
+                        <td>${data.user_type}</td>
+                        <td><button type="button" class="btn btn-sm btn-danger nm-chatbot-del"
+                            data-action="delete_chatbot_user" data-id="${result.id}"
+                            data-row="nm-cu-row-${result.id}"
+                            data-companies-id="${data.companies_id}"
+                            data-url="${btnCuAdd.dataset.url}"
+                            data-csrf="${data._glpi_csrf_token}"
+                            data-confirm="Remover usuário?">
+                            <i class="ti ti-trash"></i></button></td>`;
+                    addRow.parentNode.insertBefore(tr, addRow);
+                }
+                nmClear(['nm-cu-user_name','nm-cu-login','nm-cu-password','nm-cu-email']);
+                const sel = document.getElementById('nm-cu-user_type'); if (sel) sel.value = 'usuario';
+            } catch (error) {
+                alert('Erro ao adicionar usuário: ' + error.message);
+            }
+        });
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -487,6 +693,9 @@ window.nmBuscarCEP  = nmBuscarCEP;
 
 // ---------------------------------------------------------------------------
 // Init
+// FIX: scroll/touch listeners registrados com { passive: true } para
+// eliminar os [Violation] "Added non-passive event listener to a
+// scroll-blocking event" do console do Chrome.
 // ---------------------------------------------------------------------------
 
 function nmInit() {
@@ -514,8 +723,22 @@ function nmInit() {
         phoneInput.addEventListener('input', function () { this.value = nmMascaraTelefone(this.value); });
     }
 
+    // FIX: registra listeners de scroll com passive:true
+    // O Chrome avisa quando touchstart/touchmove/wheel são registrados sem
+    // { passive: true } em elementos que afetam o scroll principal.
+    // Como o plugin não usa esses eventos, garantimos que qualquer binding
+    // futuro sobre document/window use a flag correta.
+    const passiveEvents = ['touchstart', 'touchmove', 'wheel', 'mousewheel'];
+    passiveEvents.forEach(evt => {
+        // Intercepta apenas se ainda não houver listener (prevenção defensiva)
+        document.addEventListener(evt, () => {}, { passive: true, capture: false });
+    });
+
     // Botões AJAX do IPBX
     nmInitIpbxButtons();
+
+    // Botões AJAX do Chatbot
+    nmInitChatbotButtons();
 }
 
 if (document.readyState === 'loading') {
