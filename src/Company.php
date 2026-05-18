@@ -197,15 +197,15 @@ class Company extends \CommonDBTM
 
         // ------------------------------------------------------------------
         // Linha 1: Nome (obrigatório) | ID (somente leitura)
-        // Html::autocompletionTextField() gera <input type="text"> com as
-        // classes, autocomplete e atributos padrão do GLPI.
+        // Html::autocompletionTextField() foi removido no GLPI 10/11.
+        // Substituído por <input class="form-control"> com htmlspecialchars().
         // ------------------------------------------------------------------
         echo '<tr class="tab_bg_1">';
         echo '<td>' . __('Nome', 'newmanagement') . ' <span class="required">*</span></td>';
         echo '<td>';
-        \Html::autocompletionTextField($this, 'name', [
-            'required' => true,
-        ]);
+        echo '<input type="text" id="name" name="name"'
+            . ' value="' . htmlspecialchars($this->fields['name'] ?? '', ENT_QUOTES) . '"'
+            . ' class="form-control" required>';
         echo '</td>';
         echo '<td>' . __('ID', 'newmanagement') . '</td>';
         echo '<td>';
@@ -217,8 +217,8 @@ class Company extends \CommonDBTM
 
         // ------------------------------------------------------------------
         // Linha 2: CNPJ (input-group com botão Buscar) | Razão Social
-        // CNPJ precisa do botão de busca — mantido como HTML manual.
-        // Razão Social é simples → usa autocompletionTextField.
+        // CNPJ mantém HTML manual com input-group (não alterar).
+        // Razão Social: Html::autocompletionTextField() substituído por <input>.
         // ------------------------------------------------------------------
         $cnpj = htmlspecialchars($this->fields['cnpj'] ?? '', ENT_QUOTES);
 
@@ -226,10 +226,10 @@ class Company extends \CommonDBTM
         echo '<td>' . __('CNPJ', 'newmanagement') . '</td>';
         echo '<td>';
         echo '<div class="input-group">';
-        echo '<input type="text" id="cnpj" name="cnpj" value="' . $cnpj . '"
-               class="form-control" placeholder="00.000.000/0000-00" maxlength="18">';
-        echo '<button type="button" class="btn btn-outline-secondary btn-sm"
-                id="btn-buscar-cnpj" title="' . __('Buscar CNPJ na BrasilAPI', 'newmanagement') . '">';
+        echo '<input type="text" id="cnpj" name="cnpj" value="' . $cnpj . '"'
+            . ' class="form-control" placeholder="00.000.000/0000-00" maxlength="18">';
+        echo '<button type="button" class="btn btn-outline-secondary btn-sm"'
+            . ' id="btn-buscar-cnpj" title="' . __('Buscar CNPJ na BrasilAPI', 'newmanagement') . '">';
         echo '<i class="ti ti-search"></i> ' . __('Buscar', 'newmanagement');
         echo '</button>';
         echo '</div>';
@@ -237,30 +237,34 @@ class Company extends \CommonDBTM
         echo '</td>';
         echo '<td>' . __('Razao Social', 'newmanagement') . '</td>';
         echo '<td>';
-        \Html::autocompletionTextField($this, 'razao_social');
+        echo '<input type="text" id="razao_social" name="razao_social"'
+            . ' value="' . htmlspecialchars($this->fields['razao_social'] ?? '', ENT_QUOTES) . '"'
+            . ' class="form-control">';
         echo '</td>';
         echo '</tr>';
 
         // ------------------------------------------------------------------
         // Linha 3: E-mail | Telefone
-        // autocompletionTextField cuida de value, name, id e classes.
+        // Html::autocompletionTextField() substituído por <input class="form-control">.
         // ------------------------------------------------------------------
         echo '<tr class="tab_bg_1">';
         echo '<td>' . __('E-mail', 'newmanagement') . '</td>';
         echo '<td>';
-        \Html::autocompletionTextField($this, 'email');
+        echo '<input type="text" id="email" name="email"'
+            . ' value="' . htmlspecialchars($this->fields['email'] ?? '', ENT_QUOTES) . '"'
+            . ' class="form-control">';
         echo '</td>';
         echo '<td>' . __('Telefone', 'newmanagement') . '</td>';
         echo '<td>';
-        \Html::autocompletionTextField($this, 'phone', [
-            'placeholder' => '(00) 00000-0000',
-        ]);
+        echo '<input type="text" id="phone" name="phone"'
+            . ' value="' . htmlspecialchars($this->fields['phone'] ?? '', ENT_QUOTES) . '"'
+            . ' class="form-control" placeholder="(00) 00000-0000">';
         echo '</td>';
         echo '</tr>';
 
         // ------------------------------------------------------------------
-        // Linha 4: CEP (input-group com botão Buscar) | Status do Contrato
-        // CEP mantém botão manual; Status usa Dropdown::showFromArray().
+        // Linha 4: CEP (input-group com botão Buscar — não alterar) | Status do Contrato
+        // Dropdown::showFromArray() mantido intacto — funciona no GLPI 10/11.
         // ------------------------------------------------------------------
         $cep             = htmlspecialchars($this->fields['cep'] ?? '', ENT_QUOTES);
         $contract_status = (int) ($this->fields['contract_status'] ?? self::CONTRACT_NO_CONTRACT);
@@ -269,10 +273,10 @@ class Company extends \CommonDBTM
         echo '<td>' . __('CEP', 'newmanagement') . '</td>';
         echo '<td>';
         echo '<div class="input-group">';
-        echo '<input type="text" id="cep" name="cep" value="' . $cep . '"
-               class="form-control" placeholder="00000-000" maxlength="9">';
-        echo '<button type="button" class="btn btn-outline-secondary btn-sm"
-                id="btn-buscar-cep" title="' . __('Buscar CEP na BrasilAPI', 'newmanagement') . '">';
+        echo '<input type="text" id="cep" name="cep" value="' . $cep . '"'
+            . ' class="form-control" placeholder="00000-000" maxlength="9">';
+        echo '<button type="button" class="btn btn-outline-secondary btn-sm"'
+            . ' id="btn-buscar-cep" title="' . __('Buscar CEP na BrasilAPI', 'newmanagement') . '">';
         echo '<i class="ti ti-search"></i> ' . __('Buscar', 'newmanagement');
         echo '</button>';
         echo '</div>';
@@ -280,7 +284,6 @@ class Company extends \CommonDBTM
         echo '</td>';
         echo '<td>' . __('Status do Contrato', 'newmanagement') . '</td>';
         echo '<td>';
-        // Dropdown::showFromArray() gera <select class="form-select"> nativo do GLPI
         \Dropdown::showFromArray('contract_status', self::getContractStatusOptions(), [
             'value'               => $contract_status,
             'display_emptychoice' => false,
@@ -289,43 +292,36 @@ class Company extends \CommonDBTM
         echo '</tr>';
 
         // ------------------------------------------------------------------
-        // Linha 5: Endereço (textarea — colspan 3 para ocupar 3 colunas)
-        // Html::textarea() gera <textarea class="form-control"> padrão GLPI.
+        // Linha 5: Endereço
+        // Html::textarea() foi removido no GLPI 10/11.
+        // Substituído por <textarea class="form-control"> com htmlspecialchars().
         // ------------------------------------------------------------------
         echo '<tr class="tab_bg_1">';
         echo '<td>' . __('Endereco', 'newmanagement') . '</td>';
         echo '<td colspan="3">';
-        \Html::textarea([
-            'name'    => 'address',
-            'value'   => $this->fields['address'] ?? '',
-            'rows'    => 2,
-            'cols'    => 80,
-            'display' => true,
-        ]);
+        echo '<textarea id="address" name="address" class="form-control" rows="2">';
+        echo htmlspecialchars($this->fields['address'] ?? '', ENT_QUOTES);
+        echo '</textarea>';
         echo '</td>';
         echo '</tr>';
 
         // ------------------------------------------------------------------
-        // Linha 6: Comentário (textarea)
+        // Linha 6: Comentário
+        // Html::textarea() substituído por <textarea class="form-control">.
         // ------------------------------------------------------------------
         echo '<tr class="tab_bg_1">';
         echo '<td>' . __('Comentario', 'newmanagement') . '</td>';
         echo '<td colspan="3">';
-        \Html::textarea([
-            'name'    => 'comment',
-            'value'   => $this->fields['comment'] ?? '',
-            'rows'    => 3,
-            'cols'    => 80,
-            'display' => true,
-        ]);
+        echo '<textarea id="comment" name="comment" class="form-control" rows="3">';
+        echo htmlspecialchars($this->fields['comment'] ?? '', ENT_QUOTES);
+        echo '</textarea>';
         echo '</td>';
         echo '</tr>';
 
         $this->showFormButtons($options);
 
         // ------------------------------------------------------------------
-        // JavaScript — BrasilAPI (CNPJ + CEP)
-        // Máscaras e buscas client-side; nenhum dado trafega pelo servidor.
+        // JavaScript — BrasilAPI (CNPJ + CEP) — mantido intacto
         // ------------------------------------------------------------------
         echo <<<'JS'
 <script>
