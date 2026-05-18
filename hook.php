@@ -116,6 +116,7 @@ function plugin_newmanagement_install() {
             `companies_id`  int {$default_key_sign} NOT NULL DEFAULT 0,
             `device_type`   varchar(100)          DEFAULT NULL,
             `ip_address`    varchar(45)           DEFAULT NULL,
+            `login`         varchar(255)          DEFAULT NULL,
             `password`      varchar(255)          DEFAULT NULL,
             `date_creation` timestamp             DEFAULT NULL,
             `date_mod`      timestamp             DEFAULT NULL,
@@ -123,6 +124,12 @@ function plugin_newmanagement_install() {
             KEY `ipbx_id` (`ipbx_id`)
         ) ENGINE=InnoDB DEFAULT CHARSET={$default_charset} COLLATE={$default_collation} ROW_FORMAT=DYNAMIC";
         $DB->doQueryOrDie($query);
+    } else {
+        // Migration: adiciona coluna login se ainda nao existir
+        $cols = $DB->listFields('glpi_plugin_newmanagement_ipbx_devices');
+        if (!isset($cols['login'])) {
+            $migration->addField('glpi_plugin_newmanagement_ipbx_devices', 'login', 'varchar(255) DEFAULT NULL', ['after' => 'ip_address']);
+        }
     }
 
     // -------------------------------------------------------
@@ -138,12 +145,19 @@ function plugin_newmanagement_install() {
             `gateway`       varchar(45)           DEFAULT NULL,
             `dns_primary`   varchar(45)           DEFAULT NULL,
             `dns_secondary` varchar(45)           DEFAULT NULL,
+            `supplier`      varchar(255)          DEFAULT NULL,
             `date_creation` timestamp             DEFAULT NULL,
             `date_mod`      timestamp             DEFAULT NULL,
             PRIMARY KEY (`id`),
             KEY `ipbx_id` (`ipbx_id`)
         ) ENGINE=InnoDB DEFAULT CHARSET={$default_charset} COLLATE={$default_collation} ROW_FORMAT=DYNAMIC";
         $DB->doQueryOrDie($query);
+    } else {
+        // Migration: adiciona coluna supplier se ainda nao existir
+        $cols = $DB->listFields('glpi_plugin_newmanagement_ipbx_network');
+        if (!isset($cols['supplier'])) {
+            $migration->addField('glpi_plugin_newmanagement_ipbx_network', 'supplier', 'varchar(255) DEFAULT NULL', ['after' => 'dns_secondary']);
+        }
     }
 
     // -------------------------------------------------------
@@ -172,257 +186,4 @@ function plugin_newmanagement_install() {
             `date_mod`         timestamp             DEFAULT NULL,
             PRIMARY KEY (`id`),
             KEY `ipbx_id` (`ipbx_id`)
-        ) ENGINE=InnoDB DEFAULT CHARSET={$default_charset} COLLATE={$default_collation} ROW_FORMAT=DYNAMIC";
-        $DB->doQueryOrDie($query);
-    }
-
-    // -------------------------------------------------------
-    // Tabela: IPBX Cloud
-    // -------------------------------------------------------
-    if (!$DB->tableExists('glpi_plugin_newmanagement_ipbx_cloud')) {
-        $query = "CREATE TABLE `glpi_plugin_newmanagement_ipbx_cloud` (
-            `id`                int {$default_key_sign} NOT NULL AUTO_INCREMENT,
-            `name`              varchar(255) NOT NULL DEFAULT '',
-            `companies_id`      int {$default_key_sign}       DEFAULT NULL,
-            `provider`          varchar(255)          DEFAULT NULL,
-            `cloud_region`      varchar(100)          DEFAULT NULL,
-            `sip_trunk`         varchar(255)          DEFAULT NULL,
-            `extensions_count`  int                   DEFAULT 0,
-            `comment`           text                  DEFAULT NULL,
-            `date_creation`     timestamp             DEFAULT NULL,
-            `date_mod`          timestamp             DEFAULT NULL,
-            `is_deleted`        tinyint(1)   NOT NULL DEFAULT 0,
-            PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB DEFAULT CHARSET={$default_charset} COLLATE={$default_collation} ROW_FORMAT=DYNAMIC";
-        $DB->doQueryOrDie($query);
-    }
-
-    // -------------------------------------------------------
-    // Tabela: Chatbot Omnichannel (campos completos)
-    // -------------------------------------------------------
-    if (!$DB->tableExists('glpi_plugin_newmanagement_chatbots')) {
-        $query = "CREATE TABLE `glpi_plugin_newmanagement_chatbots` (
-            `id`                      int {$default_key_sign} NOT NULL AUTO_INCREMENT,
-            `companies_id`            int {$default_key_sign}       DEFAULT NULL,
-            `model`                   varchar(255)          DEFAULT NULL,
-            `chatbot_registration_id` varchar(100)          DEFAULT NULL,
-            `activation_date`         date                  DEFAULT NULL,
-            `whatsapp_number`         varchar(50)           DEFAULT NULL,
-            `access_link`             varchar(500)          DEFAULT NULL,
-            `plan`                    varchar(255)          DEFAULT NULL,
-            `users_count`             int                   DEFAULT 0,
-            `supervisors_count`       int                   DEFAULT 0,
-            `admins_count`            int                   DEFAULT 0,
-            `admin_login`             varchar(255)          DEFAULT NULL,
-            `admin_password`          varchar(255)          DEFAULT NULL,
-            `superadmin_login`        varchar(255)          DEFAULT NULL,
-            `superadmin_password`     varchar(255)          DEFAULT NULL,
-            `manager_name`            varchar(255)          DEFAULT NULL,
-            `manager_contact`         varchar(100)          DEFAULT NULL,
-            `manager_email`           varchar(255)          DEFAULT NULL,
-            `social_networks`         text                  DEFAULT NULL,
-            `comment`                 text                  DEFAULT NULL,
-            `date_creation`           timestamp             DEFAULT NULL,
-            `date_mod`                timestamp             DEFAULT NULL,
-            `is_deleted`              tinyint(1)   NOT NULL DEFAULT 0,
-            PRIMARY KEY (`id`),
-            KEY `companies_id` (`companies_id`)
-        ) ENGINE=InnoDB DEFAULT CHARSET={$default_charset} COLLATE={$default_collation} ROW_FORMAT=DYNAMIC";
-        $DB->doQueryOrDie($query);
-    } else {
-        // Migration para instâncias que já têm a tabela com campos antigos
-        $cols = $DB->listFields('glpi_plugin_newmanagement_chatbots');
-        $new_fields = [
-            'chatbot_registration_id' => "varchar(100) DEFAULT NULL",
-            'activation_date'         => "date DEFAULT NULL",
-            'whatsapp_number'         => "varchar(50) DEFAULT NULL",
-            'access_link'             => "varchar(500) DEFAULT NULL",
-            'plan'                    => "varchar(255) DEFAULT NULL",
-            'users_count'             => "int DEFAULT 0",
-            'supervisors_count'       => "int DEFAULT 0",
-            'admins_count'            => "int DEFAULT 0",
-            'admin_login'             => "varchar(255) DEFAULT NULL",
-            'admin_password'          => "varchar(255) DEFAULT NULL",
-            'superadmin_login'        => "varchar(255) DEFAULT NULL",
-            'superadmin_password'     => "varchar(255) DEFAULT NULL",
-            'manager_name'            => "varchar(255) DEFAULT NULL",
-            'manager_contact'         => "varchar(100) DEFAULT NULL",
-            'manager_email'           => "varchar(255) DEFAULT NULL",
-            'social_networks'         => "text DEFAULT NULL",
-        ];
-        foreach ($new_fields as $field => $definition) {
-            if (!isset($cols[$field])) {
-                $migration->addField('glpi_plugin_newmanagement_chatbots', $field, $definition);
-            }
-        }
-        // Remove campos antigos que foram substituídos
-        if (isset($cols['name']))         $migration->dropField('glpi_plugin_newmanagement_chatbots', 'name');
-        if (isset($cols['platform']))     $migration->dropField('glpi_plugin_newmanagement_chatbots', 'platform');
-        if (isset($cols['channels']))     $migration->dropField('glpi_plugin_newmanagement_chatbots', 'channels');
-        if (isset($cols['api_endpoint'])) $migration->dropField('glpi_plugin_newmanagement_chatbots', 'api_endpoint');
-    }
-
-    // -------------------------------------------------------
-    // Tabela: Comunicação em Massa do Chatbot
-    // -------------------------------------------------------
-    if (!$DB->tableExists('glpi_plugin_newmanagement_chatbot_mass_comm')) {
-        $query = "CREATE TABLE `glpi_plugin_newmanagement_chatbot_mass_comm` (
-            `id`                   int {$default_key_sign} NOT NULL AUTO_INCREMENT,
-            `chatbot_id`           int {$default_key_sign} NOT NULL DEFAULT 0,
-            `companies_id`         int {$default_key_sign} NOT NULL DEFAULT 0,
-            `system_name`          varchar(255)          DEFAULT NULL,
-            `activation_date`      date                  DEFAULT NULL,
-            `authenticated_number` varchar(50)           DEFAULT NULL,
-            `homologation_type`    varchar(100)          DEFAULT NULL,
-            `access_link`          varchar(500)          DEFAULT NULL,
-            `login`                varchar(255)          DEFAULT NULL,
-            `password`             varchar(255)          DEFAULT NULL,
-            `manager`              varchar(255)          DEFAULT NULL,
-            `date_creation`        timestamp             DEFAULT NULL,
-            `date_mod`             timestamp             DEFAULT NULL,
-            PRIMARY KEY (`id`),
-            KEY `chatbot_id` (`chatbot_id`),
-            KEY `companies_id` (`companies_id`)
-        ) ENGINE=InnoDB DEFAULT CHARSET={$default_charset} COLLATE={$default_collation} ROW_FORMAT=DYNAMIC";
-        $DB->doQueryOrDie($query);
-    }
-
-    // -------------------------------------------------------
-    // Tabela: Números WhatsApp Restritos pela Meta
-    // -------------------------------------------------------
-    if (!$DB->tableExists('glpi_plugin_newmanagement_chatbot_wa_restrictions')) {
-        $query = "CREATE TABLE `glpi_plugin_newmanagement_chatbot_wa_restrictions` (
-            `id`               int {$default_key_sign} NOT NULL AUTO_INCREMENT,
-            `chatbot_id`       int {$default_key_sign} NOT NULL DEFAULT 0,
-            `companies_id`     int {$default_key_sign} NOT NULL DEFAULT 0,
-            `whatsapp_number`  varchar(50)           DEFAULT NULL,
-            `restriction_date` date                  DEFAULT NULL,
-            `restriction_time` varchar(100)          DEFAULT NULL,
-            `date_creation`    timestamp             DEFAULT NULL,
-            `date_mod`         timestamp             DEFAULT NULL,
-            PRIMARY KEY (`id`),
-            KEY `chatbot_id` (`chatbot_id`)
-        ) ENGINE=InnoDB DEFAULT CHARSET={$default_charset} COLLATE={$default_collation} ROW_FORMAT=DYNAMIC";
-        $DB->doQueryOrDie($query);
-    }
-
-    // -------------------------------------------------------
-    // Tabela: Usuários Cadastrados no Chatbot
-    // -------------------------------------------------------
-    if (!$DB->tableExists('glpi_plugin_newmanagement_chatbot_users')) {
-        $query = "CREATE TABLE `glpi_plugin_newmanagement_chatbot_users` (
-            `id`            int {$default_key_sign} NOT NULL AUTO_INCREMENT,
-            `chatbot_id`    int {$default_key_sign} NOT NULL DEFAULT 0,
-            `companies_id`  int {$default_key_sign} NOT NULL DEFAULT 0,
-            `user_name`     varchar(255)          DEFAULT NULL,
-            `login`         varchar(255)          DEFAULT NULL,
-            `password`      varchar(255)          DEFAULT NULL,
-            `email`         varchar(255)          DEFAULT NULL,
-            `user_type`     varchar(50)           DEFAULT NULL COMMENT 'usuario,supervisor,administrador',
-            `date_creation` timestamp             DEFAULT NULL,
-            `date_mod`      timestamp             DEFAULT NULL,
-            PRIMARY KEY (`id`),
-            KEY `chatbot_id` (`chatbot_id`)
-        ) ENGINE=InnoDB DEFAULT CHARSET={$default_charset} COLLATE={$default_collation} ROW_FORMAT=DYNAMIC";
-        $DB->doQueryOrDie($query);
-    }
-
-    // -------------------------------------------------------
-    // Tabela: Linhas Fixas (legado)
-    // -------------------------------------------------------
-    if (!$DB->tableExists('glpi_plugin_newmanagement_fixedlines')) {
-        $query = "CREATE TABLE `glpi_plugin_newmanagement_fixedlines` (
-            `id`            int {$default_key_sign} NOT NULL AUTO_INCREMENT,
-            `name`          varchar(255) NOT NULL DEFAULT '',
-            `companies_id`  int {$default_key_sign}       DEFAULT NULL,
-            `number`        varchar(50)           DEFAULT NULL,
-            `operator`      varchar(100)          DEFAULT NULL,
-            `contract_end`  date                  DEFAULT NULL,
-            `comment`       text                  DEFAULT NULL,
-            `date_creation` timestamp             DEFAULT NULL,
-            `date_mod`      timestamp             DEFAULT NULL,
-            `is_deleted`    tinyint(1)   NOT NULL DEFAULT 0,
-            PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB DEFAULT CHARSET={$default_charset} COLLATE={$default_collation} ROW_FORMAT=DYNAMIC";
-        $DB->doQueryOrDie($query);
-    }
-
-    // -------------------------------------------------------
-    // Tabela: Tarefas com Geolocalização
-    // -------------------------------------------------------
-    if (!$DB->tableExists('glpi_plugin_newmanagement_tasks')) {
-        $query = "CREATE TABLE `glpi_plugin_newmanagement_tasks` (
-            `id`                int {$default_key_sign}  NOT NULL AUTO_INCREMENT,
-            `name`              varchar(255)  NOT NULL DEFAULT '',
-            `companies_id`      int {$default_key_sign}         DEFAULT NULL,
-            `assigned_user_id`  int {$default_key_sign}         DEFAULT NULL,
-            `status`            tinyint(1)    NOT NULL DEFAULT 0,
-            `latitude`          decimal(10,7)          DEFAULT NULL,
-            `longitude`         decimal(10,7)          DEFAULT NULL,
-            `km_calculated`     decimal(10,2)          DEFAULT NULL,
-            `digital_signature` text                   DEFAULT NULL,
-            `date_due`          timestamp              DEFAULT NULL,
-            `comment`           text                   DEFAULT NULL,
-            `date_creation`     timestamp              DEFAULT NULL,
-            `date_mod`          timestamp              DEFAULT NULL,
-            `is_deleted`        tinyint(1)    NOT NULL DEFAULT 0,
-            PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB DEFAULT CHARSET={$default_charset} COLLATE={$default_collation} ROW_FORMAT=DYNAMIC";
-        $DB->doQueryOrDie($query);
-    }
-
-    // -------------------------------------------------------
-    // Direitos de acesso
-    // -------------------------------------------------------
-    $rights = [
-        ['itemtype' => 'GlpiPlugin\\Newmanagement\\Company',   'name' => 'plugin_newmanagement_company'],
-        ['itemtype' => 'GlpiPlugin\\Newmanagement\\Ipbx',      'name' => 'plugin_newmanagement_ipbx'],
-        ['itemtype' => 'GlpiPlugin\\Newmanagement\\IpbxCloud', 'name' => 'plugin_newmanagement_ipbxcloud'],
-        ['itemtype' => 'GlpiPlugin\\Newmanagement\\Chatbot',   'name' => 'plugin_newmanagement_chatbot'],
-        ['itemtype' => 'GlpiPlugin\\Newmanagement\\FixedLine', 'name' => 'plugin_newmanagement_fixedline'],
-        ['itemtype' => 'GlpiPlugin\\Newmanagement\\Task',      'name' => 'plugin_newmanagement_task'],
-    ];
-    foreach ($rights as $right) {
-        ProfileRight::addProfileRights([$right['name']]);
-        ProfileRight::updateProfileRights(4, [$right['name'] => ALLSTANDARDRIGHT | READNOTE | UPDATENOTE]);
-    }
-
-    $migration->executeMigration();
-    return true;
-}
-
-function plugin_newmanagement_uninstall() {
-    global $DB;
-
-    $tables = [
-        'glpi_plugin_newmanagement_chatbot_users',
-        'glpi_plugin_newmanagement_chatbot_wa_restrictions',
-        'glpi_plugin_newmanagement_chatbot_mass_comm',
-        'glpi_plugin_newmanagement_ipbx_lines',
-        'glpi_plugin_newmanagement_ipbx_network',
-        'glpi_plugin_newmanagement_ipbx_devices',
-        'glpi_plugin_newmanagement_ipbx_extensions',
-        'glpi_plugin_newmanagement_ipbx',
-        'glpi_plugin_newmanagement_companies',
-        'glpi_plugin_newmanagement_ipbx_cloud',
-        'glpi_plugin_newmanagement_chatbots',
-        'glpi_plugin_newmanagement_fixedlines',
-        'glpi_plugin_newmanagement_tasks',
-    ];
-    foreach ($tables as $table) {
-        if ($DB->tableExists($table)) {
-            $DB->doQueryOrDie("DROP TABLE `{$table}`");
-        }
-    }
-
-    ProfileRight::deleteProfileRights([
-        'plugin_newmanagement_company',
-        'plugin_newmanagement_ipbx',
-        'plugin_newmanagement_ipbxcloud',
-        'plugin_newmanagement_chatbot',
-        'plugin_newmanagement_fixedline',
-        'plugin_newmanagement_task',
-    ]);
-
-    return true;
-}
+        ) ENGINE=InnoDB DEFAULT CHARSET={$default_charset} COLLATE={$default_collation} ROW_FORM
