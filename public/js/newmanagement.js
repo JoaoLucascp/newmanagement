@@ -457,7 +457,14 @@ function nmInitChatbotButtons() {
                 const actionEl = document.getElementById('nm-chatbot-action');
                 const idEl     = document.getElementById('nm-chatbot-id');
                 if (actionEl) actionEl.value = 'update_chatbot';
-                if (idEl && result.id) idEl.value = result.id;
+                if (idEl && result.id) {
+                    idEl.value = result.id;
+                    // Correção 1: propagar o chatbot_id recém-salvo para os três botões add
+                    ['nm-mc-add-btn', 'nm-wa-add-btn', 'nm-cu-add-btn'].forEach(btnId => {
+                        const b = document.getElementById(btnId);
+                        if (b) b.dataset.chatbotId = result.id;
+                    });
+                }
                 btnSave.classList.replace('btn-primary', 'btn-success');
                 setTimeout(() => btnSave.classList.replace('btn-success', 'btn-primary'), 2000);
             } catch (error) {
@@ -466,7 +473,7 @@ function nmInitChatbotButtons() {
         });
     }
 
-    // Listeners delegados para chatbot (eye + delete) — também registrados uma única vez
+    // Listeners delegados para chatbot (eye + delete + add) — registrados uma única vez
     if (!window._nmChatbotDelegated) {
         window._nmChatbotDelegated = true;
 
@@ -500,18 +507,24 @@ function nmInitChatbotButtons() {
                 return;
             }
         });
-    }
 
-    // --- Adicionar Comunicação em Massa ---
-    const btnMcAdd = document.getElementById('nm-mc-add-btn');
-    if (btnMcAdd && !btnMcAdd._nmBound) {
-        btnMcAdd._nmBound = true;
-        btnMcAdd.addEventListener('click', async () => {
+        // Correção 3: handlers add via delegação no document (evita problema de re-binding após AJAX do GLPI)
+
+        // --- Adicionar Comunicação em Massa (delegado) ---
+        document.addEventListener('click', async (e) => {
+            const btn = e.target.closest('#nm-mc-add-btn');
+            if (!btn) return;
+            // Correção 2: guard chatbot_id=0
+            const chatbotId = btn.dataset.chatbotId || '0';
+            if (parseInt(chatbotId, 10) <= 0) {
+                alert('Salve o Chatbot primeiro antes de adicionar itens.');
+                return;
+            }
             const data = {
-                _glpi_csrf_token:     btnMcAdd.dataset.csrf || nmGetCsrfToken(),
+                _glpi_csrf_token:     btn.dataset.csrf || nmGetCsrfToken(),
                 action:               'add_mass_comm',
-                chatbot_id:           btnMcAdd.dataset.chatbotId  || '0',
-                companies_id:         btnMcAdd.dataset.companiesId || '0',
+                chatbot_id:           chatbotId,
+                companies_id:         btn.dataset.companiesId || '0',
                 system_name:          nmVal('nm-mc-system_name'),
                 activation_date:      nmVal('nm-mc-activation_date'),
                 authenticated_number: nmVal('nm-mc-authenticated_number'),
@@ -521,7 +534,7 @@ function nmInitChatbotButtons() {
                 password:             nmVal('nm-mc-password'),
             };
             try {
-                const result = await nmPost(btnMcAdd.dataset.url, data);
+                const result = await nmPost(btn.dataset.url, data);
                 if (!result.success) throw new Error(result.error || 'Erro');
                 const addRow = document.getElementById('nm-mc-add-row');
                 if (addRow) {
@@ -540,36 +553,41 @@ function nmInitChatbotButtons() {
                             data-action="delete_mass_comm" data-id="${result.id}"
                             data-row="nm-mc-row-${result.id}"
                             data-companies-id="${data.companies_id}"
-                            data-url="${btnMcAdd.dataset.url}"
+                            data-url="${btn.dataset.url}"
                             data-csrf="${data._glpi_csrf_token}"
                             data-confirm="Remover?">
                             <i class="ti ti-trash"></i></button></td>`;
                     addRow.parentNode.insertBefore(tr, addRow);
                 }
-                nmClear(['nm-mc-system_name', 'nm-mc-activation_date', 'nm-mc-authenticated_number', 'nm-mc-homologation_type', 'nm-mc-access_link', 'nm-mc-login', 'nm-mc-password']);
+                nmClear(['nm-mc-system_name','nm-mc-activation_date','nm-mc-authenticated_number',
+                         'nm-mc-homologation_type','nm-mc-access_link','nm-mc-login','nm-mc-password']);
             } catch (error) {
                 alert('Erro ao adicionar comunicação em massa: ' + error.message);
             }
         });
-    }
 
-    // --- Adicionar Restrição WA ---
-    const btnWaAdd = document.getElementById('nm-wa-add-btn');
-    if (btnWaAdd && !btnWaAdd._nmBound) {
-        btnWaAdd._nmBound = true;
-        btnWaAdd.addEventListener('click', async () => {
+        // --- Adicionar Restrição WA (delegado) ---
+        document.addEventListener('click', async (e) => {
+            const btn = e.target.closest('#nm-wa-add-btn');
+            if (!btn) return;
+            // Correção 2: guard chatbot_id=0
+            const chatbotId = btn.dataset.chatbotId || '0';
+            if (parseInt(chatbotId, 10) <= 0) {
+                alert('Salve o Chatbot primeiro antes de adicionar itens.');
+                return;
+            }
             const data = {
-                _glpi_csrf_token: btnWaAdd.dataset.csrf || nmGetCsrfToken(),
+                _glpi_csrf_token: btn.dataset.csrf || nmGetCsrfToken(),
                 action:           'add_wa_restriction',
-                chatbot_id:       btnWaAdd.dataset.chatbotId   || '0',
-                companies_id:     btnWaAdd.dataset.companiesId || '0',
+                chatbot_id:       chatbotId,
+                companies_id:     btn.dataset.companiesId || '0',
                 whatsapp_number:  nmVal('nm-wa-whatsapp_number'),
                 restriction_date: nmVal('nm-wa-restriction_date'),
                 restriction_time: nmVal('nm-wa-restriction_time'),
                 end_date:         nmVal('nm-wa-end_date'),
             };
             try {
-                const result = await nmPost(btnWaAdd.dataset.url, data);
+                const result = await nmPost(btn.dataset.url, data);
                 if (!result.success) throw new Error(result.error || 'Erro');
                 const addRow = document.getElementById('nm-wa-add-row');
                 if (addRow) {
@@ -585,29 +603,34 @@ function nmInitChatbotButtons() {
                             data-action="delete_wa_restriction" data-id="${result.id}"
                             data-row="nm-wa-row-${result.id}"
                             data-companies-id="${data.companies_id}"
-                            data-url="${btnWaAdd.dataset.url}"
+                            data-url="${btn.dataset.url}"
                             data-csrf="${data._glpi_csrf_token}"
                             data-confirm="Remover?">
                             <i class="ti ti-trash"></i></button></td>`;
                     addRow.parentNode.insertBefore(tr, addRow);
                 }
-                nmClear(['nm-wa-whatsapp_number', 'nm-wa-restriction_date', 'nm-wa-restriction_time', 'nm-wa-end_date']);
+                nmClear(['nm-wa-whatsapp_number','nm-wa-restriction_date',
+                         'nm-wa-restriction_time','nm-wa-end_date']);
             } catch (error) {
                 alert('Erro ao adicionar restrição: ' + error.message);
             }
         });
-    }
 
-    // --- Adicionar Usuário Chatbot ---
-    const btnCuAdd = document.getElementById('nm-cu-add-btn');
-    if (btnCuAdd && !btnCuAdd._nmBound) {
-        btnCuAdd._nmBound = true;
-        btnCuAdd.addEventListener('click', async () => {
+        // --- Adicionar Usuário Chatbot (delegado) ---
+        document.addEventListener('click', async (e) => {
+            const btn = e.target.closest('#nm-cu-add-btn');
+            if (!btn) return;
+            // Correção 2: guard chatbot_id=0
+            const chatbotId = btn.dataset.chatbotId || '0';
+            if (parseInt(chatbotId, 10) <= 0) {
+                alert('Salve o Chatbot primeiro antes de adicionar itens.');
+                return;
+            }
             const data = {
-                _glpi_csrf_token: btnCuAdd.dataset.csrf || nmGetCsrfToken(),
+                _glpi_csrf_token: btn.dataset.csrf || nmGetCsrfToken(),
                 action:           'add_chatbot_user',
-                chatbot_id:       btnCuAdd.dataset.chatbotId   || '0',
-                companies_id:     btnCuAdd.dataset.companiesId || '0',
+                chatbot_id:       chatbotId,
+                companies_id:     btn.dataset.companiesId || '0',
                 user_name:        nmVal('nm-cu-user_name'),
                 login:            nmVal('nm-cu-login'),
                 password:         nmVal('nm-cu-password'),
@@ -615,7 +638,7 @@ function nmInitChatbotButtons() {
                 user_type:        nmVal('nm-cu-user_type'),
             };
             try {
-                const result = await nmPost(btnCuAdd.dataset.url, data);
+                const result = await nmPost(btn.dataset.url, data);
                 if (!result.success) throw new Error(result.error || 'Erro');
                 const addRow = document.getElementById('nm-cu-add-row');
                 if (addRow) {
@@ -632,14 +655,15 @@ function nmInitChatbotButtons() {
                             data-action="delete_chatbot_user" data-id="${result.id}"
                             data-row="nm-cu-row-${result.id}"
                             data-companies-id="${data.companies_id}"
-                            data-url="${btnCuAdd.dataset.url}"
+                            data-url="${btn.dataset.url}"
                             data-csrf="${data._glpi_csrf_token}"
                             data-confirm="Remover usuário?">
                             <i class="ti ti-trash"></i></button></td>`;
                     addRow.parentNode.insertBefore(tr, addRow);
                 }
-                nmClear(['nm-cu-user_name', 'nm-cu-login', 'nm-cu-password', 'nm-cu-email']);
-                const sel = document.getElementById('nm-cu-user_type'); if (sel) sel.value = 'usuario';
+                nmClear(['nm-cu-user_name','nm-cu-login','nm-cu-password','nm-cu-email']);
+                const sel = document.getElementById('nm-cu-user_type');
+                if (sel) sel.value = 'usuario';
             } catch (error) {
                 alert('Erro ao adicionar usuário: ' + error.message);
             }
