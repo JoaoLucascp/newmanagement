@@ -271,6 +271,7 @@ class Ipbx extends \CommonDBTM
     {
         $h = fn($v) => htmlspecialchars((string) ($v ?? ''), ENT_QUOTES);
 
+        // Ordem das colunas: Número | Senha | IP Aparelho | Usuário | Grava? | Departamento | Ação
         // Botão excluir: btn-icon sem fundo colorido + ti ti-trash text-danger — padrão GLPI
         return '<tr class="tab_bg_1" id="nm-ext-row-' . $id . '">'
             . '<td>' . $h($row['number']) . '</td>'
@@ -309,6 +310,8 @@ class Ipbx extends \CommonDBTM
 
         echo '<table class="tab_cadre_fixehov" id="nm-dev-table">';
 
+        // thead com headerRow noHover — padrão GLPI 10/11
+        // Ordem das colunas: Tipo | IP | Senha | Ação
         echo '<thead>';
         echo '<tr class="headerRow noHover">';
         foreach ([
@@ -343,6 +346,7 @@ class Ipbx extends \CommonDBTM
         echo '</td>';
 
         // Slot de senha — JS injeta <input type="password"> aqui pelo data-target-id
+        // Ordem: Tipo | IP | Senha | Ação
         echo '<td>';
         echo '<div id="nm-dev-password-slot"';
         echo ' data-target-id="nm-dev-password"';
@@ -372,6 +376,7 @@ class Ipbx extends \CommonDBTM
     {
         $h = fn($v) => htmlspecialchars((string) ($v ?? ''), ENT_QUOTES);
 
+        // Ordem das colunas: Tipo | IP | Senha | Ação
         // Botão excluir: btn-icon sem fundo colorido + ti ti-trash text-danger — padrão GLPI
         return '<tr class="tab_bg_1" id="nm-dev-row-' . $id . '">'
             . '<td>' . $h($row['device_type']) . '</td>'
@@ -407,6 +412,8 @@ class Ipbx extends \CommonDBTM
 
         echo '<table class="tab_cadre_fixehov" id="nm-net-table">';
 
+        // thead com headerRow noHover — padrão GLPI 10/11
+        // Ordem das colunas: IP Rede | Máscara | Gateway | DNS Primário | DNS Secundário | Ação
         echo '<thead>';
         echo '<tr class="headerRow noHover">';
         foreach ([
@@ -429,6 +436,7 @@ class Ipbx extends \CommonDBTM
         }
 
         // Linha de adição como última <tr class="tab_bg_2"> dentro do tbody — padrão GLPI
+        // Ordem: ip_network | netmask | gateway | dns_primary | dns_secondary | Ação
         echo '<tr class="tab_bg_2" id="nm-net-add-row">';
 
         echo '<td>';
@@ -478,6 +486,7 @@ class Ipbx extends \CommonDBTM
     {
         $h = fn($v) => htmlspecialchars((string) ($v ?? ''), ENT_QUOTES);
 
+        // Ordem das colunas: IP Rede | Máscara | Gateway | DNS Primário | DNS Secundário | Ação
         // Botão excluir: btn-icon sem fundo colorido + ti ti-trash text-danger — padrão GLPI
         return '<tr class="tab_bg_1" id="nm-net-row-' . $id . '">'
             . '<td>' . $h($row['ip_network']) . '</td>'
