@@ -92,15 +92,29 @@ function nmGetCsrfToken() {
 
 // ---------------------------------------------------------------------------
 // Fetch AJAX com CSRF — envia FormData e retorna JSON
+//
+// GLPI 11 (Symfony CheckCsrfListener) valida o token de duas formas:
+//   1. Header  X-Glpi-Csrf-Token  → para chamadas XHR/fetch genéricas
+//   2. Body    _glpi_csrf_token   → obrigatório em endpoints ajax/*.php
+//              que chamam Session::checkCSRF($_POST)
+// Enviamos os dois para garantir compatibilidade com GLPI 10 e 11.
 // ---------------------------------------------------------------------------
 
 async function nmPost(url, data) {
+    const csrf = nmGetCsrfToken();
     const body = new FormData();
+
+    // Garante que o token esteja no body antes de iterar o objeto data
+    if (!data['_glpi_csrf_token']) {
+        body.append('_glpi_csrf_token', csrf);
+    }
+
     Object.entries(data).forEach(([k, v]) => body.append(k, v));
 
     const res = await fetch(url, {
         method: 'POST',
-        headers: { 'X-Glpi-Csrf-Token': nmGetCsrfToken() },
+        // Header mantido para compatibilidade com a REST API oficial do GLPI
+        headers: { 'X-Glpi-Csrf-Token': csrf },
         body,
     });
 
@@ -261,10 +275,10 @@ function nmInitIpbxButtons() {
                     tr.className = 'tab_bg_1';
                     tr.innerHTML = `
                         <td>${data.number}</td>
-                        <td>••••••</td>
+                        <td>\u2022\u2022\u2022\u2022\u2022\u2022</td>
                         <td>${data.device_ip}</td>
                         <td>${data.user_name}</td>
-                        <td>${parseInt(data.records_calls, 10) ? 'Sim' : 'Não'}</td>
+                        <td>${parseInt(data.records_calls, 10) ? 'Sim' : 'N\u00e3o'}</td>
                         <td>${data.department}</td>
                         <td>${nmDelBtn('delete_extension', result.id, 'nm-ext-row-' + result.id, getCompaniesId(btnExt), getBtnUrl(btnExt), 'Remover ramal?')}</td>`;
                     // Insere ANTES da linha de adição, mantendo-a sempre por último
@@ -305,7 +319,7 @@ function nmInitIpbxButtons() {
                         <td>${data.device_type}</td>
                         <td>${data.ip_address}</td>
                         <td>${data.login}</td>
-                        <td>••••••</td>
+                        <td>\u2022\u2022\u2022\u2022\u2022\u2022</td>
                         <td>${nmDelBtn('delete_device', result.id, 'nm-dev-row-' + result.id, getCompaniesId(btnDev), getBtnUrl(btnDev), 'Remover dispositivo?')}</td>`;
                     addRow.parentNode.insertBefore(tr, addRow);
                 }
@@ -557,7 +571,7 @@ function nmInitChatbotButtons() {
                         <td>${data.homologation_type}</td>
                         <td>${data.access_link ? '<a href="'+data.access_link+'" target="_blank" rel="noopener"><i class="ti ti-external-link"></i></a>' : ''}</td>
                         <td>${data.login}</td>
-                        <td>••••••</td>
+                        <td>\u2022\u2022\u2022\u2022\u2022\u2022</td>
                         <td><button type="button" class="btn btn-sm btn-danger nm-chatbot-del"
                             data-action="delete_mass_comm" data-id="${result.id}"
                             data-row="nm-mc-row-${result.id}"
@@ -571,7 +585,7 @@ function nmInitChatbotButtons() {
                 nmClear(['nm-mc-system_name','nm-mc-activation_date','nm-mc-authenticated_number',
                          'nm-mc-homologation_type','nm-mc-access_link','nm-mc-login','nm-mc-password']);
             } catch (error) {
-                alert('Erro ao adicionar comunicação em massa: ' + error.message);
+                alert('Erro ao adicionar comunica\u00e7\u00e3o em massa: ' + error.message);
             }
         });
 
@@ -620,7 +634,7 @@ function nmInitChatbotButtons() {
                 nmClear(['nm-wa-whatsapp_number','nm-wa-restriction_date',
                          'nm-wa-restriction_time','nm-wa-end_date']);
             } catch (error) {
-                alert('Erro ao adicionar restrição: ' + error.message);
+                alert('Erro ao adicionar restri\u00e7\u00e3o: ' + error.message);
             }
         });
 
@@ -655,7 +669,7 @@ function nmInitChatbotButtons() {
                     tr.innerHTML = `
                         <td>${data.user_name}</td>
                         <td>${data.login}</td>
-                        <td>••••••</td>
+                        <td>\u2022\u2022\u2022\u2022\u2022\u2022</td>
                         <td>${data.email}</td>
                         <td>${data.user_type}</td>
                         <td><button type="button" class="btn btn-sm btn-danger nm-chatbot-del"
@@ -664,7 +678,7 @@ function nmInitChatbotButtons() {
                             data-companies-id="${data.companies_id}"
                             data-url="${btn.dataset.url}"
                             data-csrf="${data._glpi_csrf_token}"
-                            data-confirm="Remover usuário?">
+                            data-confirm="Remover usu\u00e1rio?">
                             <i class="ti ti-trash"></i></button></td>`;
                     addRow.parentNode.insertBefore(tr, addRow);
                 }
@@ -672,7 +686,7 @@ function nmInitChatbotButtons() {
                 const sel = document.getElementById('nm-cu-user_type');
                 if (sel) sel.value = 'usuario';
             } catch (error) {
-                alert('Erro ao adicionar usuário: ' + error.message);
+                alert('Erro ao adicionar usu\u00e1rio: ' + error.message);
             }
         });
     }
@@ -705,7 +719,7 @@ async function nmBuscarCNPJ() {
     if (!input) return;
     const cnpj = input.value.replace(/\D/g, '');
     if (cnpj.length !== 14) { nmFeedback('cnpj-feedback', 'Digite um CNPJ completo (14 digitos).', 'error'); return; }
-    if (!nmValidarCNPJ(cnpj)) { nmFeedback('cnpj-feedback', 'CNPJ inválido.', 'error'); return; }
+    if (!nmValidarCNPJ(cnpj)) { nmFeedback('cnpj-feedback', 'CNPJ inv\u00e1lido.', 'error'); return; }
     nmFeedback('cnpj-feedback', '', '');
     nmSetLoading('btn-buscar-cnpj', true);
     try {
@@ -715,7 +729,7 @@ async function nmBuscarCNPJ() {
         ]);
         if (!brasilResponse.ok) {
             const err = await brasilResponse.json().catch(() => ({}));
-            nmFeedback('cnpj-feedback', err.message || 'CNPJ não encontrado.', 'error');
+            nmFeedback('cnpj-feedback', err.message || 'CNPJ n\u00e3o encontrado.', 'error');
             return;
         }
         const data = await brasilResponse.json();
@@ -728,7 +742,7 @@ async function nmBuscarCNPJ() {
         if (data.cep) set('cep', nmMascaraCEP(data.cep));
         const partes = [data.logradouro, data.numero, data.complemento, data.bairro, data.municipio, data.uf].filter(Boolean);
         if (partes.length) set('address', partes.join(', '));
-        nmFeedback('cnpj-feedback', '✓ Dados preenchidos com sucesso!', 'success');
+        nmFeedback('cnpj-feedback', '\u2713 Dados preenchidos com sucesso!', 'success');
     } catch {
         nmFeedback('cnpj-feedback', 'Erro ao consultar BrasilAPI.', 'error');
     } finally {
@@ -744,17 +758,17 @@ async function nmBuscarCEP() {
     const input = document.getElementById('cep');
     if (!input) return;
     const cep = input.value.replace(/\D/g, '');
-    if (cep.length !== 8) { nmFeedback('cep-feedback', 'Digite um CEP completo (8 dígitos).', 'error'); return; }
+    if (cep.length !== 8) { nmFeedback('cep-feedback', 'Digite um CEP completo (8 d\u00edgitos).', 'error'); return; }
     nmFeedback('cep-feedback', '', '');
     nmSetLoading('btn-buscar-cep', true);
     try {
         const response = await fetch('https://brasilapi.com.br/api/cep/v1/' + cep);
-        if (!response.ok) { nmFeedback('cep-feedback', 'CEP não encontrado.', 'error'); return; }
+        if (!response.ok) { nmFeedback('cep-feedback', 'CEP n\u00e3o encontrado.', 'error'); return; }
         const data = await response.json();
         const partes = [data.street, data.neighborhood, data.city, data.state].filter(Boolean);
         const addressInput = document.getElementById('address');
         if (addressInput && partes.length) addressInput.value = partes.join(', ');
-        nmFeedback('cep-feedback', '✓ Endereço preenchido!', 'success');
+        nmFeedback('cep-feedback', '\u2713 Endere\u00e7o preenchido!', 'success');
     } catch {
         nmFeedback('cep-feedback', 'Erro ao consultar BrasilAPI.', 'error');
     } finally {
