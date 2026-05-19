@@ -9,6 +9,10 @@
 include('../../../inc/includes.php');
 
 Session::checkLoginUser();
+// GLPI 11 — CheckCsrfListener do Symfony rejeita o request com 403 se
+// Session::checkCSRF() não for chamado explicitamente em endpoints ajax/*.php.
+// O token chega em $_POST['_glpi_csrf_token'] (enviado pelo nmPost() no FormData).
+Session::checkCSRF($_POST);
 Session::checkRight('plugin_newmanagement_chatbot', READ);
 
 // Garante que qualquer saída seja JSON
