@@ -20,6 +20,18 @@ function nmJson(bool $ok, array $extra = []): void {
     exit;
 }
 
+/**
+ * Criptografa uma senha usando a API oficial do GLPI (Toolbox::encrypt).
+ * Compatível com GLPI 10 e 11.
+ * Toolbox::sodiumEncrypt() nunca existiu como método público no GLPI.
+ */
+function nmEncrypt(string $value): string {
+    if ($value === '') {
+        return '';
+    }
+    return \Toolbox::encrypt($value);
+}
+
 $action       = $_POST['action']       ?? '';
 $companies_id = (int)($_POST['companies_id'] ?? 0);
 $id           = (int)($_POST['id']     ?? 0);
@@ -31,7 +43,7 @@ if ($companies_id <= 0) {
 global $DB;
 $now = date('Y-m-d H:i:s');
 
-// ── Sanitizadores (sem htmlspecialchars — DB já faz escape) ──────────────────────
+// ── Sanitizadores (sem htmlspecialchars — DB já faz escape) ─────────────────────────────
 $s = fn(string $key, string $default = '') => trim($_POST[$key] ?? $default);
 $i = fn(string $key, int $default = 0)    => (int)($_POST[$key] ?? $default);
 $d = function(string $key): ?string {
@@ -42,7 +54,7 @@ $d = function(string $key): ?string {
 try {
     switch ($action) {
 
-        // ── Chatbot principal ─────────────────────────────────────────────────────
+        // ── Chatbot principal ────────────────────────────────────────────────────
         case 'add_chatbot':
             Session::checkRight('plugin_newmanagement_chatbot', CREATE);
             $data = [
@@ -57,9 +69,9 @@ try {
                 'supervisors_count'       => $i('supervisors_count'),
                 'admins_count'            => $i('admins_count'),
                 'admin_login'             => $s('admin_login'),
-                'admin_password'          => \Toolbox::sodiumEncrypt($s('admin_password')),
+                'admin_password'          => nmEncrypt($s('admin_password')),
                 'superadmin_login'        => $s('superadmin_login'),
-                'superadmin_password'     => \Toolbox::sodiumEncrypt($s('superadmin_password')),
+                'superadmin_password'     => nmEncrypt($s('superadmin_password')),
                 'manager_name'            => $s('manager_name'),
                 'manager_contact'         => $s('manager_contact'),
                 'manager_email'           => $s('manager_email'),
@@ -88,9 +100,9 @@ try {
                 'supervisors_count'       => $i('supervisors_count'),
                 'admins_count'            => $i('admins_count'),
                 'admin_login'             => $s('admin_login'),
-                'admin_password'          => \Toolbox::sodiumEncrypt($s('admin_password')),
+                'admin_password'          => nmEncrypt($s('admin_password')),
                 'superadmin_login'        => $s('superadmin_login'),
-                'superadmin_password'     => \Toolbox::sodiumEncrypt($s('superadmin_password')),
+                'superadmin_password'     => nmEncrypt($s('superadmin_password')),
                 'manager_name'            => $s('manager_name'),
                 'manager_contact'         => $s('manager_contact'),
                 'manager_email'           => $s('manager_email'),
@@ -105,7 +117,7 @@ try {
             nmJson(false, ['error' => 'ID inválido']);
             break;
 
-        // ── Comunicação em Massa ──────────────────────────────────────────────────
+        // ── Comunicação em Massa ────────────────────────────────────────────────────
         case 'add_mass_comm':
             Session::checkRight('plugin_newmanagement_chatbot', CREATE);
             $chatbot_id = $i('chatbot_id');
@@ -119,7 +131,7 @@ try {
                 'homologation_type'    => $s('homologation_type'),
                 'access_link'          => $s('access_link'),
                 'login'                => $s('login'),
-                'password'             => \Toolbox::sodiumEncrypt($s('password')),
+                'password'             => nmEncrypt($s('password')),
                 'manager'              => $s('manager'),
                 'date_creation'        => $now,
                 'date_mod'             => $now,
@@ -135,7 +147,7 @@ try {
             nmJson(true);
             break;
 
-        // ── Números Restritos ─────────────────────────────────────────────────────
+        // ── Números Restritos ──────────────────────────────────────────────────────────
         case 'add_wa_restriction':
             Session::checkRight('plugin_newmanagement_chatbot', CREATE);
             $chatbot_id = $i('chatbot_id');
@@ -160,7 +172,7 @@ try {
             nmJson(true);
             break;
 
-        // ── Usuários do Chatbot ───────────────────────────────────────────────────
+        // ── Usuários do Chatbot ──────────────────────────────────────────────────────────
         case 'add_chatbot_user':
             Session::checkRight('plugin_newmanagement_chatbot', CREATE);
             $chatbot_id = $i('chatbot_id');
@@ -170,7 +182,7 @@ try {
                 'companies_id'  => $companies_id,
                 'user_name'     => $s('user_name'),
                 'login'         => $s('login'),
-                'password'      => \Toolbox::sodiumEncrypt($s('password')),
+                'password'      => nmEncrypt($s('password')),
                 'email'         => $s('email'),
                 'user_type'     => $s('user_type'),
                 'date_creation' => $now,
