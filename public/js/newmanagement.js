@@ -83,7 +83,7 @@ function nmSetLoading(btnId, loading) {
 //
 // IMPORTANTE: O GLPI 11 usa tokens CSRF single-use.
 // Nunca armazenar o token em data-attributes ou variáveis de longa duração.
-// Sempre chamar nmGetCsrfToken() NO MOMENTO do clique para obter o token
+// Sempre chamar nmGetCsrfToken() NO MOMENTO do fetch para obter o token
 // atual do <meta name="glpi-csrf-token">, que o GLPI atualiza a cada resposta.
 // ---------------------------------------------------------------------------
 
@@ -98,6 +98,12 @@ function nmGetCsrfToken() {
 // ---------------------------------------------------------------------------
 // Fetch AJAX com CSRF — envia FormData e retorna JSON
 //
+// SOLUÇÃO A: o token CSRF é capturado AQUI, imediatamente antes do fetch,
+// garantindo que seja sempre o mais fresco possível.
+// Qualquer _glpi_csrf_token enviado pelo chamador é DESCARTADO — o token
+// montado no objeto data pode ter envelhecido entre a montagem e a chamada,
+// causando 403 no GLPI 11 (tokens single-use do CheckCsrfListener).
+//
 // GLPI 11 (Symfony CheckCsrfListener) valida o token de duas formas:
 //   1. Header  X-Glpi-Csrf-Token  → para chamadas XHR/fetch genéricas
 //   2. Body    _glpi_csrf_token   → obrigatório em endpoints ajax/*.php
@@ -106,15 +112,17 @@ function nmGetCsrfToken() {
 // ---------------------------------------------------------------------------
 
 async function nmPost(url, data) {
+    // Token capturado aqui — último momento antes do fetch, sempre fresco.
+    // Nunca usar token vindo do chamador: pode ser stale em tokens single-use.
     const csrf = nmGetCsrfToken();
     const body = new FormData();
 
-    // Garante que o token esteja no body antes de iterar o objeto data
-    if (!data['_glpi_csrf_token']) {
-        body.append('_glpi_csrf_token', csrf);
-    }
+    // Injeta o token fresco primeiro; ignora qualquer _glpi_csrf_token do data.
+    body.append('_glpi_csrf_token', csrf);
 
-    Object.entries(data).forEach(([k, v]) => body.append(k, v));
+    Object.entries(data).forEach(([k, v]) => {
+        if (k !== '_glpi_csrf_token') body.append(k, v);
+    });
 
     const res = await fetch(url, {
         method: 'POST',
@@ -220,7 +228,6 @@ function nmInitIpbxButtons() {
             const actionUrl = btnSaveAll.dataset.actionUrl || nmGetIpbxActionUrl();
 
             const ipbxData = {
-                _glpi_csrf_token: nmVal('nm-ipbx-csrf') || nmGetCsrfToken(),
                 action:           nmVal('nm-ipbx-action')       || 'add_ipbx',
                 id:               nmVal('nm-ipbx-id')           || '0',
                 companies_id:     nmVal('nm-ipbx-companies-id') || nmGetIpbxCompaniesId(),
@@ -451,10 +458,7 @@ function nmInitChatbotButtons() {
             if (!btnSave) return;
 
             const url  = btnSave.dataset.actionUrl;
-            // Token sempre fresco — GLPI 11 invalida tokens após cada uso
-            const csrf = nmGetCsrfToken();
             const data = {
-                _glpi_csrf_token:        csrf,
                 action:                  nmVal('nm-chatbot-action')       || 'add_chatbot',
                 id:                      nmVal('nm-chatbot-id')           || '0',
                 companies_id:            nmVal('nm-chatbot-companies-id') || '0',
@@ -502,7 +506,6 @@ function nmInitChatbotButtons() {
         });
 
         // --- Eye toggle + Delete delegados ---
-        // Token buscado sempre na hora do clique — nunca de btn.dataset.csrf
         document.addEventListener('click', async (e) => {
             const eyeBtn = e.target.closest('.nm-btn-eye');
             if (eyeBtn) {
@@ -519,11 +522,9 @@ function nmInitChatbotButtons() {
                 if (!confirm(btn.dataset.confirm || 'Remover?')) return;
                 try {
                     const result = await nmPost(btn.dataset.url, {
-                        // nmGetCsrfToken() sempre fresco — token do dataset pode estar expirado
-                        _glpi_csrf_token: nmGetCsrfToken(),
-                        action:           btn.dataset.action,
-                        id:               btn.dataset.id,
-                        companies_id:     btn.dataset.companiesId || '',
+                        action:       btn.dataset.action,
+                        id:           btn.dataset.id,
+                        companies_id: btn.dataset.companiesId || '',
                     });
                     if (!result.success) throw new Error(result.error || 'Erro ao remover');
                     const row = document.getElementById(btn.dataset.row);
@@ -536,7 +537,6 @@ function nmInitChatbotButtons() {
         });
 
         // --- Adicionar Comunicação em Massa (delegado) ---
-        // Token buscado sempre na hora do clique — nunca de btn.dataset.csrf
         document.addEventListener('click', async (e) => {
             const btn = e.target.closest('#nm-mc-add-btn');
             if (!btn) return;
@@ -546,7 +546,6 @@ function nmInitChatbotButtons() {
                 return;
             }
             const data = {
-                _glpi_csrf_token:     nmGetCsrfToken(),
                 action:               'add_mass_comm',
                 chatbot_id:           chatbotId,
                 companies_id:         btn.dataset.companiesId || '0',
@@ -591,7 +590,6 @@ function nmInitChatbotButtons() {
         });
 
         // --- Adicionar Restrição WA (delegado) ---
-        // Token buscado sempre na hora do clique — nunca de btn.dataset.csrf
         document.addEventListener('click', async (e) => {
             const btn = e.target.closest('#nm-wa-add-btn');
             if (!btn) return;
@@ -601,7 +599,6 @@ function nmInitChatbotButtons() {
                 return;
             }
             const data = {
-                _glpi_csrf_token: nmGetCsrfToken(),
                 action:           'add_wa_restriction',
                 chatbot_id:       chatbotId,
                 companies_id:     btn.dataset.companiesId || '0',
@@ -640,7 +637,6 @@ function nmInitChatbotButtons() {
         });
 
         // --- Adicionar Usuário Chatbot (delegado) ---
-        // Token buscado sempre na hora do clique — nunca de btn.dataset.csrf
         document.addEventListener('click', async (e) => {
             const btn = e.target.closest('#nm-cu-add-btn');
             if (!btn) return;
@@ -650,15 +646,14 @@ function nmInitChatbotButtons() {
                 return;
             }
             const data = {
-                _glpi_csrf_token: nmGetCsrfToken(),
-                action:           'add_chatbot_user',
-                chatbot_id:       chatbotId,
-                companies_id:     btn.dataset.companiesId || '0',
-                user_name:        nmVal('nm-cu-user_name'),
-                login:            nmVal('nm-cu-login'),
-                password:         nmVal('nm-cu-password'),
-                email:            nmVal('nm-cu-email'),
-                user_type:        nmVal('nm-cu-user_type'),
+                action:       'add_chatbot_user',
+                chatbot_id:   chatbotId,
+                companies_id: btn.dataset.companiesId || '0',
+                user_name:    nmVal('nm-cu-user_name'),
+                login:        nmVal('nm-cu-login'),
+                password:     nmVal('nm-cu-password'),
+                email:        nmVal('nm-cu-email'),
+                user_type:    nmVal('nm-cu-user_type'),
             };
             try {
                 const result = await nmPost(btn.dataset.url, data);
