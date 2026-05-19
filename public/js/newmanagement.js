@@ -80,6 +80,11 @@ function nmSetLoading(btnId, loading) {
 
 // ---------------------------------------------------------------------------
 // CSRF Helper — GLPI 11 exige X-Glpi-Csrf-Token em todo POST
+//
+// IMPORTANTE: O GLPI 11 usa tokens CSRF single-use.
+// Nunca armazenar o token em data-attributes ou variáveis de longa duração.
+// Sempre chamar nmGetCsrfToken() NO MOMENTO do clique para obter o token
+// atual do <meta name="glpi-csrf-token">, que o GLPI atualiza a cada resposta.
 // ---------------------------------------------------------------------------
 
 function nmGetCsrfToken() {
@@ -275,10 +280,10 @@ function nmInitIpbxButtons() {
                     tr.className = 'tab_bg_1';
                     tr.innerHTML = `
                         <td>${data.number}</td>
-                        <td>\u2022\u2022\u2022\u2022\u2022\u2022</td>
+                        <td>••••••</td>
                         <td>${data.device_ip}</td>
                         <td>${data.user_name}</td>
-                        <td>${parseInt(data.records_calls, 10) ? 'Sim' : 'N\u00e3o'}</td>
+                        <td>${parseInt(data.records_calls, 10) ? 'Sim' : 'Não'}</td>
                         <td>${data.department}</td>
                         <td>${nmDelBtn('delete_extension', result.id, 'nm-ext-row-' + result.id, getCompaniesId(btnExt), getBtnUrl(btnExt), 'Remover ramal?')}</td>`;
                     // Insere ANTES da linha de adição, mantendo-a sempre por último
@@ -319,7 +324,7 @@ function nmInitIpbxButtons() {
                         <td>${data.device_type}</td>
                         <td>${data.ip_address}</td>
                         <td>${data.login}</td>
-                        <td>\u2022\u2022\u2022\u2022\u2022\u2022</td>
+                        <td>••••••</td>
                         <td>${nmDelBtn('delete_device', result.id, 'nm-dev-row-' + result.id, getCompaniesId(btnDev), getBtnUrl(btnDev), 'Remover dispositivo?')}</td>`;
                     addRow.parentNode.insertBefore(tr, addRow);
                 }
@@ -437,23 +442,17 @@ function nmInitIpbxButtons() {
 // ---------------------------------------------------------------------------
 
 function nmInitChatbotButtons() {
-    // Solução 1: registrar TODOS os handlers Chatbot via delegação no document,
-    // incluindo o nm-chatbot-save que antes usava bind direto no elemento.
-    // A flag window._nmChatbotDelegated garante registro único.
     if (!window._nmChatbotDelegated) {
         window._nmChatbotDelegated = true;
 
         // --- Salvar Chatbot (delegado) ---
-        // Antes: bind direto via btnSave._nmBound — falhava quando a aba
-        // ainda não existia no DOM durante o nmInit() inicial.
-        // Agora: delegação no document captura o clique independente de quando
-        // o elemento entra no DOM.
         document.addEventListener('click', async (e) => {
             const btnSave = e.target.closest('#nm-chatbot-save');
             if (!btnSave) return;
 
             const url  = btnSave.dataset.actionUrl;
-            const csrf = nmVal('nm-chatbot-csrf') || nmGetCsrfToken();
+            // Token sempre fresco — GLPI 11 invalida tokens após cada uso
+            const csrf = nmGetCsrfToken();
             const data = {
                 _glpi_csrf_token:        csrf,
                 action:                  nmVal('nm-chatbot-action')       || 'add_chatbot',
@@ -503,6 +502,7 @@ function nmInitChatbotButtons() {
         });
 
         // --- Eye toggle + Delete delegados ---
+        // Token buscado sempre na hora do clique — nunca de btn.dataset.csrf
         document.addEventListener('click', async (e) => {
             const eyeBtn = e.target.closest('.nm-btn-eye');
             if (eyeBtn) {
@@ -519,7 +519,8 @@ function nmInitChatbotButtons() {
                 if (!confirm(btn.dataset.confirm || 'Remover?')) return;
                 try {
                     const result = await nmPost(btn.dataset.url, {
-                        _glpi_csrf_token: btn.dataset.csrf || nmGetCsrfToken(),
+                        // nmGetCsrfToken() sempre fresco — token do dataset pode estar expirado
+                        _glpi_csrf_token: nmGetCsrfToken(),
                         action:           btn.dataset.action,
                         id:               btn.dataset.id,
                         companies_id:     btn.dataset.companiesId || '',
@@ -535,6 +536,7 @@ function nmInitChatbotButtons() {
         });
 
         // --- Adicionar Comunicação em Massa (delegado) ---
+        // Token buscado sempre na hora do clique — nunca de btn.dataset.csrf
         document.addEventListener('click', async (e) => {
             const btn = e.target.closest('#nm-mc-add-btn');
             if (!btn) return;
@@ -544,7 +546,7 @@ function nmInitChatbotButtons() {
                 return;
             }
             const data = {
-                _glpi_csrf_token:     btn.dataset.csrf || nmGetCsrfToken(),
+                _glpi_csrf_token:     nmGetCsrfToken(),
                 action:               'add_mass_comm',
                 chatbot_id:           chatbotId,
                 companies_id:         btn.dataset.companiesId || '0',
@@ -571,13 +573,12 @@ function nmInitChatbotButtons() {
                         <td>${data.homologation_type}</td>
                         <td>${data.access_link ? '<a href="'+data.access_link+'" target="_blank" rel="noopener"><i class="ti ti-external-link"></i></a>' : ''}</td>
                         <td>${data.login}</td>
-                        <td>\u2022\u2022\u2022\u2022\u2022\u2022</td>
+                        <td>••••••</td>
                         <td><button type="button" class="btn btn-sm btn-danger nm-chatbot-del"
                             data-action="delete_mass_comm" data-id="${result.id}"
                             data-row="nm-mc-row-${result.id}"
                             data-companies-id="${data.companies_id}"
                             data-url="${btn.dataset.url}"
-                            data-csrf="${data._glpi_csrf_token}"
                             data-confirm="Remover?">
                             <i class="ti ti-trash"></i></button></td>`;
                     addRow.parentNode.insertBefore(tr, addRow);
@@ -585,11 +586,12 @@ function nmInitChatbotButtons() {
                 nmClear(['nm-mc-system_name','nm-mc-activation_date','nm-mc-authenticated_number',
                          'nm-mc-homologation_type','nm-mc-access_link','nm-mc-login','nm-mc-password']);
             } catch (error) {
-                alert('Erro ao adicionar comunica\u00e7\u00e3o em massa: ' + error.message);
+                alert('Erro ao adicionar comunicação em massa: ' + error.message);
             }
         });
 
         // --- Adicionar Restrição WA (delegado) ---
+        // Token buscado sempre na hora do clique — nunca de btn.dataset.csrf
         document.addEventListener('click', async (e) => {
             const btn = e.target.closest('#nm-wa-add-btn');
             if (!btn) return;
@@ -599,7 +601,7 @@ function nmInitChatbotButtons() {
                 return;
             }
             const data = {
-                _glpi_csrf_token: btn.dataset.csrf || nmGetCsrfToken(),
+                _glpi_csrf_token: nmGetCsrfToken(),
                 action:           'add_wa_restriction',
                 chatbot_id:       chatbotId,
                 companies_id:     btn.dataset.companiesId || '0',
@@ -626,7 +628,6 @@ function nmInitChatbotButtons() {
                             data-row="nm-wa-row-${result.id}"
                             data-companies-id="${data.companies_id}"
                             data-url="${btn.dataset.url}"
-                            data-csrf="${data._glpi_csrf_token}"
                             data-confirm="Remover?">
                             <i class="ti ti-trash"></i></button></td>`;
                     addRow.parentNode.insertBefore(tr, addRow);
@@ -634,11 +635,12 @@ function nmInitChatbotButtons() {
                 nmClear(['nm-wa-whatsapp_number','nm-wa-restriction_date',
                          'nm-wa-restriction_time','nm-wa-end_date']);
             } catch (error) {
-                alert('Erro ao adicionar restri\u00e7\u00e3o: ' + error.message);
+                alert('Erro ao adicionar restrição: ' + error.message);
             }
         });
 
         // --- Adicionar Usuário Chatbot (delegado) ---
+        // Token buscado sempre na hora do clique — nunca de btn.dataset.csrf
         document.addEventListener('click', async (e) => {
             const btn = e.target.closest('#nm-cu-add-btn');
             if (!btn) return;
@@ -648,7 +650,7 @@ function nmInitChatbotButtons() {
                 return;
             }
             const data = {
-                _glpi_csrf_token: btn.dataset.csrf || nmGetCsrfToken(),
+                _glpi_csrf_token: nmGetCsrfToken(),
                 action:           'add_chatbot_user',
                 chatbot_id:       chatbotId,
                 companies_id:     btn.dataset.companiesId || '0',
@@ -669,7 +671,7 @@ function nmInitChatbotButtons() {
                     tr.innerHTML = `
                         <td>${data.user_name}</td>
                         <td>${data.login}</td>
-                        <td>\u2022\u2022\u2022\u2022\u2022\u2022</td>
+                        <td>••••••</td>
                         <td>${data.email}</td>
                         <td>${data.user_type}</td>
                         <td><button type="button" class="btn btn-sm btn-danger nm-chatbot-del"
@@ -677,8 +679,7 @@ function nmInitChatbotButtons() {
                             data-row="nm-cu-row-${result.id}"
                             data-companies-id="${data.companies_id}"
                             data-url="${btn.dataset.url}"
-                            data-csrf="${data._glpi_csrf_token}"
-                            data-confirm="Remover usu\u00e1rio?">
+                            data-confirm="Remover usuário?">
                             <i class="ti ti-trash"></i></button></td>`;
                     addRow.parentNode.insertBefore(tr, addRow);
                 }
@@ -686,7 +687,7 @@ function nmInitChatbotButtons() {
                 const sel = document.getElementById('nm-cu-user_type');
                 if (sel) sel.value = 'usuario';
             } catch (error) {
-                alert('Erro ao adicionar usu\u00e1rio: ' + error.message);
+                alert('Erro ao adicionar usuário: ' + error.message);
             }
         });
     }
@@ -719,7 +720,7 @@ async function nmBuscarCNPJ() {
     if (!input) return;
     const cnpj = input.value.replace(/\D/g, '');
     if (cnpj.length !== 14) { nmFeedback('cnpj-feedback', 'Digite um CNPJ completo (14 digitos).', 'error'); return; }
-    if (!nmValidarCNPJ(cnpj)) { nmFeedback('cnpj-feedback', 'CNPJ inv\u00e1lido.', 'error'); return; }
+    if (!nmValidarCNPJ(cnpj)) { nmFeedback('cnpj-feedback', 'CNPJ inválido.', 'error'); return; }
     nmFeedback('cnpj-feedback', '', '');
     nmSetLoading('btn-buscar-cnpj', true);
     try {
@@ -729,7 +730,7 @@ async function nmBuscarCNPJ() {
         ]);
         if (!brasilResponse.ok) {
             const err = await brasilResponse.json().catch(() => ({}));
-            nmFeedback('cnpj-feedback', err.message || 'CNPJ n\u00e3o encontrado.', 'error');
+            nmFeedback('cnpj-feedback', err.message || 'CNPJ não encontrado.', 'error');
             return;
         }
         const data = await brasilResponse.json();
@@ -742,7 +743,7 @@ async function nmBuscarCNPJ() {
         if (data.cep) set('cep', nmMascaraCEP(data.cep));
         const partes = [data.logradouro, data.numero, data.complemento, data.bairro, data.municipio, data.uf].filter(Boolean);
         if (partes.length) set('address', partes.join(', '));
-        nmFeedback('cnpj-feedback', '\u2713 Dados preenchidos com sucesso!', 'success');
+        nmFeedback('cnpj-feedback', '✓ Dados preenchidos com sucesso!', 'success');
     } catch {
         nmFeedback('cnpj-feedback', 'Erro ao consultar BrasilAPI.', 'error');
     } finally {
@@ -758,17 +759,17 @@ async function nmBuscarCEP() {
     const input = document.getElementById('cep');
     if (!input) return;
     const cep = input.value.replace(/\D/g, '');
-    if (cep.length !== 8) { nmFeedback('cep-feedback', 'Digite um CEP completo (8 d\u00edgitos).', 'error'); return; }
+    if (cep.length !== 8) { nmFeedback('cep-feedback', 'Digite um CEP completo (8 dígitos).', 'error'); return; }
     nmFeedback('cep-feedback', '', '');
     nmSetLoading('btn-buscar-cep', true);
     try {
         const response = await fetch('https://brasilapi.com.br/api/cep/v1/' + cep);
-        if (!response.ok) { nmFeedback('cep-feedback', 'CEP n\u00e3o encontrado.', 'error'); return; }
+        if (!response.ok) { nmFeedback('cep-feedback', 'CEP não encontrado.', 'error'); return; }
         const data = await response.json();
         const partes = [data.street, data.neighborhood, data.city, data.state].filter(Boolean);
         const addressInput = document.getElementById('address');
         if (addressInput && partes.length) addressInput.value = partes.join(', ');
-        nmFeedback('cep-feedback', '\u2713 Endere\u00e7o preenchido!', 'success');
+        nmFeedback('cep-feedback', '✓ Endereço preenchido!', 'success');
     } catch {
         nmFeedback('cep-feedback', 'Erro ao consultar BrasilAPI.', 'error');
     } finally {
