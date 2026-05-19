@@ -117,7 +117,8 @@ class Chatbot extends \CommonDBTM
         echo '<div class="nm-chatbot-tab" data-action-url="' . htmlspecialchars($action, ENT_QUOTES) . '" data-companies-id="' . $companies_id . '">';
 
         echo '<div id="nm-chatbot-form-wrapper">';
-        echo '<input type="hidden" id="nm-chatbot-csrf"         value="' . $csrf . '">';
+        // Inclui o token CSRF com o name padrão esperado pelo GLPI
+        echo '<input type="hidden" id="nm-chatbot-csrf" name="_glpi_csrf_token" value="' . $csrf . '">';
         echo '<input type="hidden" id="nm-chatbot-action"       value="' . $form_action . '">';
         echo '<input type="hidden" id="nm-chatbot-id"           value="' . $chatbot_id . '">';
         echo '<input type="hidden" id="nm-chatbot-companies-id" value="' . $companies_id . '">';
@@ -312,13 +313,14 @@ class Chatbot extends \CommonDBTM
         }
 
         echo '<tr class="tab_bg_2 nm-add-row" id="nm-mc-add-row">';
-        echo '<td><input type="text" id="nm-mc-system_name"          class="form-control form-control-sm" placeholder="' . __('Nome', 'newmanagement') . '"></td>';
-        echo '<td><input type="date" id="nm-mc-activation_date"      class="form-control form-control-sm"></td>';
-        echo '<td><input type="text" id="nm-mc-authenticated_number" class="form-control form-control-sm" placeholder="5511..."></td>';
-        echo '<td><input type="text" id="nm-mc-homologation_type"    class="form-control form-control-sm" placeholder="Ex: BSP"></td>';
-        echo '<td><input type="url"  id="nm-mc-access_link"          class="form-control form-control-sm" placeholder="https://"></td>';
-        echo '<td><input type="text" id="nm-mc-login"                class="form-control form-control-sm"></td>';
-        echo '<td><input type="password" id="nm-mc-password"         class="form-control form-control-sm" placeholder="' . __('Senha', 'newmanagement') . '" autocomplete="new-password"></td>';
+        // Template row para bulk-add de Comunicação em Massa (names como arrays)
+        echo '<td><input type="text" id="nm-mc-system_name_0" name="chatbot_mass_comm[system_name][]"          class="form-control form-control-sm" placeholder="' . __('Nome', 'newmanagement') . '"></td>';
+        echo '<td><input type="date" id="nm-mc-activation_date_0" name="chatbot_mass_comm[activation_date][]"      class="form-control form-control-sm"></td>';
+        echo '<td><input type="text" id="nm-mc-authenticated_number_0" name="chatbot_mass_comm[authenticated_number][]" class="form-control form-control-sm" placeholder="5511..."></td>';
+        echo '<td><input type="text" id="nm-mc-homologation_type_0" name="chatbot_mass_comm[homologation_type][]"    class="form-control form-control-sm" placeholder="Ex: BSP"></td>';
+        echo '<td><input type="url"  id="nm-mc-access_link_0" name="chatbot_mass_comm[access_link][]"          class="form-control form-control-sm" placeholder="https://"></td>';
+        echo '<td><input type="text" id="nm-mc-login_0" name="chatbot_mass_comm[login][]"                class="form-control form-control-sm"></td>';
+        echo '<td><input type="password" id="nm-mc-password_0" name="chatbot_mass_comm[password][]"         class="form-control form-control-sm" placeholder="' . __('Senha', 'newmanagement') . '" autocomplete="new-password"></td>';
         echo '<td></td>';
         echo '</tr>';
         echo '</tbody>';
@@ -375,10 +377,11 @@ class Chatbot extends \CommonDBTM
         }
 
         echo '<tr class="tab_bg_2 nm-add-row" id="nm-wa-add-row">';
-        echo '<td><input type="text" id="nm-wa-whatsapp_number"  class="form-control form-control-sm" placeholder="5511..."></td>';
-        echo '<td><input type="date" id="nm-wa-restriction_date" class="form-control form-control-sm"></td>';
-        echo '<td><input type="text" id="nm-wa-restriction_time" class="form-control form-control-sm" placeholder="Ex: 24h, 7 dias"></td>';
-        echo '<td><input type="date" id="nm-wa-end_date"         class="form-control form-control-sm"></td>';
+        // Template row para bulk-add de restrições WA (names como arrays)
+        echo '<td><input type="text" id="nm-wa-whatsapp_number_0" name="chatbot_wa_restrictions[whatsapp_number][]"  class="form-control form-control-sm" placeholder="5511..."></td>';
+        echo '<td><input type="date" id="nm-wa-restriction_date_0" name="chatbot_wa_restrictions[restriction_date][]" class="form-control form-control-sm"></td>';
+        echo '<td><input type="text" id="nm-wa-restriction_time_0" name="chatbot_wa_restrictions[restriction_time][]" class="form-control form-control-sm" placeholder="Ex: 24h, 7 dias"></td>';
+        echo '<td><input type="date" id="nm-wa-end_date_0" name="chatbot_wa_restrictions[end_date][]"         class="form-control form-control-sm"></td>';
         echo '<td></td>';
         echo '</tr>';
         echo '</tbody>';
@@ -436,12 +439,13 @@ class Chatbot extends \CommonDBTM
             echo '</tr>';
         }
 
+        // Linha de template para adicionar múltiplos usuários — nomes em formato de arrays
         echo '<tr class="tab_bg_2 nm-add-row" id="nm-cu-add-row">';
-        echo '<td><input type="text"     id="nm-cu-user_name" class="form-control form-control-sm" placeholder="' . __('Nome', 'newmanagement') . '"></td>';
-        echo '<td><input type="text"     id="nm-cu-login"     class="form-control form-control-sm" placeholder="' . __('Login', 'newmanagement') . '"></td>';
-        echo '<td><input type="password" id="nm-cu-password"  class="form-control form-control-sm" placeholder="' . __('Senha', 'newmanagement') . '" autocomplete="new-password"></td>';
-        echo '<td><input type="email"    id="nm-cu-email"     class="form-control form-control-sm" placeholder="email@"></td>';
-        echo '<td><select id="nm-cu-user_type" class="form-select form-select-sm">';
+        echo '<td><input type="text"     id="nm-cu-user_name_0" name="chatbot_users[user_name][]" class="form-control form-control-sm" placeholder="' . __('Nome', 'newmanagement') . '"></td>';
+        echo '<td><input type="text"     id="nm-cu-login_0"     name="chatbot_users[login][]" class="form-control form-control-sm" placeholder="' . __('Login', 'newmanagement') . '"></td>';
+        echo '<td><input type="password" id="nm-cu-password_0"  name="chatbot_users[password][]" class="form-control form-control-sm" placeholder="' . __('Senha', 'newmanagement') . '" autocomplete="new-password"></td>';
+        echo '<td><input type="email"    id="nm-cu-email_0"     name="chatbot_users[email][]" class="form-control form-control-sm" placeholder="email@"></td>';
+        echo '<td><select id="nm-cu-user_type_0" name="chatbot_users[user_type][]" class="form-select form-select-sm">';
         echo '  <option value="usuario">'       . __('Usuário',       'newmanagement') . '</option>';
         echo '  <option value="supervisor">'    . __('Supervisor',    'newmanagement') . '</option>';
         echo '  <option value="administrador">' . __('Administrador', 'newmanagement') . '</option>';

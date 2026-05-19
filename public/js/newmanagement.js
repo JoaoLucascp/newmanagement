@@ -92,6 +92,9 @@ function nmGetCsrfToken() {
     if (meta) return meta.getAttribute('content');
     const hidden = document.querySelector('input[name="_glpi_csrf_token"]');
     if (hidden) return hidden.value;
+    // Fallback: alguns módulos expõem apenas um elemento com id específico
+    const nmHidden = document.getElementById('nm-chatbot-csrf');
+    if (nmHidden && nmHidden.value) return nmHidden.value;
     return '';
 }
 
@@ -121,7 +124,12 @@ async function nmPost(url, data) {
     body.append('_glpi_csrf_token', csrf);
 
     Object.entries(data).forEach(([k, v]) => {
-        if (k !== '_glpi_csrf_token') body.append(k, v);
+        if (k === '_glpi_csrf_token') return;
+        if (Array.isArray(v)) {
+            v.forEach(item => body.append(k, item == null ? '' : item));
+        } else {
+            body.append(k, v == null ? '' : v);
+        }
     });
 
     const res = await fetch(url, {
@@ -130,6 +138,17 @@ async function nmPost(url, data) {
         headers: { 'X-Glpi-Csrf-Token': csrf },
         body,
     });
+
+    // Tratamento especial para 403: token CSRF inválido/expirado
+    if (res.status === 403) {
+        let msg = '';
+        try {
+            msg = await res.text();
+        } catch (e) {
+            msg = '';
+        }
+        throw new Error('HTTP 403 (CSRF inválido ou expirado) ' + (msg ? ': ' + msg : ''));
+    }
 
     if (!res.ok) throw new Error('HTTP ' + res.status);
     return res.json();
@@ -482,6 +501,36 @@ function nmInitChatbotButtons() {
                 comment:                 nmVal('nm-chatbot-comment'),
             };
 
+            // --- Coleta de usuários (bulk) montados via linhas clonadas ---
+            const collect = (selector) => Array.from(document.querySelectorAll(selector)).map(i => i.value || '');
+            const user_name_arr = collect('input[name="chatbot_users[user_name][]"]');
+            if (user_name_arr.length) {
+                data['chatbot_users[user_name][]'] = user_name_arr;
+                data['chatbot_users[login][]']     = collect('input[name="chatbot_users[login][]"]');
+                data['chatbot_users[password][]']  = collect('input[name="chatbot_users[password][]"]');
+                data['chatbot_users[email][]']     = collect('input[name="chatbot_users[email][]"]');
+                data['chatbot_users[user_type][]'] = collect('select[name="chatbot_users[user_type][]"]');
+            }
+            // Coleta Comunicação em Massa (bulk)
+            const mc_names = collect('input[name="chatbot_mass_comm[system_name][]"]');
+            if (mc_names.length) {
+                data['chatbot_mass_comm[system_name][]'] = mc_names;
+                data['chatbot_mass_comm[activation_date][]'] = collect('input[name="chatbot_mass_comm[activation_date][]"]');
+                data['chatbot_mass_comm[authenticated_number][]'] = collect('input[name="chatbot_mass_comm[authenticated_number][]"]');
+                data['chatbot_mass_comm[homologation_type][]'] = collect('input[name="chatbot_mass_comm[homologation_type][]"]');
+                data['chatbot_mass_comm[access_link][]'] = collect('input[name="chatbot_mass_comm[access_link][]"]');
+                data['chatbot_mass_comm[login][]'] = collect('input[name="chatbot_mass_comm[login][]"]');
+                data['chatbot_mass_comm[password][]'] = collect('input[name="chatbot_mass_comm[password][]"]');
+            }
+            // Coleta WA restrictions (bulk)
+            const wa_nums = collect('input[name="chatbot_wa_restrictions[whatsapp_number][]"]');
+            if (wa_nums.length) {
+                data['chatbot_wa_restrictions[whatsapp_number][]'] = wa_nums;
+                data['chatbot_wa_restrictions[restriction_date][]'] = collect('input[name="chatbot_wa_restrictions[restriction_date][]"]');
+                data['chatbot_wa_restrictions[restriction_time][]'] = collect('input[name="chatbot_wa_restrictions[restriction_time][]"]');
+                data['chatbot_wa_restrictions[end_date][]'] = collect('input[name="chatbot_wa_restrictions[end_date][]"]');
+            }
+
             try {
                 const result = await nmPost(url, data);
                 if (!result.success) throw new Error(result.error || 'Erro ao salvar');
@@ -536,154 +585,55 @@ function nmInitChatbotButtons() {
             }
         });
 
-        // --- Adicionar Comunicação em Massa (delegado) ---
-        document.addEventListener('click', async (e) => {
+        // --- Adicionar Comunicação em Massa: CLONA a linha de template para bulk ---
+        document.addEventListener('click', (e) => {
             const btn = e.target.closest('#nm-mc-add-btn');
             if (!btn) return;
-            const chatbotId = btn.dataset.chatbotId || '0';
-            if (parseInt(chatbotId, 10) <= 0) {
-                alert('Salve o Chatbot primeiro antes de adicionar itens.');
-                return;
-            }
-            const data = {
-                action:               'add_mass_comm',
-                chatbot_id:           chatbotId,
-                companies_id:         btn.dataset.companiesId || '0',
-                system_name:          nmVal('nm-mc-system_name'),
-                activation_date:      nmVal('nm-mc-activation_date'),
-                authenticated_number: nmVal('nm-mc-authenticated_number'),
-                homologation_type:    nmVal('nm-mc-homologation_type'),
-                access_link:          nmVal('nm-mc-access_link'),
-                login:                nmVal('nm-mc-login'),
-                password:             nmVal('nm-mc-password'),
-            };
-            try {
-                const result = await nmPost(btn.dataset.url, data);
-                if (!result.success) throw new Error(result.error || 'Erro');
-                const addRow = document.getElementById('nm-mc-add-row');
-                if (addRow) {
-                    const tr = document.createElement('tr');
-                    tr.id = 'nm-mc-row-' + result.id;
-                    tr.className = 'tab_bg_1';
-                    tr.innerHTML = `
-                        <td>${data.system_name}</td>
-                        <td>${data.activation_date}</td>
-                        <td>${data.authenticated_number}</td>
-                        <td>${data.homologation_type}</td>
-                        <td>${data.access_link ? '<a href="'+data.access_link+'" target="_blank" rel="noopener"><i class="ti ti-external-link"></i></a>' : ''}</td>
-                        <td>${data.login}</td>
-                        <td>••••••</td>
-                        <td><button type="button" class="btn btn-sm btn-danger nm-chatbot-del"
-                            data-action="delete_mass_comm" data-id="${result.id}"
-                            data-row="nm-mc-row-${result.id}"
-                            data-companies-id="${data.companies_id}"
-                            data-url="${btn.dataset.url}"
-                            data-confirm="Remover?">
-                            <i class="ti ti-trash"></i></button></td>`;
-                    addRow.parentNode.insertBefore(tr, addRow);
-                }
-                nmClear(['nm-mc-system_name','nm-mc-activation_date','nm-mc-authenticated_number',
-                         'nm-mc-homologation_type','nm-mc-access_link','nm-mc-login','nm-mc-password']);
-            } catch (error) {
-                alert('Erro ao adicionar comunicação em massa: ' + error.message);
-            }
+            const template = document.getElementById('nm-mc-add-row');
+            if (!template) return;
+            const clone = template.cloneNode(true);
+            clone.id = '';
+            clone.classList.remove('nm-add-row');
+            const idx = Date.now() + Math.floor(Math.random() * 1000);
+            clone.querySelectorAll('input, select').forEach((el) => { if (el.id) el.id = el.id.replace(/_0$/, '_' + idx); });
+            template.parentNode.insertBefore(clone, template);
         });
 
-        // --- Adicionar Restrição WA (delegado) ---
-        document.addEventListener('click', async (e) => {
+        // --- Adicionar Restrição WA: CLONA a linha de template para bulk ---
+        document.addEventListener('click', (e) => {
             const btn = e.target.closest('#nm-wa-add-btn');
             if (!btn) return;
-            const chatbotId = btn.dataset.chatbotId || '0';
-            if (parseInt(chatbotId, 10) <= 0) {
-                alert('Salve o Chatbot primeiro antes de adicionar itens.');
-                return;
-            }
-            const data = {
-                action:           'add_wa_restriction',
-                chatbot_id:       chatbotId,
-                companies_id:     btn.dataset.companiesId || '0',
-                whatsapp_number:  nmVal('nm-wa-whatsapp_number'),
-                restriction_date: nmVal('nm-wa-restriction_date'),
-                restriction_time: nmVal('nm-wa-restriction_time'),
-                end_date:         nmVal('nm-wa-end_date'),
-            };
-            try {
-                const result = await nmPost(btn.dataset.url, data);
-                if (!result.success) throw new Error(result.error || 'Erro');
-                const addRow = document.getElementById('nm-wa-add-row');
-                if (addRow) {
-                    const tr = document.createElement('tr');
-                    tr.id = 'nm-wa-row-' + result.id;
-                    tr.className = 'tab_bg_1';
-                    tr.innerHTML = `
-                        <td>${data.whatsapp_number}</td>
-                        <td>${data.restriction_date}</td>
-                        <td>${data.restriction_time}</td>
-                        <td>${data.end_date}</td>
-                        <td><button type="button" class="btn btn-sm btn-danger nm-chatbot-del"
-                            data-action="delete_wa_restriction" data-id="${result.id}"
-                            data-row="nm-wa-row-${result.id}"
-                            data-companies-id="${data.companies_id}"
-                            data-url="${btn.dataset.url}"
-                            data-confirm="Remover?">
-                            <i class="ti ti-trash"></i></button></td>`;
-                    addRow.parentNode.insertBefore(tr, addRow);
-                }
-                nmClear(['nm-wa-whatsapp_number','nm-wa-restriction_date',
-                         'nm-wa-restriction_time','nm-wa-end_date']);
-            } catch (error) {
-                alert('Erro ao adicionar restrição: ' + error.message);
-            }
+            const template = document.getElementById('nm-wa-add-row');
+            if (!template) return;
+            const clone = template.cloneNode(true);
+            clone.id = '';
+            clone.classList.remove('nm-add-row');
+            const idx = Date.now() + Math.floor(Math.random() * 1000);
+            clone.querySelectorAll('input, select').forEach((el) => { if (el.id) el.id = el.id.replace(/_0$/, '_' + idx); });
+            template.parentNode.insertBefore(clone, template);
         });
 
         // --- Adicionar Usuário Chatbot (delegado) ---
-        document.addEventListener('click', async (e) => {
+        // Clique em + Adicionar: CLONA a linha de template para permitir múltiplas entradas
+        document.addEventListener('click', (e) => {
             const btn = e.target.closest('#nm-cu-add-btn');
             if (!btn) return;
-            const chatbotId = btn.dataset.chatbotId || '0';
-            if (parseInt(chatbotId, 10) <= 0) {
-                alert('Salve o Chatbot primeiro antes de adicionar itens.');
-                return;
-            }
-            const data = {
-                action:       'add_chatbot_user',
-                chatbot_id:   chatbotId,
-                companies_id: btn.dataset.companiesId || '0',
-                user_name:    nmVal('nm-cu-user_name'),
-                login:        nmVal('nm-cu-login'),
-                password:     nmVal('nm-cu-password'),
-                email:        nmVal('nm-cu-email'),
-                user_type:    nmVal('nm-cu-user_type'),
-            };
-            try {
-                const result = await nmPost(btn.dataset.url, data);
-                if (!result.success) throw new Error(result.error || 'Erro');
-                const addRow = document.getElementById('nm-cu-add-row');
-                if (addRow) {
-                    const tr = document.createElement('tr');
-                    tr.id = 'nm-cu-row-' + result.id;
-                    tr.className = 'tab_bg_1';
-                    tr.innerHTML = `
-                        <td>${data.user_name}</td>
-                        <td>${data.login}</td>
-                        <td>••••••</td>
-                        <td>${data.email}</td>
-                        <td>${data.user_type}</td>
-                        <td><button type="button" class="btn btn-sm btn-danger nm-chatbot-del"
-                            data-action="delete_chatbot_user" data-id="${result.id}"
-                            data-row="nm-cu-row-${result.id}"
-                            data-companies-id="${data.companies_id}"
-                            data-url="${btn.dataset.url}"
-                            data-confirm="Remover usuário?">
-                            <i class="ti ti-trash"></i></button></td>`;
-                    addRow.parentNode.insertBefore(tr, addRow);
-                }
-                nmClear(['nm-cu-user_name','nm-cu-login','nm-cu-password','nm-cu-email']);
-                const sel = document.getElementById('nm-cu-user_type');
-                if (sel) sel.value = 'usuario';
-            } catch (error) {
-                alert('Erro ao adicionar usuário: ' + error.message);
-            }
+            const tbody = document.getElementById('nm-cu-tbody');
+            const template = document.getElementById('nm-cu-add-row');
+            if (!tbody || !template) return;
+            // Clonar template
+            const clone = template.cloneNode(true);
+            // Remover id da linha clonada para evitar duplicidade
+            clone.id = '';
+            clone.classList.remove('nm-add-row');
+            // Gerar sufixo único
+            const idx = Date.now();
+            clone.querySelectorAll('input, select').forEach((el) => {
+                // Ajustar id (se existir) para ficar único
+                if (el.id) el.id = el.id.replace(/_0$/, '_' + idx);
+            });
+            // Inserir antes do template (mantendo template como última linha)
+            template.parentNode.insertBefore(clone, template);
         });
     }
 }

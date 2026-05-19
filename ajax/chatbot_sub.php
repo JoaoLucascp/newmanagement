@@ -88,6 +88,86 @@ try {
             $DB->insert('glpi_plugin_newmanagement_chatbots', $data);
             $newId = $DB->insertId();
             if (!$newId) nmJson(false, ['error' => 'Falha ao inserir chatbot no banco']);
+            // Se vierem usuários em modo bulk, inseri-los agora
+            if (!empty($_POST['chatbot_users']) && is_array($_POST['chatbot_users'])) {
+                $users = $_POST['chatbot_users'];
+                $names  = $users['user_name'] ?? [];
+                $logins = $users['login']     ?? [];
+                $pwds   = $users['password']  ?? [];
+                $emails = $users['email']     ?? [];
+                $types  = $users['user_type'] ?? [];
+                $count = max(0, count($names));
+                for ($i = 0; $i < $count; $i++) {
+                    $uname = trim($names[$i] ?? '');
+                    $ulogin = trim($logins[$i] ?? '');
+                    if ($uname === '' && $ulogin === '') continue;
+                    $DB->insert('glpi_plugin_newmanagement_chatbot_users', [
+                        'chatbot_id'    => $newId,
+                        'companies_id'  => $companies_id,
+                        'user_name'     => $uname,
+                        'login'         => $ulogin,
+                        'password'      => nmEncrypt(trim($pwds[$i] ?? '')),
+                        'email'         => trim($emails[$i] ?? ''),
+                        'user_type'     => trim($types[$i] ?? 'usuario'),
+                        'date_creation' => $now,
+                        'date_mod'      => $now,
+                    ]);
+                }
+            }
+            // Se vierem comunicações em massa em bulk, inseri-las
+            if (!empty($_POST['chatbot_mass_comm']) && is_array($_POST['chatbot_mass_comm'])) {
+                $mc = $_POST['chatbot_mass_comm'];
+                $names = $mc['system_name'] ?? [];
+                $acts  = $mc['activation_date'] ?? [];
+                $auths = $mc['authenticated_number'] ?? [];
+                $homs  = $mc['homologation_type'] ?? [];
+                $links = $mc['access_link'] ?? [];
+                $logins = $mc['login'] ?? [];
+                $pwds  = $mc['password'] ?? [];
+                $count = max(0, count($names));
+                for ($i = 0; $i < $count; $i++) {
+                    $n = trim($names[$i] ?? '');
+                    if ($n === '') continue;
+                    $DB->insert('glpi_plugin_newmanagement_chatbot_mass_comm', [
+                        'chatbot_id' => $newId,
+                        'companies_id' => $companies_id,
+                        'system_name' => $n,
+                        'activation_date' => trim($acts[$i] ?? ''),
+                        'authenticated_number' => trim($auths[$i] ?? ''),
+                        'homologation_type' => trim($homs[$i] ?? ''),
+                        'access_link' => trim($links[$i] ?? ''),
+                        'login' => trim($logins[$i] ?? ''),
+                        'password' => nmEncrypt(trim($pwds[$i] ?? '')),
+                        'date_creation' => $now,
+                        'date_mod' => $now,
+                    ]);
+                }
+            }
+
+            // Se vierem restrições WA em bulk, inseri-las
+            if (!empty($_POST['chatbot_wa_restrictions']) && is_array($_POST['chatbot_wa_restrictions'])) {
+                $wa = $_POST['chatbot_wa_restrictions'];
+                $nums = $wa['whatsapp_number'] ?? [];
+                $rdates = $wa['restriction_date'] ?? [];
+                $rtimes = $wa['restriction_time'] ?? [];
+                $ends = $wa['end_date'] ?? [];
+                $count = max(0, count($nums));
+                for ($i = 0; $i < $count; $i++) {
+                    $num = trim($nums[$i] ?? '');
+                    if ($num === '') continue;
+                    $DB->insert('glpi_plugin_newmanagement_chatbot_wa_restrictions', [
+                        'chatbot_id' => $newId,
+                        'companies_id' => $companies_id,
+                        'whatsapp_number' => $num,
+                        'restriction_date' => trim($rdates[$i] ?? ''),
+                        'restriction_time' => trim($rtimes[$i] ?? ''),
+                        'end_date' => trim($ends[$i] ?? ''),
+                        'date_creation' => $now,
+                        'date_mod' => $now,
+                    ]);
+                }
+            }
+
             nmJson(true, ['id' => $newId]);
 
         case 'update_chatbot':
@@ -116,7 +196,93 @@ try {
             ];
             if ($id > 0) {
                 $DB->update('glpi_plugin_newmanagement_chatbots', $data, ['id' => $id]);
-                nmJson(true);
+
+                // Bulk replace users: se vierem arrays, substituir os existentes
+                if (!empty($_POST['chatbot_users']) && is_array($_POST['chatbot_users'])) {
+                    // Remover usuários atuais para este chatbot e re-inserir os enviados
+                    $DB->delete('glpi_plugin_newmanagement_chatbot_users', ['chatbot_id' => $id]);
+                    $users = $_POST['chatbot_users'];
+                    $names  = $users['user_name'] ?? [];
+                    $logins = $users['login']     ?? [];
+                    $pwds   = $users['password']  ?? [];
+                    $emails = $users['email']     ?? [];
+                    $types  = $users['user_type'] ?? [];
+                    $count = max(0, count($names));
+                    for ($i = 0; $i < $count; $i++) {
+                        $uname = trim($names[$i] ?? '');
+                        $ulogin = trim($logins[$i] ?? '');
+                        if ($uname === '' && $ulogin === '') continue;
+                        $DB->insert('glpi_plugin_newmanagement_chatbot_users', [
+                            'chatbot_id'    => $id,
+                            'companies_id'  => $companies_id,
+                            'user_name'     => $uname,
+                            'login'         => $ulogin,
+                            'password'      => nmEncrypt(trim($pwds[$i] ?? '')),
+                            'email'         => trim($emails[$i] ?? ''),
+                            'user_type'     => trim($types[$i] ?? 'usuario'),
+                            'date_creation' => $now,
+                            'date_mod'      => $now,
+                        ]);
+                    }
+                }
+
+                    // Bulk replace mass comm
+                    if (!empty($_POST['chatbot_mass_comm']) && is_array($_POST['chatbot_mass_comm'])) {
+                        $DB->delete('glpi_plugin_newmanagement_chatbot_mass_comm', ['chatbot_id' => $id]);
+                        $mc = $_POST['chatbot_mass_comm'];
+                        $names = $mc['system_name'] ?? [];
+                        $acts  = $mc['activation_date'] ?? [];
+                        $auths = $mc['authenticated_number'] ?? [];
+                        $homs  = $mc['homologation_type'] ?? [];
+                        $links = $mc['access_link'] ?? [];
+                        $logins = $mc['login'] ?? [];
+                        $pwds  = $mc['password'] ?? [];
+                        $count = max(0, count($names));
+                        for ($i = 0; $i < $count; $i++) {
+                            $n = trim($names[$i] ?? '');
+                            if ($n === '') continue;
+                            $DB->insert('glpi_plugin_newmanagement_chatbot_mass_comm', [
+                                'chatbot_id' => $id,
+                                'companies_id' => $companies_id,
+                                'system_name' => $n,
+                                'activation_date' => trim($acts[$i] ?? ''),
+                                'authenticated_number' => trim($auths[$i] ?? ''),
+                                'homologation_type' => trim($homs[$i] ?? ''),
+                                'access_link' => trim($links[$i] ?? ''),
+                                'login' => trim($logins[$i] ?? ''),
+                                'password' => nmEncrypt(trim($pwds[$i] ?? '')),
+                                'date_creation' => $now,
+                                'date_mod' => $now,
+                            ]);
+                        }
+                    }
+
+                    // Bulk replace WA restrictions
+                    if (!empty($_POST['chatbot_wa_restrictions']) && is_array($_POST['chatbot_wa_restrictions'])) {
+                        $DB->delete('glpi_plugin_newmanagement_chatbot_wa_restrictions', ['chatbot_id' => $id]);
+                        $wa = $_POST['chatbot_wa_restrictions'];
+                        $nums = $wa['whatsapp_number'] ?? [];
+                        $rdates = $wa['restriction_date'] ?? [];
+                        $rtimes = $wa['restriction_time'] ?? [];
+                        $ends = $wa['end_date'] ?? [];
+                        $count = max(0, count($nums));
+                        for ($i = 0; $i < $count; $i++) {
+                            $num = trim($nums[$i] ?? '');
+                            if ($num === '') continue;
+                            $DB->insert('glpi_plugin_newmanagement_chatbot_wa_restrictions', [
+                                'chatbot_id' => $id,
+                                'companies_id' => $companies_id,
+                                'whatsapp_number' => $num,
+                                'restriction_date' => trim($rdates[$i] ?? ''),
+                                'restriction_time' => trim($rtimes[$i] ?? ''),
+                                'end_date' => trim($ends[$i] ?? ''),
+                                'date_creation' => $now,
+                                'date_mod' => $now,
+                            ]);
+                        }
+                    }
+
+                    nmJson(true);
             }
             nmJson(false, ['error' => 'ID inválido']);
             break;
