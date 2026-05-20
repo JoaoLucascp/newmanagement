@@ -4,14 +4,21 @@
  * Newmanagement - Plugin GLPI
  * Handler AJAX: operações CRUD da aba Chatbot
  * Responde SEMPRE com JSON: { success: bool, error?: string, id?: int }
+ *
+ * Proteção em camadas:
+ *  1. Session::checkLoginUser()         — usuário autenticado
+ *  2. Session::checkCSRF($_POST)         — token CSRF válido
+ *  3. Session::checkRight(READ)          — direito mínimo de leitura
+ *  4. Por ação: checkRight(CREATE | UPDATE | DELETE) conforme necessário
  */
 
 include('../../../inc/includes.php');
 
+// [C2] Camada 1 — usuário logado
 Session::checkLoginUser();
-// GLPI 11 — CheckCsrfListener do Symfony rejeita o request com 403 se
-// Session::checkCSRF() não for chamado explicitamente em endpoints ajax/*.php.
+// [C2] Camada 2 — token CSRF obrigatório (GLPI 11)
 Session::checkCSRF($_POST);
+// [C2] Camada 3 — direito mínimo de leitura no plugin
 Session::checkRight('plugin_newmanagement_chatbot', READ);
 
 header('Content-Type: application/json; charset=utf-8');
@@ -131,6 +138,7 @@ try {
     switch ($action) {
 
         case 'add_chatbot':
+            // [C2] Direito exato: CREATE
             Session::checkRight('plugin_newmanagement_chatbot', CREATE);
             $data = [
                 'companies_id'            => $companies_id,
@@ -168,6 +176,7 @@ try {
             nmJson(true, ['id' => $newId]);
 
         case 'update_chatbot':
+            // [C2] Direito exato: UPDATE
             Session::checkRight('plugin_newmanagement_chatbot', UPDATE);
             if ($id <= 0) nmJson(false, ['error' => 'ID inválido']);
             $data = [
@@ -190,7 +199,6 @@ try {
                 'comment'                 => $s('comment'),
                 'date_mod'                => $now,
             ];
-            // Só atualiza senha se um novo valor foi enviado
             if ($s('admin_password') !== '')
                 $data['admin_password']      = nmEncryptPassword($s('admin_password'));
             if ($s('superadmin_password') !== '')
@@ -211,6 +219,7 @@ try {
             nmJson(true);
 
         case 'add_mass_comm':
+            // [C2] Direito exato: CREATE
             Session::checkRight('plugin_newmanagement_chatbot', CREATE);
             $chatbot_id = $n('chatbot_id');
             if ($chatbot_id <= 0) nmJson(false, ['error' => 'chatbot_id inválido']);
@@ -233,12 +242,14 @@ try {
             nmJson(true, ['id' => $newId]);
 
         case 'delete_mass_comm':
+            // [C2] Direito exato: DELETE
             Session::checkRight('plugin_newmanagement_chatbot', DELETE);
             if ($id <= 0) nmJson(false, ['error' => 'ID inválido']);
             $DB->delete('glpi_plugin_newmanagement_chatbot_mass_comm', ['id' => $id]);
             nmJson(true);
 
         case 'add_wa_restriction':
+            // [C2] Direito exato: CREATE
             Session::checkRight('plugin_newmanagement_chatbot', CREATE);
             $chatbot_id = $n('chatbot_id');
             if ($chatbot_id <= 0) nmJson(false, ['error' => 'chatbot_id inválido']);
@@ -257,12 +268,14 @@ try {
             nmJson(true, ['id' => $newId]);
 
         case 'delete_wa_restriction':
+            // [C2] Direito exato: DELETE
             Session::checkRight('plugin_newmanagement_chatbot', DELETE);
             if ($id <= 0) nmJson(false, ['error' => 'ID inválido']);
             $DB->delete('glpi_plugin_newmanagement_chatbot_wa_restrictions', ['id' => $id]);
             nmJson(true);
 
         case 'add_chatbot_user':
+            // [C2] Direito exato: CREATE
             Session::checkRight('plugin_newmanagement_chatbot', CREATE);
             $chatbot_id = $n('chatbot_id');
             if ($chatbot_id <= 0) nmJson(false, ['error' => 'chatbot_id inválido']);
@@ -282,6 +295,7 @@ try {
             nmJson(true, ['id' => $newId]);
 
         case 'delete_chatbot_user':
+            // [C2] Direito exato: DELETE
             Session::checkRight('plugin_newmanagement_chatbot', DELETE);
             if ($id <= 0) nmJson(false, ['error' => 'ID inválido']);
             $DB->delete('glpi_plugin_newmanagement_chatbot_users', ['id' => $id]);
@@ -291,5 +305,7 @@ try {
             nmJson(false, ['error' => 'Ação desconhecida: ' . $action]);
     }
 } catch (\Throwable $e) {
-    nmJson(false, ['error' => $e->getMessage()]);
+    // [C2] Não vazar stack trace para o cliente
+    \Toolbox::logDebug('chatbot_sub.php error: ' . $e->getMessage());
+    nmJson(false, ['error' => 'Erro interno ao processar requisição']);
 }
