@@ -1,0 +1,83 @@
+{#
+  Partial: tabela de Ramais
+  Variáveis herdadas do contexto pai (tab.html.twig):
+    extensions, ipbx_id, companies_id, csrf, action_url, can_write, can_delete
+#}
+<table class="tab_cadre_fixehov" id="nm-ext-table">
+  <thead>
+    <tr class="headerRow noHover">
+      <th>{{ 'Número'|__('newmanagement') }}</th>
+      <th>{{ 'Senha'|__('newmanagement') }}</th>
+      <th>{{ 'IP Aparelho'|__('newmanagement') }}</th>
+      <th>{{ 'Usuário'|__('newmanagement') }}</th>
+      <th>{{ 'Grava?'|__('newmanagement') }}</th>
+      <th>{{ 'Departamento'|__('newmanagement') }}</th>
+      <th style="text-align:right">
+        {% if can_write %}
+          {% set ext_disabled = '' %}
+          {% if not can_write %}
+            {% set ext_disabled = 'disabled title="' ~ 'Sem permissão de escrita'|__('newmanagement') ~ '"' %}
+          {% elseif ipbx_id == 0 %}
+            {% set ext_disabled = 'disabled title="' ~ 'Salve o IPBX antes de adicionar ramais'|__('newmanagement') ~ '"' %}
+          {% endif %}
+          <button type="button"
+                  id="nm-ext-add-btn"
+                  class="btn btn-sm btn-outline-secondary"
+                  data-action="add_extension"
+                  data-ipbx-id="{{ ipbx_id }}"
+                  data-companies-id="{{ companies_id }}"
+                  data-csrf="{{ csrf|e('html_attr') }}"
+                  data-url="{{ action_url|e('html_attr') }}"
+                  {{ ipbx_id == 0 ? 'disabled' }}>
+            <i class="ti ti-plus"></i> {{ 'Adicionar Ramal'|__('newmanagement') }}
+          </button>
+        {% endif %}
+      </th>
+    </tr>
+  </thead>
+  <tbody id="nm-ext-tbody">
+    {% for row in extensions %}
+    <tr class="tab_bg_1" id="nm-ext-row-{{ row.id }}">
+      <td>{{ row.number|e }}</td>
+      <td>••••••</td>
+      <td>{{ row.device_ip|e }}</td>
+      <td>{{ row.user_name|e }}</td>
+      <td>{{ row.records_calls ? 'Sim'|__('newmanagement') : 'Não'|__('newmanagement') }}</td>
+      <td>{{ row.department|e }}</td>
+      <td>
+        {% if can_delete %}
+        <button type="button"
+                class="btn btn-sm btn-icon nm-del-btn"
+                data-action="delete_extension"
+                data-id="{{ row.id }}"
+                data-row="nm-ext-row-{{ row.id }}"
+                data-companies-id="{{ companies_id }}"
+                data-csrf="{{ csrf|e('html_attr') }}"
+                data-url="{{ action_url|e('html_attr') }}"
+                data-confirm="{{ 'Remover ramal?'|__('newmanagement') }}"
+                title="{{ 'Remover'|__('newmanagement') }}">
+          <i class="ti ti-trash text-danger"></i>
+        </button>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+
+    {% if can_write %}
+    <tr class="tab_bg_2" id="nm-ext-add-row">
+      <td><input type="text" id="nm-ext-number" autocomplete="off" class="form-control form-control-sm" placeholder="{{ 'Número'|__('newmanagement') }}"></td>
+      <td><input type="password" id="nm-ext-password" class="form-control form-control-sm" placeholder="{{ 'Senha'|__('newmanagement') }}" autocomplete="new-password"></td>
+      <td><input type="text" id="nm-ext-device_ip" autocomplete="off" class="form-control form-control-sm" placeholder="IP"></td>
+      <td><input type="text" id="nm-ext-user_name" autocomplete="off" class="form-control form-control-sm" placeholder="{{ 'Usuário'|__('newmanagement') }}"></td>
+      <td>
+        <select id="nm-ext-records_calls" class="form-select form-select-sm">
+          <option value="0">{{ 'Não'|__('newmanagement') }}</option>
+          <option value="1">{{ 'Sim'|__('newmanagement') }}</option>
+        </select>
+      </td>
+      <td><input type="text" id="nm-ext-department" autocomplete="off" class="form-control form-control-sm" placeholder="{{ 'Departamento'|__('newmanagement') }}"></td>
+      <td></td>
+    </tr>
+    {% endif %}
+  </tbody>
+</table>

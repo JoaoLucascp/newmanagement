@@ -1,0 +1,71 @@
+{#
+  Partial: tabela de Rede da Empresa
+  Variáveis herdadas: network, ipbx_id, companies_id, csrf, action_url, can_write, can_delete
+#}
+<table class="tab_cadre_fixehov" id="nm-net-table">
+  <thead>
+    <tr class="headerRow noHover">
+      <th>{{ 'IP Rede'|__('newmanagement') }}</th>
+      <th>{{ 'Máscara'|__('newmanagement') }}</th>
+      <th>{{ 'Gateway'|__('newmanagement') }}</th>
+      <th>{{ 'DNS Primário'|__('newmanagement') }}</th>
+      <th>{{ 'DNS Secundário'|__('newmanagement') }}</th>
+      <th>{{ 'Fornecedor'|__('newmanagement') }}</th>
+      <th style="text-align:right">
+        {% if can_write %}
+        <button type="button"
+                id="nm-net-add-btn"
+                class="btn btn-sm btn-outline-secondary"
+                data-action="add_network"
+                data-ipbx-id="{{ ipbx_id }}"
+                data-companies-id="{{ companies_id }}"
+                data-csrf="{{ csrf|e('html_attr') }}"
+                data-url="{{ action_url|e('html_attr') }}"
+                {{ ipbx_id == 0 ? 'disabled' }}>
+          <i class="ti ti-plus"></i> {{ 'Adicionar Rede'|__('newmanagement') }}
+        </button>
+        {% endif %}
+      </th>
+    </tr>
+  </thead>
+  <tbody id="nm-net-tbody">
+    {% for row in network %}
+    <tr class="tab_bg_1" id="nm-net-row-{{ row.id }}">
+      <td>{{ row.ip_network|e }}</td>
+      <td>{{ row.netmask|e }}</td>
+      <td>{{ row.gateway|e }}</td>
+      <td>{{ row.dns_primary|e }}</td>
+      <td>{{ row.dns_secondary|e }}</td>
+      <td>{{ row.supplier|default('')|e }}</td>
+      <td>
+        {% if can_delete %}
+        <button type="button"
+                class="btn btn-sm btn-icon nm-del-btn"
+                data-action="delete_network"
+                data-id="{{ row.id }}"
+                data-row="nm-net-row-{{ row.id }}"
+                data-companies-id="{{ companies_id }}"
+                data-csrf="{{ csrf|e('html_attr') }}"
+                data-url="{{ action_url|e('html_attr') }}"
+                data-confirm="{{ 'Remover rede?'|__('newmanagement') }}"
+                title="{{ 'Remover'|__('newmanagement') }}">
+          <i class="ti ti-trash text-danger"></i>
+        </button>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+
+    {% if can_write %}
+    <tr class="tab_bg_2" id="nm-net-add-row">
+      <td><input type="text" id="nm-net-ip_network"    autocomplete="off" class="form-control form-control-sm" placeholder="192.168.1.0"></td>
+      <td><input type="text" id="nm-net-netmask"       autocomplete="off" class="form-control form-control-sm" placeholder="255.255.255.0"></td>
+      <td><input type="text" id="nm-net-gateway"       autocomplete="off" class="form-control form-control-sm" placeholder="192.168.1.1"></td>
+      <td><input type="text" id="nm-net-dns_primary"   autocomplete="off" class="form-control form-control-sm" placeholder="8.8.8.8"></td>
+      <td><input type="text" id="nm-net-dns_secondary" autocomplete="off" class="form-control form-control-sm" placeholder="8.8.4.4"></td>
+      <td><input type="text" id="nm-net-supplier"      autocomplete="off" class="form-control form-control-sm" placeholder="{{ 'Fornecedor'|__('newmanagement') }}"></td>
+      <td></td>
+    </tr>
+    {% endif %}
+  </tbody>
+</table>
