@@ -129,7 +129,6 @@ class Company extends \CommonDBTM
         $menu['page']  = '/plugins/newmanagement/front/company.php';
         $menu['icon']  = 'ti ti-building';
 
-        // [FIX] Cada item do menu só é exibido se o usuário tiver direito de leitura
         if (\Session::haveRight('plugin_newmanagement_company', READ)) {
             $menu['options']['company']['title']           = __('Empresas', 'newmanagement');
             $menu['options']['company']['page']            = '/plugins/newmanagement/front/company.php';
@@ -209,6 +208,13 @@ class Company extends \CommonDBTM
         $this->showFormHeader($options);
 
         // ------------------------------------------------------------------
+        // [FIX A3] Registra o script externo via helper nativo do GLPI.
+        // Isso garante que o JS seja carregado no <head> de forma correta,
+        // sem bloco <script> inline dentro do método showForm().
+        // ------------------------------------------------------------------
+        \Html::requireJs('newmanagement_company_form');
+
+        // ------------------------------------------------------------------
         // Linha 1: Nome (obrigatório) | ID (somente leitura)
         // ------------------------------------------------------------------
         echo '<tr class="tab_bg_1">';
@@ -254,7 +260,6 @@ class Company extends \CommonDBTM
 
         // ------------------------------------------------------------------
         // Linha 3: E-mail | Telefone
-        // [FIX] type="email" para validação nativa do browser
         // ------------------------------------------------------------------
         echo '<tr class="tab_bg_1">';
         echo '<td>' . __('E-mail', 'newmanagement') . '</td>';
@@ -324,138 +329,6 @@ class Company extends \CommonDBTM
         echo '</tr>';
 
         $this->showFormButtons($options);
-
-        // ------------------------------------------------------------------
-        // JavaScript — BrasilAPI (CNPJ + CEP)
-        // [FIX] AbortController com timeout de 8s para evitar fetch pendente indefinidamente
-        // ------------------------------------------------------------------
-        echo <<<'JS'
-<script>
-(function () {
-    'use strict';
-
-    /* ── utilitários ── */
-    function soDigitos(v) { return v.replace(/\D/g, ''); }
-
-    function setFeedback(id, msg, tipo) {
-        const el = document.getElementById(id);
-        if (!el) return;
-        el.textContent = msg;
-        el.className = 'nm-feedback' + (tipo ? ' nm-feedback--' + tipo : '');
-    }
-
-    function setLoading(btnId, loading) {
-        const btn = document.getElementById(btnId);
-        if (!btn) return;
-        btn.disabled = loading;
-        btn.innerHTML = loading
-            ? '<span class="nm-spinner"></span> Buscando…'
-            : '<i class="ti ti-search"></i> Buscar';
-    }
-
-    /* [FIX] fetch com timeout via AbortController */
-    function fetchComTimeout(url, timeoutMs = 8000) {
-        const ctrl = new AbortController();
-        const timer = setTimeout(() => ctrl.abort(), timeoutMs);
-        return fetch(url, { signal: ctrl.signal }).finally(() => clearTimeout(timer));
-    }
-
-    /* ── máscara CNPJ ── */
-    document.getElementById('cnpj')?.addEventListener('input', function () {
-        let v = soDigitos(this.value).slice(0, 14);
-        if (v.length > 12) v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
-        else if (v.length > 8) v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})/, '$1.$2.$3/$4');
-        else if (v.length > 5) v = v.replace(/^(\d{2})(\d{3})(\d{3})/, '$1.$2.$3');
-        else if (v.length > 2) v = v.replace(/^(\d{2})(\d+)/, '$1.$2');
-        this.value = v;
-    });
-
-    /* ── máscara CEP ── */
-    document.getElementById('cep')?.addEventListener('input', function () {
-        let v = soDigitos(this.value).slice(0, 8);
-        if (v.length > 5) v = v.replace(/^(\d{5})(\d+)/, '$1-$2');
-        this.value = v;
-    });
-
-    /* ── busca CNPJ ── */
-    document.getElementById('btn-buscar-cnpj')?.addEventListener('click', async function () {
-        const raw = soDigitos(document.getElementById('cnpj')?.value || '');
-        if (raw.length !== 14) {
-            setFeedback('cnpj-feedback', 'CNPJ deve ter 14 d\u00edgitos.', 'error');
-            return;
-        }
-        setLoading('btn-buscar-cnpj', true);
-        setFeedback('cnpj-feedback', '', '');
-        try {
-            const res  = await fetchComTimeout('https://brasilapi.com.br/api/cnpj/v1/' + raw);
-            const data = await res.json();
-            if (!res.ok) { setFeedback('cnpj-feedback', data.message || 'CNPJ n\u00e3o encontrado.', 'error'); return; }
-
-            const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
-            set('razao_social', data.razao_social);
-            set('email',  data.email);
-            set('phone',  data.ddd_telefone_1 ? '(' + data.ddd_telefone_1.slice(0,2) + ') ' + data.ddd_telefone_1.slice(2) : '');
-
-            const partes = [
-                data.logradouro  ? data.descricao_tipo_de_logradouro + ' ' + data.logradouro : '',
-                data.numero      ? 'N\u00ba ' + data.numero : '',
-                data.complemento || '',
-                data.bairro      || '',
-                data.municipio   ? data.municipio + (data.uf ? ' - ' + data.uf : '') : '',
-            ].filter(Boolean);
-            set('address', partes.join(', '));
-
-            if (data.cep) {
-                const c = soDigitos(data.cep).slice(0, 8);
-                set('cep', c.length === 8 ? c.replace(/^(\d{5})(\d{3})$/, '$1-$2') : c);
-            }
-            setFeedback('cnpj-feedback', '\u2714 Dados preenchidos com sucesso.', 'success');
-        } catch (err) {
-            const msg = err.name === 'AbortError'
-                ? 'Tempo limite excedido. Tente novamente.'
-                : 'Erro de conex\u00e3o com a BrasilAPI.';
-            setFeedback('cnpj-feedback', msg, 'error');
-            console.error('[NM] CNPJ fetch error:', err);
-        } finally {
-            setLoading('btn-buscar-cnpj', false);
-        }
-    });
-
-    /* ── busca CEP ── */
-    document.getElementById('btn-buscar-cep')?.addEventListener('click', async function () {
-        const raw = soDigitos(document.getElementById('cep')?.value || '');
-        if (raw.length !== 8) {
-            setFeedback('cep-feedback', 'CEP deve ter 8 d\u00edgitos.', 'error');
-            return;
-        }
-        setLoading('btn-buscar-cep', true);
-        setFeedback('cep-feedback', '', '');
-        try {
-            const res  = await fetchComTimeout('https://brasilapi.com.br/api/cep/v2/' + raw);
-            const data = await res.json();
-            if (!res.ok) { setFeedback('cep-feedback', data.message || 'CEP n\u00e3o encontrado.', 'error'); return; }
-
-            const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
-            const partes = [
-                data.street       || '',
-                data.neighborhood || '',
-                data.city         ? data.city + (data.state ? ' - ' + data.state : '') : '',
-            ].filter(Boolean);
-            set('address', partes.join(', '));
-            setFeedback('cep-feedback', '\u2714 Endere\u00e7o preenchido.', 'success');
-        } catch (err) {
-            const msg = err.name === 'AbortError'
-                ? 'Tempo limite excedido. Tente novamente.'
-                : 'Erro de conex\u00e3o com a BrasilAPI.';
-            setFeedback('cep-feedback', msg, 'error');
-            console.error('[NM] CEP fetch error:', err);
-        } finally {
-            setLoading('btn-buscar-cep', false);
-        }
-    });
-})();
-</script>
-JS;
 
         return true;
     }
