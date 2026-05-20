@@ -17,6 +17,11 @@ class Ipbx extends \CommonDBTM
     public static $itemtype  = Company::class;
     public static $items_id  = 'companies_id';
 
+    // Constantes para nomes de tabelas filhas
+    const TABLE_EXTENSIONS = 'glpi_plugin_newmanagement_ipbx_extensions';
+    const TABLE_DEVICES    = 'glpi_plugin_newmanagement_ipbx_devices';
+    const TABLE_NETWORK    = 'glpi_plugin_newmanagement_ipbx_network';
+
     public static function getTypeName($nb = 0): string
     {
         return _n('Servidor IPBX', 'Servidores IPBX', $nb, 'newmanagement');
@@ -41,34 +46,91 @@ class Ipbx extends \CommonDBTM
     }
 
     // ======================================================================
+    // Buscas nativas GLPI
+    // ======================================================================
+    public function rawSearchOptions(): array
+    {
+        $tab = parent::rawSearchOptions();
+
+        $tab[] = [
+            'id'            => 1,
+            'table'         => self::getTable(),
+            'field'         => 'model',
+            'name'          => __('Modelo', 'newmanagement'),
+            'searchtype'    => 'contains',
+            'datatype'      => 'string',
+        ];
+
+        $tab[] = [
+            'id'            => 2,
+            'table'         => self::getTable(),
+            'field'         => 'ip_local',
+            'name'          => __('IP Local', 'newmanagement'),
+            'searchtype'    => 'contains',
+            'datatype'      => 'string',
+        ];
+
+        $tab[] = [
+            'id'            => 3,
+            'table'         => self::getTable(),
+            'field'         => 'ip_external',
+            'name'          => __('IP Externo', 'newmanagement'),
+            'searchtype'    => 'contains',
+            'datatype'      => 'string',
+        ];
+
+        $tab[] = [
+            'id'            => 4,
+            'table'         => self::getTable(),
+            'field'         => 'server_version',
+            'name'          => __('Versão', 'newmanagement'),
+            'searchtype'    => 'contains',
+            'datatype'      => 'string',
+        ];
+
+        return $tab;
+    }
+
+    // ======================================================================
     // Tab principal
     // ======================================================================
     public function showTabForCompany(int $companies_id): void
     {
         global $DB;
 
+        // [FIX] Verificação de direito de leitura
+        if (!\Session::haveRight(self::$rightname, READ)) {
+            echo '<div class="alert alert-warning">' . __('Acesso negado.', 'newmanagement') . '</div>';
+            return;
+        }
+
         $rows    = $DB->request(['FROM' => self::getTable(), 'WHERE' => ['companies_id' => $companies_id, 'is_deleted' => 0], 'LIMIT' => 1]);
         $ipbx_id = 0;
         $fields  = ['id' => 0, 'companies_id' => $companies_id, 'model' => '', 'server_version' => '', 'ip_local' => '', 'ip_external' => '', 'web_port' => '', 'web_password' => '', 'ssh_port' => '', 'ssh_password' => '', 'comment' => ''];
 
+        // [FIX] Flags indicando se senha existe no banco (sem expor o valor no HTML)
+        $has_web_password = false;
+        $has_ssh_password = false;
+
         foreach ($rows as $row) {
             $fields  = $row;
             $ipbx_id = (int) $row['id'];
-            try {
-                if (!empty($fields['web_password'])) {
-                    $fields['web_password'] = \Toolbox::sodiumDecrypt($fields['web_password']);
-                }
-            } catch (\Throwable $e) {}
-            try {
-                if (!empty($fields['ssh_password'])) {
-                    $fields['ssh_password'] = \Toolbox::sodiumDecrypt($fields['ssh_password']);
-                }
-            } catch (\Throwable $e) {}
+            // [FIX] Nunca colocar senha descriptografada no value= do input
+            // Apenas indicamos se existe senha salva para exibir placeholder correto
+            $has_web_password = !empty($fields['web_password']);
+            $has_ssh_password = !empty($fields['ssh_password']);
+            // Limpa os valores de senha — o JS não precisa deles no HTML
+            $fields['web_password'] = '';
+            $fields['ssh_password'] = '';
         }
 
         $csrf   = \Session::getNewCSRFToken();
         $action = \Plugin::getWebDir('newmanagement') . '/ajax/ipbx_sub.php';
         $h      = fn($v) => htmlspecialchars((string) ($v ?? ''), ENT_QUOTES);
+
+        // [FIX] Sinaliza para o backend se a senha deve ser mantida (campo vazio = não alterar)
+        $web_placeholder = $has_web_password ? __('(senha salva — deixe em branco para manter)', 'newmanagement') : __('Senha Web', 'newmanagement');
+        $ssh_placeholder = $has_ssh_password ? __('(senha salva — deixe em branco para manter)', 'newmanagement') : __('Senha SSH', 'newmanagement');
 
         echo '<div class="nm-ipbx-tab" data-action-url="' . $h($action) . '" data-companies-id="' . $companies_id . '">';
 
@@ -99,7 +161,8 @@ class Ipbx extends \CommonDBTM
         echo '<td><input type="text" id="nm-ipbx-web_port" autocomplete="off" value="' . $h($fields['web_port']) . '" class="form-control" placeholder="80"></td>';
         echo '<td>' . __('Senha Web', 'newmanagement') . '</td>';
         echo '<td><div class="input-group">';
-        echo '<input type="password" id="nm-web-password" class="form-control" autocomplete="new-password" value="' . $h($fields['web_password']) . '">';
+        // [FIX] value= sempre vazio — placeholder informa ao usuário se há senha salva
+        echo '<input type="password" id="nm-web-password" class="form-control" autocomplete="new-password" value="" placeholder="' . $h($web_placeholder) . '">';
         echo '<button type="button" class="btn btn-sm btn-icon nm-btn-eye" data-target="nm-web-password"><i class="ti ti-eye"></i></button>';
         echo '</div></td>';
         echo '</tr>';
@@ -109,7 +172,8 @@ class Ipbx extends \CommonDBTM
         echo '<td><input type="text" id="nm-ipbx-ssh_port" autocomplete="off" value="' . $h($fields['ssh_port']) . '" class="form-control" placeholder="22"></td>';
         echo '<td>' . __('Senha SSH', 'newmanagement') . '</td>';
         echo '<td><div class="input-group">';
-        echo '<input type="password" id="nm-ssh-password" class="form-control" autocomplete="new-password" value="' . $h($fields['ssh_password']) . '">';
+        // [FIX] value= sempre vazio — placeholder informa ao usuário se há senha salva
+        echo '<input type="password" id="nm-ssh-password" class="form-control" autocomplete="new-password" value="" placeholder="' . $h($ssh_placeholder) . '">';
         echo '<button type="button" class="btn btn-sm btn-icon nm-btn-eye" data-target="nm-ssh-password"><i class="ti ti-eye"></i></button>';
         echo '</div></td>';
         echo '</tr>';
@@ -193,15 +257,15 @@ class Ipbx extends \CommonDBTM
     {
         global $DB;
         $rows = ($ipbx_id > 0)
-            ? $DB->request(['FROM' => 'glpi_plugin_newmanagement_ipbx_extensions', 'WHERE' => ['ipbx_id' => $ipbx_id], 'ORDER' => 'number ASC'])
+            ? $DB->request(['FROM' => self::TABLE_EXTENSIONS, 'WHERE' => ['ipbx_id' => $ipbx_id], 'ORDER' => 'number ASC'])
             : [];
 
         $h = fn($v) => htmlspecialchars((string) ($v ?? ''), ENT_QUOTES);
 
-        echo '<table class="tab_cadre_fixehov" id="nm-ext-table">';
+        // [FIX] Botão desabilitado se IPBX ainda não foi salvo
+        $add_disabled = ($ipbx_id === 0) ? ' disabled title="' . __('Salve o IPBX antes de adicionar ramais', 'newmanagement') . '"' : '';
 
-        // thead — padrão GLPI 10/11
-        // Ordem: Número | Senha | IP Aparelho | Usuário | Grava? | Departamento | [botão no th]
+        echo '<table class="tab_cadre_fixehov" id="nm-ext-table">';
         echo '<thead>';
         echo '<tr class="headerRow noHover">';
         echo '<th>' . __('Número', 'newmanagement') . '</th>';
@@ -217,7 +281,9 @@ class Ipbx extends \CommonDBTM
         echo ' data-action="add_extension"';
         echo ' data-ipbx-id="' . $ipbx_id . '"';
         echo ' data-companies-id="' . $companies_id . '"';
-        echo ' data-url="' . $h($action) . '">';
+        echo ' data-csrf="' . $h($csrf) . '"';  // [FIX] CSRF no botão
+        echo ' data-url="' . $h($action) . '"';
+        echo $add_disabled . '>';
         echo '<i class="ti ti-plus"></i> ' . __('Adicionar Ramal', 'newmanagement');
         echo '</button>';
         echo '</th>';
@@ -226,42 +292,35 @@ class Ipbx extends \CommonDBTM
 
         echo '<tbody id="nm-ext-tbody">';
 
-        // Linhas existentes — class="tab_bg_1"
         foreach ($rows as $row) {
             echo self::renderExtensionRow((int) $row['id'], $row, $companies_id, $csrf, $action);
         }
 
-        // Linha de adição — class="tab_bg_2"
         echo '<tr class="tab_bg_2" id="nm-ext-add-row">';
 
-        // Número
         echo '<td>';
         echo '<input type="text" id="nm-ext-number" autocomplete="off"';
         echo ' class="form-control form-control-sm"';
         echo ' placeholder="' . __('Número', 'newmanagement') . '">';
         echo '</td>';
 
-        // Senha — input direto (não usa slot)
         echo '<td>';
         echo '<input type="password" id="nm-ext-password"';
         echo ' class="form-control form-control-sm"';
         echo ' placeholder="' . __('Senha', 'newmanagement') . '" autocomplete="new-password">';
         echo '</td>';
 
-        // IP Aparelho
         echo '<td>';
         echo '<input type="text" id="nm-ext-device_ip" autocomplete="off"';
         echo ' class="form-control form-control-sm" placeholder="IP">';
         echo '</td>';
 
-        // Usuário
         echo '<td>';
         echo '<input type="text" id="nm-ext-user_name" autocomplete="off"';
         echo ' class="form-control form-control-sm"';
         echo ' placeholder="' . __('Usuário', 'newmanagement') . '">';
         echo '</td>';
 
-        // Grava?
         echo '<td>';
         echo '<select id="nm-ext-records_calls" class="form-select form-select-sm">';
         echo '<option value="0">' . __('Não', 'newmanagement') . '</option>';
@@ -269,14 +328,12 @@ class Ipbx extends \CommonDBTM
         echo '</select>';
         echo '</td>';
 
-        // Departamento
         echo '<td>';
         echo '<input type="text" id="nm-ext-department" autocomplete="off"';
         echo ' class="form-control form-control-sm"';
         echo ' placeholder="' . __('Departamento', 'newmanagement') . '">';
         echo '</td>';
 
-        // Célula vazia (alinha com o th do botão)
         echo '<td></td>';
 
         echo '</tr>';
@@ -288,7 +345,6 @@ class Ipbx extends \CommonDBTM
     {
         $h = fn($v) => htmlspecialchars((string) ($v ?? ''), ENT_QUOTES);
 
-        // Ordem: Número | Senha | IP Aparelho | Usuário | Grava? | Departamento | Ação
         return '<tr class="tab_bg_1" id="nm-ext-row-' . $id . '">'
             . '<td>' . $h($row['number']) . '</td>'
             . '<td>••••••</td>'
@@ -303,6 +359,7 @@ class Ipbx extends \CommonDBTM
             . ' data-id="' . $id . '"'
             . ' data-row="nm-ext-row-' . $id . '"'
             . ' data-companies-id="' . $companies_id . '"'
+            . ' data-csrf="' . htmlspecialchars($csrf, ENT_QUOTES) . '"'  // [FIX] CSRF no delete
             . ' data-url="' . htmlspecialchars($action, ENT_QUOTES) . '"'
             . ' data-confirm="' . __('Remover ramal?', 'newmanagement') . '"'
             . ' title="' . __('Remover', 'newmanagement') . '">'
@@ -319,15 +376,15 @@ class Ipbx extends \CommonDBTM
     {
         global $DB;
         $rows = ($ipbx_id > 0)
-            ? $DB->request(['FROM' => 'glpi_plugin_newmanagement_ipbx_devices', 'WHERE' => ['ipbx_id' => $ipbx_id], 'ORDER' => 'device_type ASC'])
+            ? $DB->request(['FROM' => self::TABLE_DEVICES, 'WHERE' => ['ipbx_id' => $ipbx_id], 'ORDER' => 'device_type ASC'])
             : [];
 
         $h = fn($v) => htmlspecialchars((string) ($v ?? ''), ENT_QUOTES);
 
-        echo '<table class="tab_cadre_fixehov" id="nm-dev-table">';
+        // [FIX] Botão desabilitado se IPBX ainda não foi salvo
+        $add_disabled = ($ipbx_id === 0) ? ' disabled title="' . __('Salve o IPBX antes de adicionar dispositivos', 'newmanagement') . '"' : '';
 
-        // thead — padrão GLPI 10/11
-        // Ordem: Tipo | IP | Login | Senha | [botão no th]
+        echo '<table class="tab_cadre_fixehov" id="nm-dev-table">';
         echo '<thead>';
         echo '<tr class="headerRow noHover">';
         echo '<th>' . __('Tipo', 'newmanagement') . '</th>';
@@ -341,7 +398,9 @@ class Ipbx extends \CommonDBTM
         echo ' data-action="add_device"';
         echo ' data-ipbx-id="' . $ipbx_id . '"';
         echo ' data-companies-id="' . $companies_id . '"';
-        echo ' data-url="' . $h($action) . '">';
+        echo ' data-csrf="' . $h($csrf) . '"';  // [FIX] CSRF no botão
+        echo ' data-url="' . $h($action) . '"';
+        echo $add_disabled . '>';
         echo '<i class="ti ti-plus"></i> ' . __('Adicionar Dispositivo', 'newmanagement');
         echo '</button>';
         echo '</th>';
@@ -350,42 +409,35 @@ class Ipbx extends \CommonDBTM
 
         echo '<tbody id="nm-dev-tbody">';
 
-        // Linhas existentes — class="tab_bg_1"
         foreach ($rows as $row) {
             echo self::renderDeviceRow((int) $row['id'], $row, $companies_id, $csrf, $action);
         }
 
-        // Linha de adição — class="tab_bg_2"
         echo '<tr class="tab_bg_2" id="nm-dev-add-row">';
 
-        // Tipo
         echo '<td>';
         echo '<input type="text" id="nm-dev-device_type" autocomplete="off"';
         echo ' class="form-control form-control-sm"';
         echo ' placeholder="' . __('Tipo', 'newmanagement') . '">';
         echo '</td>';
 
-        // IP
         echo '<td>';
         echo '<input type="text" id="nm-dev-ip_address" autocomplete="off"';
         echo ' class="form-control form-control-sm" placeholder="IP">';
         echo '</td>';
 
-        // Login
         echo '<td>';
         echo '<input type="text" id="nm-dev-login" autocomplete="off"';
         echo ' class="form-control form-control-sm"';
         echo ' placeholder="' . __('Login', 'newmanagement') . '">';
         echo '</td>';
 
-        // Senha — input direto
         echo '<td>';
         echo '<input type="password" id="nm-dev-password"';
         echo ' class="form-control form-control-sm"';
         echo ' placeholder="' . __('Senha', 'newmanagement') . '" autocomplete="new-password">';
         echo '</td>';
 
-        // Célula vazia (alinha com o th do botão)
         echo '<td></td>';
 
         echo '</tr>';
@@ -397,7 +449,6 @@ class Ipbx extends \CommonDBTM
     {
         $h = fn($v) => htmlspecialchars((string) ($v ?? ''), ENT_QUOTES);
 
-        // Ordem: Tipo | IP | Login | Senha | Ação
         return '<tr class="tab_bg_1" id="nm-dev-row-' . $id . '">'
             . '<td>' . $h($row['device_type']) . '</td>'
             . '<td>' . $h($row['ip_address']) . '</td>'
@@ -410,6 +461,7 @@ class Ipbx extends \CommonDBTM
             . ' data-id="' . $id . '"'
             . ' data-row="nm-dev-row-' . $id . '"'
             . ' data-companies-id="' . $companies_id . '"'
+            . ' data-csrf="' . htmlspecialchars($csrf, ENT_QUOTES) . '"'  // [FIX] CSRF no delete
             . ' data-url="' . htmlspecialchars($action, ENT_QUOTES) . '"'
             . ' data-confirm="' . __('Remover dispositivo?', 'newmanagement') . '"'
             . ' title="' . __('Remover', 'newmanagement') . '">'
@@ -426,15 +478,15 @@ class Ipbx extends \CommonDBTM
     {
         global $DB;
         $rows = ($ipbx_id > 0)
-            ? $DB->request(['FROM' => 'glpi_plugin_newmanagement_ipbx_network', 'WHERE' => ['ipbx_id' => $ipbx_id]])
+            ? $DB->request(['FROM' => self::TABLE_NETWORK, 'WHERE' => ['ipbx_id' => $ipbx_id]])
             : [];
 
         $h = fn($v) => htmlspecialchars((string) ($v ?? ''), ENT_QUOTES);
 
-        echo '<table class="tab_cadre_fixehov" id="nm-net-table">';
+        // [FIX] Botão desabilitado se IPBX ainda não foi salvo
+        $add_disabled = ($ipbx_id === 0) ? ' disabled title="' . __('Salve o IPBX antes de adicionar redes', 'newmanagement') . '"' : '';
 
-        // thead — padrão GLPI 10/11
-        // Ordem: IP Rede | Máscara | Gateway | DNS Primário | DNS Secundário | Fornecedor | [botão no th]
+        echo '<table class="tab_cadre_fixehov" id="nm-net-table">';
         echo '<thead>';
         echo '<tr class="headerRow noHover">';
         echo '<th>' . __('IP Rede', 'newmanagement') . '</th>';
@@ -450,7 +502,9 @@ class Ipbx extends \CommonDBTM
         echo ' data-action="add_network"';
         echo ' data-ipbx-id="' . $ipbx_id . '"';
         echo ' data-companies-id="' . $companies_id . '"';
-        echo ' data-url="' . $h($action) . '">';
+        echo ' data-csrf="' . $h($csrf) . '"';  // [FIX] CSRF no botão
+        echo ' data-url="' . $h($action) . '"';
+        echo $add_disabled . '>';
         echo '<i class="ti ti-plus"></i> ' . __('Adicionar Rede', 'newmanagement');
         echo '</button>';
         echo '</th>';
@@ -459,12 +513,10 @@ class Ipbx extends \CommonDBTM
 
         echo '<tbody id="nm-net-tbody">';
 
-        // Linhas existentes — class="tab_bg_1"
         foreach ($rows as $row) {
             echo self::renderNetworkRow((int) $row['id'], $row, $companies_id, $csrf, $action);
         }
 
-        // Linha de adição — class="tab_bg_2"
         echo '<tr class="tab_bg_2" id="nm-net-add-row">';
 
         echo '<td>';
@@ -492,14 +544,12 @@ class Ipbx extends \CommonDBTM
         echo ' class="form-control form-control-sm" placeholder="8.8.4.4">';
         echo '</td>';
 
-        // Fornecedor
         echo '<td>';
         echo '<input type="text" id="nm-net-supplier" autocomplete="off"';
         echo ' class="form-control form-control-sm"';
         echo ' placeholder="' . __('Fornecedor', 'newmanagement') . '">';
         echo '</td>';
 
-        // Célula vazia (alinha com o th do botão)
         echo '<td></td>';
 
         echo '</tr>';
@@ -511,7 +561,6 @@ class Ipbx extends \CommonDBTM
     {
         $h = fn($v) => htmlspecialchars((string) ($v ?? ''), ENT_QUOTES);
 
-        // Ordem: IP Rede | Máscara | Gateway | DNS Primário | DNS Secundário | Fornecedor | Ação
         return '<tr class="tab_bg_1" id="nm-net-row-' . $id . '">'
             . '<td>' . $h($row['ip_network']) . '</td>'
             . '<td>' . $h($row['netmask']) . '</td>'
@@ -526,6 +575,7 @@ class Ipbx extends \CommonDBTM
             . ' data-id="' . $id . '"'
             . ' data-row="nm-net-row-' . $id . '"'
             . ' data-companies-id="' . $companies_id . '"'
+            . ' data-csrf="' . htmlspecialchars($csrf, ENT_QUOTES) . '"'  // [FIX] CSRF no delete
             . ' data-url="' . htmlspecialchars($action, ENT_QUOTES) . '"'
             . ' data-confirm="' . __('Remover rede?', 'newmanagement') . '"'
             . ' title="' . __('Remover', 'newmanagement') . '">'
