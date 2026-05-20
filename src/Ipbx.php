@@ -17,6 +17,9 @@ class Ipbx extends \CommonDBTM
     public static $itemtype  = Company::class;
     public static $items_id  = 'companies_id';
 
+    /** Itens por página nas sub-tabelas */
+    const PAGE_SIZE = 20;
+
     // Constantes para nomes de tabelas filhas
     const TABLE_EXTENSIONS = 'glpi_plugin_newmanagement_ipbx_extensions';
     const TABLE_DEVICES    = 'glpi_plugin_newmanagement_ipbx_devices';
@@ -96,17 +99,18 @@ class Ipbx extends \CommonDBTM
     }
 
     // ======================================================================
-    // Tab principal — [FIX A1] Usa TemplateRenderer em vez de echo HTML
+    // Tab principal — usa TemplateRenderer via Twig
     // ======================================================================
 
     /**
      * Renderiza a aba IPBX completa via Twig.
      *
-     * Responsabilidades deste método:
-     *   - Consultar o banco (campos IPBX + sub-tabelas)
-     *   - Verificar permissões
-     *   - Preparar arrays de dados limpos (senhas nunca expostas)
-     *   - Delegar TODA a apresentação ao template Twig
+     * Paginação server-side:
+     *   - ext_page (GET, int ≥ 1): página atual dos ramais
+     *   - dev_page (GET, int ≥ 1): página atual dos dispositivos
+     *   Cada página carrega PAGE_SIZE registros via LIMIT/OFFSET.
+     *   A navegação (prev/next) faz fetch AJAX ao endpoint ipbx_paginate.php
+     *   e substitui apenas o tbody + controles — sem reload da aba inteira.
      */
     public function showTabForCompany(int $companies_id): void
     {
@@ -144,19 +148,27 @@ class Ipbx extends \CommonDBTM
             $ipbx_id          = (int) $row['id'];
             $has_web_password = !empty($fields['web_password']);
             $has_ssh_password = !empty($fields['ssh_password']);
-            // Nunca expor senhas no HTML
             $fields['web_password'] = '';
             $fields['ssh_password'] = '';
         }
 
-        // --- Sub-tabelas ---
-        $extensions = ($ipbx_id > 0)
-            ? iterator_to_array($DB->request(['FROM' => self::TABLE_EXTENSIONS, 'WHERE' => ['ipbx_id' => $ipbx_id], 'ORDER' => 'number ASC']))
-            : [];
+        // --- Sub-tabelas paginadas ---
+        $ext_page = max(1, (int) ($_GET['ext_page'] ?? 1));
+        $dev_page = max(1, (int) ($_GET['dev_page'] ?? 1));
 
-        $devices = ($ipbx_id > 0)
-            ? iterator_to_array($DB->request(['FROM' => self::TABLE_DEVICES, 'WHERE' => ['ipbx_id' => $ipbx_id], 'ORDER' => 'device_type ASC']))
-            : [];
+        [$extensions, $ext_total] = self::fetchPage(
+            self::TABLE_EXTENSIONS,
+            ['ipbx_id' => $ipbx_id],
+            'number ASC',
+            $ext_page
+        );
+
+        [$devices, $dev_total] = self::fetchPage(
+            self::TABLE_DEVICES,
+            ['ipbx_id' => $ipbx_id],
+            'device_type ASC',
+            $dev_page
+        );
 
         $network = ($ipbx_id > 0)
             ? iterator_to_array($DB->request(['FROM' => self::TABLE_NETWORK, 'WHERE' => ['ipbx_id' => $ipbx_id]]))
@@ -166,31 +178,72 @@ class Ipbx extends \CommonDBTM
         \Glpi\Application\View\TemplateRenderer::getInstance()->display(
             '@GlpiPlugin/Newmanagement/ipbx/tab.html.twig',
             [
-                'action_url'     => \Plugin::getWebDir('newmanagement') . '/ajax/ipbx_sub.php',
-                'companies_id'   => $companies_id,
-                'ipbx_id'        => $ipbx_id,
-                'fields'         => $fields,
-                'ipbx_action'    => $ipbx_id > 0 ? 'update_ipbx' : 'add_ipbx',
-                'csrf'           => \Session::getNewCSRFToken(),
-                'can_write'      => $can_write,
-                'can_delete'     => $can_delete,
-                'web_placeholder' => $has_web_password
+                'action_url'       => \Plugin::getWebDir('newmanagement') . '/ajax/ipbx_sub.php',
+                'paginate_url'     => \Plugin::getWebDir('newmanagement') . '/ajax/ipbx_paginate.php',
+                'companies_id'     => $companies_id,
+                'ipbx_id'          => $ipbx_id,
+                'fields'           => $fields,
+                'ipbx_action'      => $ipbx_id > 0 ? 'update_ipbx' : 'add_ipbx',
+                'csrf'             => \Session::getNewCSRFToken(),
+                'can_write'        => $can_write,
+                'can_delete'       => $can_delete,
+                'web_placeholder'  => $has_web_password
                     ? __('(senha salva — deixe em branco para manter)', 'newmanagement')
                     : __('Senha Web', 'newmanagement'),
-                'ssh_placeholder' => $has_ssh_password
+                'ssh_placeholder'  => $has_ssh_password
                     ? __('(senha salva — deixe em branco para manter)', 'newmanagement')
                     : __('Senha SSH', 'newmanagement'),
-                'extensions'     => $extensions,
-                'devices'        => $devices,
-                'network'        => $network,
+                'extensions'       => $extensions,
+                'ext_page'         => $ext_page,
+                'ext_total'        => $ext_total,
+                'ext_page_size'    => self::PAGE_SIZE,
+                'devices'          => $devices,
+                'dev_page'         => $dev_page,
+                'dev_total'        => $dev_total,
+                'dev_page_size'    => self::PAGE_SIZE,
+                'network'          => $network,
             ]
         );
     }
 
     // ======================================================================
-    // Métodos estáticos auxiliares — usados pelo AJAX para renderizar
-    // linhas individuais ao adicionar um item sem recarregar a página.
-    // Permanecem em PHP puro pois retornam string para o JSON do AJAX.
+    // fetchPage — helper de paginação reutilizável
+    // ======================================================================
+
+    /**
+     * Busca uma página de registros com LIMIT/OFFSET e retorna também o total.
+     *
+     * @param string $table   Nome da tabela
+     * @param array  $where   Critérios WHERE
+     * @param string $order   Cláusula ORDER BY
+     * @param int    $page    Página atual (base 1)
+     * @return array{0: array, 1: int}  [rows, total]
+     */
+    public static function fetchPage(string $table, array $where, string $order, int $page): array
+    {
+        global $DB;
+
+        // Garante que ipbx_id > 0 antes de bater no banco
+        if (empty($where['ipbx_id']) || (int) $where['ipbx_id'] <= 0) {
+            return [[], 0];
+        }
+
+        $total = countElementsInTable($table, $where);
+        $offset = ($page - 1) * self::PAGE_SIZE;
+
+        $rows = iterator_to_array($DB->request([
+            'FROM'   => $table,
+            'WHERE'  => $where,
+            'ORDER'  => $order,
+            'LIMIT'  => self::PAGE_SIZE,
+            'START'  => $offset,
+        ]));
+
+        return [$rows, (int) $total];
+    }
+
+    // ======================================================================
+    // Métodos estáticos auxiliares — renderizam linhas individuais para o AJAX
     // ======================================================================
 
     public static function renderExtensionRow(int $id, array $row, int $companies_id, string $csrf, string $action, bool $can_delete = true): string

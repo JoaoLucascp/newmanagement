@@ -1,65 +1,134 @@
 {#
-  Partial: tabela de Dispositivos
-  Variáveis herdadas: devices, ipbx_id, companies_id, csrf, action_url, can_write, can_delete
-#}
-<table class="tab_cadre_fixehov" id="nm-dev-table">
-  <thead>
-    <tr class="headerRow noHover">
-      <th>{{ 'Tipo'|__('newmanagement') }}</th>
-      <th>{{ 'IP'|__('newmanagement') }}</th>
-      <th>{{ 'Login'|__('newmanagement') }}</th>
-      <th>{{ 'Senha'|__('newmanagement') }}</th>
-      <th style="text-align:right">
-        {% if can_write %}
-        <button type="button"
-                id="nm-dev-add-btn"
-                class="btn btn-sm btn-outline-secondary"
-                data-action="add_device"
-                data-ipbx-id="{{ ipbx_id }}"
-                data-companies-id="{{ companies_id }}"
-                data-csrf="{{ csrf|e('html_attr') }}"
-                data-url="{{ action_url|e('html_attr') }}"
-                {{ ipbx_id == 0 ? 'disabled' }}>
-          <i class="ti ti-plus"></i> {{ 'Adicionar Dispositivo'|__('newmanagement') }}
-        </button>
-        {% endif %}
-      </th>
-    </tr>
-  </thead>
-  <tbody id="nm-dev-tbody">
-    {% for row in devices %}
-    <tr class="tab_bg_1" id="nm-dev-row-{{ row.id }}">
-      <td>{{ row.device_type|e }}</td>
-      <td>{{ row.ip_address|e }}</td>
-      <td>{{ row.login|default('')|e }}</td>
-      <td>••••••</td>
-      <td>
-        {% if can_delete %}
-        <button type="button"
-                class="btn btn-sm btn-icon nm-del-btn"
-                data-action="delete_device"
-                data-id="{{ row.id }}"
-                data-row="nm-dev-row-{{ row.id }}"
-                data-companies-id="{{ companies_id }}"
-                data-csrf="{{ csrf|e('html_attr') }}"
-                data-url="{{ action_url|e('html_attr') }}"
-                data-confirm="{{ 'Remover dispositivo?'|__('newmanagement') }}"
-                title="{{ 'Remover'|__('newmanagement') }}">
-          <i class="ti ti-trash text-danger"></i>
-        </button>
-        {% endif %}
-      </td>
-    </tr>
-    {% endfor %}
+  Partial: Tabela de Dispositivos com paginação server-side.
 
-    {% if can_write %}
-    <tr class="tab_bg_2" id="nm-dev-add-row">
-      <td><input type="text" id="nm-dev-device_type" autocomplete="off" class="form-control form-control-sm" placeholder="{{ 'Tipo'|__('newmanagement') }}"></td>
-      <td><input type="text" id="nm-dev-ip_address" autocomplete="off" class="form-control form-control-sm" placeholder="IP"></td>
-      <td><input type="text" id="nm-dev-login" autocomplete="off" class="form-control form-control-sm" placeholder="{{ 'Login'|__('newmanagement') }}"></td>
-      <td><input type="password" id="nm-dev-password" class="form-control form-control-sm" placeholder="{{ 'Senha'|__('newmanagement') }}" autocomplete="new-password"></td>
-      <td></td>
-    </tr>
-    {% endif %}
-  </tbody>
-</table>
+  Variáveis esperadas (herdadas de tab.html.twig):
+    devices        — array de rows da página atual
+    dev_page       — int: página atual (base 1)
+    dev_total      — int: total de registros
+    dev_page_size  — int: itens por página
+    ipbx_id        — int
+    companies_id   — int
+    csrf           — string
+    action_url     — string
+    paginate_url   — string
+    can_write      — bool
+    can_delete     — bool
+#}
+
+{% set dev_pages = dev_page_size > 0 ? ((dev_total / dev_page_size)|round(0, 'ceil'))|int : 1 %}
+{% set dev_pages = dev_pages < 1 ? 1 : dev_pages %}
+
+<div id="nm-dev-section"
+     data-section="devices"
+     data-ipbx-id="{{ ipbx_id }}"
+     data-companies-id="{{ companies_id }}"
+     data-paginate-url="{{ paginate_url|e('html_attr') }}"
+     data-action-url="{{ action_url|e('html_attr') }}"
+     data-page="{{ dev_page }}"
+     data-page-size="{{ dev_page_size }}"
+     data-total="{{ dev_total }}">
+
+  <table class="tab_cadre_fixe">
+    <thead>
+      <tr>
+        <th>{{ 'Tipo'|__('newmanagement') }}</th>
+        <th>{{ 'IP'|__('newmanagement') }}</th>
+        <th>{{ 'Login'|__('newmanagement') }}</th>
+        <th>{{ 'Senha'|__('newmanagement') }}</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="nm-dev-tbody">
+      {% for row in devices %}
+        <tr class="tab_bg_1" id="nm-dev-row-{{ row.id }}">
+          <td>{{ row.device_type }}</td>
+          <td>{{ row.ip_address }}</td>
+          <td>{{ row.login }}</td>
+          <td>••••••</td>
+          <td>
+            {% if can_delete %}
+            <button type="button"
+                    class="btn btn-sm btn-icon nm-del-btn"
+                    data-action="delete_device"
+                    data-id="{{ row.id }}"
+                    data-row="nm-dev-row-{{ row.id }}"
+                    data-companies-id="{{ companies_id }}"
+                    data-csrf="{{ csrf|e('html_attr') }}"
+                    data-url="{{ action_url|e('html_attr') }}"
+                    data-confirm="{{ 'Remover dispositivo?'|__('newmanagement') }}"
+                    title="{{ 'Remover'|__('newmanagement') }}">
+              <i class="ti ti-trash text-danger"></i>
+            </button>
+            {% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr id="nm-dev-empty">
+          <td colspan="5" class="text-center text-muted py-3">
+            {{ 'Nenhum dispositivo cadastrado.'|__('newmanagement') }}
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {# Controles de paginação #}
+  <div id="nm-dev-pagination"
+       class="d-flex align-items-center justify-content-between mt-2"
+       {% if dev_pages <= 1 %}style="display:none!important"{% endif %}>
+
+    <span class="text-muted" style="font-size:0.8rem">
+      {{ 'Mostrando'|__('newmanagement') }}
+      {{ ((dev_page - 1) * dev_page_size) + 1 }}–{{ [dev_page * dev_page_size, dev_total]|min }}
+      {{ 'de'|__('newmanagement') }} {{ dev_total }}
+      {{ 'dispositivos'|__('newmanagement') }}
+    </span>
+
+    <div class="d-flex gap-1">
+      <button type="button"
+              class="btn btn-sm btn-outline-secondary nm-page-btn"
+              data-section-id="nm-dev-section"
+              data-dir="prev"
+              {% if dev_page <= 1 %}disabled{% endif %}
+              title="{{ 'Página anterior'|__('newmanagement') }}">
+        <i class="ti ti-chevron-left"></i>
+      </button>
+
+      <span class="btn btn-sm disabled px-3" style="min-width:90px;text-align:center">
+        {{ dev_page }} / {{ dev_pages }}
+      </span>
+
+      <button type="button"
+              class="btn btn-sm btn-outline-secondary nm-page-btn"
+              data-section-id="nm-dev-section"
+              data-dir="next"
+              {% if dev_page >= dev_pages %}disabled{% endif %}
+              title="{{ 'Próxima página'|__('newmanagement') }}">
+        <i class="ti ti-chevron-right"></i>
+      </button>
+    </div>
+  </div>
+
+  {# Formulário de adição de dispositivo #}
+  {% if can_write and ipbx_id > 0 %}
+  <div class="nm-add-form mt-3" id="nm-dev-add-form">
+    <table class="tab_cadre_fixe">
+      <tr class="tab_bg_2">
+        <td><input type="text"     class="form-control" id="nm-dev-device_type" placeholder="{{ 'Tipo'|__('newmanagement') }}"></td>
+        <td><input type="text"     class="form-control" id="nm-dev-ip_address"  placeholder="{{ 'IP'|__('newmanagement') }}"></td>
+        <td><input type="text"     class="form-control" id="nm-dev-login"       placeholder="{{ 'Login'|__('newmanagement') }}"></td>
+        <td><input type="password" class="form-control" id="nm-dev-password"    placeholder="{{ 'Senha'|__('newmanagement') }}" autocomplete="new-password"></td>
+        <td>
+          <button type="button" class="btn btn-sm btn-success nm-add-dev-btn"
+                  data-ipbx-id="{{ ipbx_id }}"
+                  data-companies-id="{{ companies_id }}"
+                  title="{{ 'Adicionar dispositivo'|__('newmanagement') }}">
+            <i class="ti ti-plus"></i>
+          </button>
+        </td>
+      </tr>
+    </table>
+  </div>
+  {% endif %}
+
+</div>{# /#nm-dev-section #}
