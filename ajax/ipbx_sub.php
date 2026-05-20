@@ -13,6 +13,8 @@ include('../../../inc/includes.php');
 use GlpiPlugin\Newmanagement\Ipbx;
 
 Session::checkLoginUser();
+// GLPI 11 — verificação CSRF obrigatória em todos os endpoints ajax/*.php
+Session::checkCSRF($_POST);
 Session::checkRight(Ipbx::$rightname, READ);
 
 // Garante que qualquer saída seja JSON
@@ -59,20 +61,26 @@ try {
 
         case 'update_ipbx':
             Session::checkRight(Ipbx::$rightname, UPDATE);
-            $ipbx = new Ipbx();
-            $ipbx->update([
-                'id'             => (int)($_POST['id'] ?? 0),
+            $ipbxId = (int)($_POST['id'] ?? 0);
+            if ($ipbxId <= 0) nmJson(false, ['error' => 'ID inválido']);
+            $data = [
+                'id'             => $ipbxId,
                 'companies_id'   => $companies_id,
                 'model'          => $_POST['model']          ?? '',
                 'server_version' => $_POST['server_version'] ?? '',
                 'ip_local'       => $_POST['ip_local']       ?? '',
                 'ip_external'    => $_POST['ip_external']    ?? '',
                 'web_port'       => $_POST['web_port']       ?? '',
-                'web_password'   => \Toolbox::sodiumEncrypt($_POST['web_password'] ?? ''),
                 'ssh_port'       => $_POST['ssh_port']       ?? '',
-                'ssh_password'   => \Toolbox::sodiumEncrypt($_POST['ssh_password'] ?? ''),
                 'comment'        => $_POST['comment']        ?? '',
-            ]);
+            ];
+            // Só atualiza senhas se o campo vier preenchido
+            if (($_POST['web_password'] ?? '') !== '')
+                $data['web_password'] = \Toolbox::sodiumEncrypt($_POST['web_password']);
+            if (($_POST['ssh_password'] ?? '') !== '')
+                $data['ssh_password'] = \Toolbox::sodiumEncrypt($_POST['ssh_password']);
+            $ipbx = new Ipbx();
+            $ipbx->update($data);
             nmJson(true);
 
         // ------------------------------------------------------------------
@@ -82,7 +90,7 @@ try {
             Session::checkRight(Ipbx::$rightname, CREATE);
             $ipbx_id = (int)($_POST['ipbx_id'] ?? 0);
             if ($ipbx_id <= 0) nmJson(false, ['error' => 'ipbx_id inválido']);
-            $newId = $DB->insert('glpi_plugin_newmanagement_ipbx_extensions', [
+            $DB->insert('glpi_plugin_newmanagement_ipbx_extensions', [
                 'ipbx_id'       => $ipbx_id,
                 'companies_id'  => $companies_id,
                 'number'        => $_POST['number']       ?? '',
@@ -94,12 +102,12 @@ try {
                 'date_creation' => $now,
                 'date_mod'      => $now,
             ]);
-            // Buscar a linha recém-inserida e gerar HTML
-            $row = $DB->request(['FROM' => 'glpi_plugin_newmanagement_ipbx_extensions', 'WHERE' => ['id' => $newId]])->current();
+            $rowId = $DB->insertId();
+            $row = $DB->request(['FROM' => 'glpi_plugin_newmanagement_ipbx_extensions', 'WHERE' => ['id' => $rowId]])->current();
             $csrf = \Session::getNewCSRFToken();
             $actionUrl = \Plugin::getWebDir('newmanagement') . '/ajax/ipbx_sub.php';
-            $html = Ipbx::renderExtensionRow((int)$newId, $row, $companies_id, $csrf, $actionUrl);
-            nmJson(true, ['id' => $newId, 'html' => $html]);
+            $html = Ipbx::renderExtensionRow((int)$rowId, $row, $companies_id, $csrf, $actionUrl);
+            nmJson(true, ['id' => $rowId, 'html' => $html]);
 
         case 'delete_extension':
             Session::checkRight(Ipbx::$rightname, DELETE);
@@ -113,21 +121,22 @@ try {
             Session::checkRight(Ipbx::$rightname, CREATE);
             $ipbx_id = (int)($_POST['ipbx_id'] ?? 0);
             if ($ipbx_id <= 0) nmJson(false, ['error' => 'ipbx_id inválido']);
-            $newId = $DB->insert('glpi_plugin_newmanagement_ipbx_devices', [
+            $DB->insert('glpi_plugin_newmanagement_ipbx_devices', [
                 'ipbx_id'       => $ipbx_id,
                 'companies_id'  => $companies_id,
                 'device_type'   => $_POST['device_type'] ?? '',
                 'ip_address'    => $_POST['ip_address']  ?? '',
+                'login'         => $_POST['login']       ?? '',
                 'password'      => $_POST['password']    ?? '',
                 'date_creation' => $now,
                 'date_mod'      => $now,
             ]);
-            // Buscar a linha recém-inserida e gerar HTML
-            $row = $DB->request(['FROM' => 'glpi_plugin_newmanagement_ipbx_devices', 'WHERE' => ['id' => $newId]])->current();
+            $rowId = $DB->insertId();
+            $row = $DB->request(['FROM' => 'glpi_plugin_newmanagement_ipbx_devices', 'WHERE' => ['id' => $rowId]])->current();
             $csrf = \Session::getNewCSRFToken();
             $actionUrl = \Plugin::getWebDir('newmanagement') . '/ajax/ipbx_sub.php';
-            $html = Ipbx::renderDeviceRow((int)$newId, $row, $companies_id, $csrf, $actionUrl);
-            nmJson(true, ['id' => $newId, 'html' => $html]);
+            $html = Ipbx::renderDeviceRow((int)$rowId, $row, $companies_id, $csrf, $actionUrl);
+            nmJson(true, ['id' => $rowId, 'html' => $html]);
 
         case 'delete_device':
             Session::checkRight(Ipbx::$rightname, DELETE);
@@ -141,7 +150,7 @@ try {
             Session::checkRight(Ipbx::$rightname, CREATE);
             $ipbx_id = (int)($_POST['ipbx_id'] ?? 0);
             if ($ipbx_id <= 0) nmJson(false, ['error' => 'ipbx_id inválido']);
-            $newId = $DB->insert('glpi_plugin_newmanagement_ipbx_network', [
+            $DB->insert('glpi_plugin_newmanagement_ipbx_network', [
                 'ipbx_id'       => $ipbx_id,
                 'companies_id'  => $companies_id,
                 'ip_network'    => $_POST['ip_network']    ?? '',
@@ -149,15 +158,16 @@ try {
                 'gateway'       => $_POST['gateway']       ?? '',
                 'dns_primary'   => $_POST['dns_primary']   ?? '',
                 'dns_secondary' => $_POST['dns_secondary'] ?? '',
+                'supplier'      => $_POST['supplier']      ?? '',
                 'date_creation' => $now,
                 'date_mod'      => $now,
             ]);
-            // Buscar a linha recém-inserida e gerar HTML
-            $row = $DB->request(['FROM' => 'glpi_plugin_newmanagement_ipbx_network', 'WHERE' => ['id' => $newId]])->current();
+            $rowId = $DB->insertId();
+            $row = $DB->request(['FROM' => 'glpi_plugin_newmanagement_ipbx_network', 'WHERE' => ['id' => $rowId]])->current();
             $csrf = \Session::getNewCSRFToken();
             $actionUrl = \Plugin::getWebDir('newmanagement') . '/ajax/ipbx_sub.php';
-            $html = Ipbx::renderNetworkRow((int)$newId, $row, $companies_id, $csrf, $actionUrl);
-            nmJson(true, ['id' => $newId, 'html' => $html]);
+            $html = Ipbx::renderNetworkRow((int)$rowId, $row, $companies_id, $csrf, $actionUrl);
+            nmJson(true, ['id' => $rowId, 'html' => $html]);
 
         case 'delete_network':
             Session::checkRight(Ipbx::$rightname, DELETE);
@@ -173,26 +183,28 @@ try {
             if ($ipbx_id <= 0) nmJson(false, ['error' => 'ipbx_id inválido']);
             $toDate = static fn(string $v): ?string => $v !== '' ? $v : null;
             $DB->insert('glpi_plugin_newmanagement_ipbx_lines', [
-                'ipbx_id'            => $ipbx_id,
-                'companies_id'       => $companies_id,
-                'pilot_number'       => $_POST['pilot_number']      ?? '',
-                'line_type'          => $_POST['line_type']          ?? '',
-                'operator'           => $_POST['operator']           ?? '',
-                'channels'           => (int)($_POST['channels']     ?? 0),
-                'ddr_count'          => (int)($_POST['ddr_count']    ?? 0),
-                'proxy_ip'           => $_POST['proxy_ip']           ?? '',
-                'proxy_port'         => $_POST['proxy_port']         ?? '',
-                'audio_ip'           => $_POST['audio_ip']           ?? '',
-                'portability_date'   => $toDate($_POST['portability_date']   ?? ''),
-                'previous_operator'  => $_POST['previous_operator']  ?? '',
-                'activation_date'    => $toDate($_POST['activation_date']    ?? ''),
-                'expiration_date'    => $toDate($_POST['expiration_date']     ?? ''),
-                'status'             => (int)($_POST['status']        ?? 1),
-                'comment'            => $_POST['comment']             ?? '',
-                'date_creation'      => $now,
-                'date_mod'           => $now,
+                'ipbx_id'           => $ipbx_id,
+                'companies_id'      => $companies_id,
+                'pilot_number'      => $_POST['pilot_number']     ?? '',
+                'line_type'         => $_POST['line_type']        ?? '',
+                'operator'          => $_POST['operator']         ?? '',
+                'channels'          => (int)($_POST['channels']   ?? 0),
+                'ddr_count'         => (int)($_POST['ddr_count']  ?? 0),
+                'proxy_ip'          => $_POST['proxy_ip']         ?? '',
+                'proxy_port'        => $_POST['proxy_port']       ?? '',
+                'audio_ip'          => $_POST['audio_ip']         ?? '',
+                'portability_date'  => $toDate($_POST['portability_date']  ?? ''),
+                'previous_operator' => $_POST['previous_operator'] ?? '',
+                'activation_date'   => $toDate($_POST['activation_date']   ?? ''),
+                'expiration_date'   => $toDate($_POST['expiration_date']   ?? ''),
+                'status'            => (int)($_POST['status']     ?? 1),
+                'comment'           => $_POST['comment']          ?? '',
+                'date_creation'     => $now,
+                'date_mod'          => $now,
             ]);
-            nmJson(true, ['id' => $DB->insertId()]);
+            $newId = $DB->insertId();
+            if (!$newId) nmJson(false, ['error' => 'Falha ao inserir linha fixa']);
+            nmJson(true, ['id' => $newId]);
 
         case 'update_line':
             Session::checkRight(Ipbx::$rightname, UPDATE);
@@ -200,21 +212,21 @@ try {
             $DB->update(
                 'glpi_plugin_newmanagement_ipbx_lines',
                 [
-                    'pilot_number'       => $_POST['pilot_number']      ?? '',
-                    'line_type'          => $_POST['line_type']          ?? '',
-                    'operator'           => $_POST['operator']           ?? '',
-                    'channels'           => (int)($_POST['channels']     ?? 0),
-                    'ddr_count'          => (int)($_POST['ddr_count']    ?? 0),
-                    'proxy_ip'           => $_POST['proxy_ip']           ?? '',
-                    'proxy_port'         => $_POST['proxy_port']         ?? '',
-                    'audio_ip'           => $_POST['audio_ip']           ?? '',
-                    'portability_date'   => $toDate($_POST['portability_date']   ?? ''),
-                    'previous_operator'  => $_POST['previous_operator']  ?? '',
-                    'activation_date'    => $toDate($_POST['activation_date']    ?? ''),
-                    'expiration_date'    => $toDate($_POST['expiration_date']     ?? ''),
-                    'status'             => (int)($_POST['status']        ?? 1),
-                    'comment'            => $_POST['comment']             ?? '',
-                    'date_mod'           => $now,
+                    'pilot_number'      => $_POST['pilot_number']     ?? '',
+                    'line_type'         => $_POST['line_type']        ?? '',
+                    'operator'          => $_POST['operator']         ?? '',
+                    'channels'          => (int)($_POST['channels']   ?? 0),
+                    'ddr_count'         => (int)($_POST['ddr_count']  ?? 0),
+                    'proxy_ip'          => $_POST['proxy_ip']         ?? '',
+                    'proxy_port'        => $_POST['proxy_port']       ?? '',
+                    'audio_ip'          => $_POST['audio_ip']         ?? '',
+                    'portability_date'  => $toDate($_POST['portability_date']  ?? ''),
+                    'previous_operator' => $_POST['previous_operator'] ?? '',
+                    'activation_date'   => $toDate($_POST['activation_date']   ?? ''),
+                    'expiration_date'   => $toDate($_POST['expiration_date']   ?? ''),
+                    'status'            => (int)($_POST['status']     ?? 1),
+                    'comment'           => $_POST['comment']          ?? '',
+                    'date_mod'          => $now,
                 ],
                 ['id' => (int)($_POST['id'] ?? 0)]
             );
