@@ -26,12 +26,20 @@ function nmJson(bool $ok, array $extra = []): void {
     exit;
 }
 
+// [FIX] Helper: criptografa senha apenas se não estiver vazia; caso contrário retorna NULL
+function nmEncryptPassword(string $value): ?string {
+    return $value !== '' ? \Toolbox::sodiumEncrypt($value) : null;
+}
+
 $action       = $_POST['action']       ?? '';
 $companies_id = (int)($_POST['companies_id'] ?? 0);
 
 if ($companies_id <= 0) {
     nmJson(false, ['error' => 'companies_id inválido']);
 }
+
+// [FIX] Flag de permissão DELETE resolvida uma vez para uso nos renderRow
+$can_delete = \Session::haveRight(Ipbx::$rightname, DELETE);
 
 global $DB;
 $now = date('Y-m-d H:i:s');
@@ -44,7 +52,7 @@ try {
         // ------------------------------------------------------------------
         case 'add_ipbx':
             Session::checkRight(Ipbx::$rightname, CREATE);
-            $ipbx = new Ipbx();
+            $ipbx  = new Ipbx();
             $newId = $ipbx->add([
                 'companies_id'   => $companies_id,
                 'model'          => $_POST['model']          ?? '',
@@ -52,9 +60,11 @@ try {
                 'ip_local'       => $_POST['ip_local']       ?? '',
                 'ip_external'    => $_POST['ip_external']    ?? '',
                 'web_port'       => $_POST['web_port']       ?? '',
-                'web_password'   => \Toolbox::sodiumEncrypt($_POST['web_password'] ?? ''),
+                // [FIX] Não criptografa senha vazia
+                'web_password'   => nmEncryptPassword($_POST['web_password'] ?? ''),
                 'ssh_port'       => $_POST['ssh_port']       ?? '',
-                'ssh_password'   => \Toolbox::sodiumEncrypt($_POST['ssh_password'] ?? ''),
+                // [FIX] Não criptografa senha vazia
+                'ssh_password'   => nmEncryptPassword($_POST['ssh_password'] ?? ''),
                 'comment'        => $_POST['comment']        ?? '',
             ]);
             nmJson(true, ['id' => $newId]);
@@ -94,8 +104,8 @@ try {
                 'ipbx_id'       => $ipbx_id,
                 'companies_id'  => $companies_id,
                 'number'        => $_POST['number']       ?? '',
-                // [FIX] Senha de ramal agora criptografada igual ao IPBX principal
-                'password'      => \Toolbox::sodiumEncrypt($_POST['password'] ?? ''),
+                // [FIX] Não criptografa senha vazia
+                'password'      => nmEncryptPassword($_POST['password'] ?? ''),
                 'device_ip'     => $_POST['device_ip']    ?? '',
                 'user_name'     => $_POST['user_name']    ?? '',
                 'records_calls' => (int)($_POST['records_calls'] ?? 0),
@@ -104,15 +114,15 @@ try {
                 'date_mod'      => $now,
             ]);
             $rowId = $DB->insertId();
-            $row = $DB->request(['FROM' => Ipbx::TABLE_EXTENSIONS, 'WHERE' => ['id' => $rowId]])->current();
-            $csrf = \Session::getNewCSRFToken();
+            $row   = $DB->request(['FROM' => Ipbx::TABLE_EXTENSIONS, 'WHERE' => ['id' => $rowId]])->current();
+            $csrf      = \Session::getNewCSRFToken();
             $actionUrl = \Plugin::getWebDir('newmanagement') . '/ajax/ipbx_sub.php';
-            $html = Ipbx::renderExtensionRow((int)$rowId, $row, $companies_id, $csrf, $actionUrl);
+            // [FIX] Passa $can_delete para renderizar o botão somente se o usuário tem direito
+            $html = Ipbx::renderExtensionRow((int)$rowId, $row, $companies_id, $csrf, $actionUrl, $can_delete);
             nmJson(true, ['id' => $rowId, 'html' => $html]);
 
         case 'delete_extension':
             Session::checkRight(Ipbx::$rightname, DELETE);
-            // [FIX] companies_id na cláusula para impedir deleção cruzada entre empresas
             $DB->delete(Ipbx::TABLE_EXTENSIONS, [
                 'id'           => (int)($_POST['id'] ?? 0),
                 'companies_id' => $companies_id,
@@ -132,21 +142,21 @@ try {
                 'device_type'   => $_POST['device_type'] ?? '',
                 'ip_address'    => $_POST['ip_address']  ?? '',
                 'login'         => $_POST['login']       ?? '',
-                // [FIX] Senha de dispositivo agora criptografada igual ao IPBX principal
-                'password'      => \Toolbox::sodiumEncrypt($_POST['password'] ?? ''),
+                // [FIX] Não criptografa senha vazia
+                'password'      => nmEncryptPassword($_POST['password'] ?? ''),
                 'date_creation' => $now,
                 'date_mod'      => $now,
             ]);
             $rowId = $DB->insertId();
-            $row = $DB->request(['FROM' => Ipbx::TABLE_DEVICES, 'WHERE' => ['id' => $rowId]])->current();
-            $csrf = \Session::getNewCSRFToken();
+            $row   = $DB->request(['FROM' => Ipbx::TABLE_DEVICES, 'WHERE' => ['id' => $rowId]])->current();
+            $csrf      = \Session::getNewCSRFToken();
             $actionUrl = \Plugin::getWebDir('newmanagement') . '/ajax/ipbx_sub.php';
-            $html = Ipbx::renderDeviceRow((int)$rowId, $row, $companies_id, $csrf, $actionUrl);
+            // [FIX] Passa $can_delete para renderizar o botão somente se o usuário tem direito
+            $html = Ipbx::renderDeviceRow((int)$rowId, $row, $companies_id, $csrf, $actionUrl, $can_delete);
             nmJson(true, ['id' => $rowId, 'html' => $html]);
 
         case 'delete_device':
             Session::checkRight(Ipbx::$rightname, DELETE);
-            // [FIX] companies_id na cláusula para impedir deleção cruzada entre empresas
             $DB->delete(Ipbx::TABLE_DEVICES, [
                 'id'           => (int)($_POST['id'] ?? 0),
                 'companies_id' => $companies_id,
@@ -173,15 +183,15 @@ try {
                 'date_mod'      => $now,
             ]);
             $rowId = $DB->insertId();
-            $row = $DB->request(['FROM' => Ipbx::TABLE_NETWORK, 'WHERE' => ['id' => $rowId]])->current();
-            $csrf = \Session::getNewCSRFToken();
+            $row   = $DB->request(['FROM' => Ipbx::TABLE_NETWORK, 'WHERE' => ['id' => $rowId]])->current();
+            $csrf      = \Session::getNewCSRFToken();
             $actionUrl = \Plugin::getWebDir('newmanagement') . '/ajax/ipbx_sub.php';
-            $html = Ipbx::renderNetworkRow((int)$rowId, $row, $companies_id, $csrf, $actionUrl);
+            // [FIX] Passa $can_delete para renderizar o botão somente se o usuário tem direito
+            $html = Ipbx::renderNetworkRow((int)$rowId, $row, $companies_id, $csrf, $actionUrl, $can_delete);
             nmJson(true, ['id' => $rowId, 'html' => $html]);
 
         case 'delete_network':
             Session::checkRight(Ipbx::$rightname, DELETE);
-            // [FIX] companies_id na cláusula para impedir deleção cruzada entre empresas
             $DB->delete(Ipbx::TABLE_NETWORK, [
                 'id'           => (int)($_POST['id'] ?? 0),
                 'companies_id' => $companies_id,
@@ -199,20 +209,20 @@ try {
             $DB->insert('glpi_plugin_newmanagement_ipbx_lines', [
                 'ipbx_id'           => $ipbx_id,
                 'companies_id'      => $companies_id,
-                'pilot_number'      => $_POST['pilot_number']     ?? '',
-                'line_type'         => $_POST['line_type']        ?? '',
-                'operator'          => $_POST['operator']         ?? '',
-                'channels'          => (int)($_POST['channels']   ?? 0),
-                'ddr_count'         => (int)($_POST['ddr_count']  ?? 0),
-                'proxy_ip'          => $_POST['proxy_ip']         ?? '',
-                'proxy_port'        => $_POST['proxy_port']       ?? '',
-                'audio_ip'          => $_POST['audio_ip']         ?? '',
+                'pilot_number'      => $_POST['pilot_number']      ?? '',
+                'line_type'         => $_POST['line_type']         ?? '',
+                'operator'          => $_POST['operator']          ?? '',
+                'channels'          => (int)($_POST['channels']    ?? 0),
+                'ddr_count'         => (int)($_POST['ddr_count']   ?? 0),
+                'proxy_ip'          => $_POST['proxy_ip']          ?? '',
+                'proxy_port'        => $_POST['proxy_port']        ?? '',
+                'audio_ip'          => $_POST['audio_ip']          ?? '',
                 'portability_date'  => $toDate($_POST['portability_date']  ?? ''),
                 'previous_operator' => $_POST['previous_operator'] ?? '',
                 'activation_date'   => $toDate($_POST['activation_date']   ?? ''),
                 'expiration_date'   => $toDate($_POST['expiration_date']   ?? ''),
-                'status'            => (int)($_POST['status']     ?? 1),
-                'comment'           => $_POST['comment']          ?? '',
+                'status'            => (int)($_POST['status']      ?? 1),
+                'comment'           => $_POST['comment']           ?? '',
                 'date_creation'     => $now,
                 'date_mod'          => $now,
             ]);
@@ -226,23 +236,22 @@ try {
             $DB->update(
                 'glpi_plugin_newmanagement_ipbx_lines',
                 [
-                    'pilot_number'      => $_POST['pilot_number']     ?? '',
-                    'line_type'         => $_POST['line_type']        ?? '',
-                    'operator'          => $_POST['operator']         ?? '',
-                    'channels'          => (int)($_POST['channels']   ?? 0),
-                    'ddr_count'         => (int)($_POST['ddr_count']  ?? 0),
-                    'proxy_ip'          => $_POST['proxy_ip']         ?? '',
-                    'proxy_port'        => $_POST['proxy_port']       ?? '',
-                    'audio_ip'          => $_POST['audio_ip']         ?? '',
+                    'pilot_number'      => $_POST['pilot_number']      ?? '',
+                    'line_type'         => $_POST['line_type']         ?? '',
+                    'operator'          => $_POST['operator']          ?? '',
+                    'channels'          => (int)($_POST['channels']    ?? 0),
+                    'ddr_count'         => (int)($_POST['ddr_count']   ?? 0),
+                    'proxy_ip'          => $_POST['proxy_ip']          ?? '',
+                    'proxy_port'        => $_POST['proxy_port']        ?? '',
+                    'audio_ip'          => $_POST['audio_ip']          ?? '',
                     'portability_date'  => $toDate($_POST['portability_date']  ?? ''),
                     'previous_operator' => $_POST['previous_operator'] ?? '',
                     'activation_date'   => $toDate($_POST['activation_date']   ?? ''),
                     'expiration_date'   => $toDate($_POST['expiration_date']   ?? ''),
-                    'status'            => (int)($_POST['status']     ?? 1),
-                    'comment'           => $_POST['comment']          ?? '',
+                    'status'            => (int)($_POST['status']      ?? 1),
+                    'comment'           => $_POST['comment']           ?? '',
                     'date_mod'          => $now,
                 ],
-                // [FIX] companies_id na cláusula para impedir update cruzado entre empresas
                 [
                     'id'           => (int)($_POST['id'] ?? 0),
                     'companies_id' => $companies_id,
@@ -252,7 +261,6 @@ try {
 
         case 'delete_line':
             Session::checkRight(Ipbx::$rightname, DELETE);
-            // [FIX] companies_id na cláusula para impedir deleção cruzada entre empresas
             $DB->delete('glpi_plugin_newmanagement_ipbx_lines', [
                 'id'           => (int)($_POST['id'] ?? 0),
                 'companies_id' => $companies_id,
