@@ -129,41 +129,54 @@ class Company extends \CommonDBTM
         $menu['page']  = '/plugins/newmanagement/front/company.php';
         $menu['icon']  = 'ti ti-building';
 
-        $menu['options']['company']['title']           = __('Empresas', 'newmanagement');
-        $menu['options']['company']['page']            = '/plugins/newmanagement/front/company.php';
-        $menu['options']['company']['icon']            = 'ti ti-building';
-        $menu['options']['company']['links']['search'] = '/plugins/newmanagement/front/company.php';
-        $menu['options']['company']['links']['add']    = '/plugins/newmanagement/front/company.php?action=add';
+        // [FIX] Cada item do menu só é exibido se o usuário tiver direito de leitura
+        if (\Session::haveRight('plugin_newmanagement_company', READ)) {
+            $menu['options']['company']['title']           = __('Empresas', 'newmanagement');
+            $menu['options']['company']['page']            = '/plugins/newmanagement/front/company.php';
+            $menu['options']['company']['icon']            = 'ti ti-building';
+            $menu['options']['company']['links']['search'] = '/plugins/newmanagement/front/company.php';
+            $menu['options']['company']['links']['add']    = '/plugins/newmanagement/front/company.php?action=add';
+        }
 
-        $menu['options']['ipbx']['title']           = __('IPBX On-Premise', 'newmanagement');
-        $menu['options']['ipbx']['page']            = '/plugins/newmanagement/front/ipbx.php';
-        $menu['options']['ipbx']['icon']            = 'ti ti-server';
-        $menu['options']['ipbx']['links']['search'] = '/plugins/newmanagement/front/ipbx.php';
-        $menu['options']['ipbx']['links']['add']    = '/plugins/newmanagement/front/ipbx.php?action=add';
+        if (\Session::haveRight('plugin_newmanagement_ipbx', READ)) {
+            $menu['options']['ipbx']['title']           = __('IPBX On-Premise', 'newmanagement');
+            $menu['options']['ipbx']['page']            = '/plugins/newmanagement/front/ipbx.php';
+            $menu['options']['ipbx']['icon']            = 'ti ti-server';
+            $menu['options']['ipbx']['links']['search'] = '/plugins/newmanagement/front/ipbx.php';
+            $menu['options']['ipbx']['links']['add']    = '/plugins/newmanagement/front/ipbx.php?action=add';
+        }
 
-        $menu['options']['ipbxcloud']['title']           = __('IPBX Cloud', 'newmanagement');
-        $menu['options']['ipbxcloud']['page']            = '/plugins/newmanagement/front/ipbxcloud.php';
-        $menu['options']['ipbxcloud']['icon']            = 'ti ti-cloud';
-        $menu['options']['ipbxcloud']['links']['search'] = '/plugins/newmanagement/front/ipbxcloud.php';
-        $menu['options']['ipbxcloud']['links']['add']    = '/plugins/newmanagement/front/ipbxcloud.php?action=add';
+        if (\Session::haveRight('plugin_newmanagement_ipbxcloud', READ)) {
+            $menu['options']['ipbxcloud']['title']           = __('IPBX Cloud', 'newmanagement');
+            $menu['options']['ipbxcloud']['page']            = '/plugins/newmanagement/front/ipbxcloud.php';
+            $menu['options']['ipbxcloud']['icon']            = 'ti ti-cloud';
+            $menu['options']['ipbxcloud']['links']['search'] = '/plugins/newmanagement/front/ipbxcloud.php';
+            $menu['options']['ipbxcloud']['links']['add']    = '/plugins/newmanagement/front/ipbxcloud.php?action=add';
+        }
 
-        $menu['options']['chatbot']['title']           = __('Chatbots', 'newmanagement');
-        $menu['options']['chatbot']['page']            = '/plugins/newmanagement/front/chatbot.php';
-        $menu['options']['chatbot']['icon']            = 'ti ti-robot';
-        $menu['options']['chatbot']['links']['search'] = '/plugins/newmanagement/front/chatbot.php';
-        $menu['options']['chatbot']['links']['add']    = '/plugins/newmanagement/front/chatbot.php?action=add';
+        if (\Session::haveRight('plugin_newmanagement_chatbot', READ)) {
+            $menu['options']['chatbot']['title']           = __('Chatbots', 'newmanagement');
+            $menu['options']['chatbot']['page']            = '/plugins/newmanagement/front/chatbot.php';
+            $menu['options']['chatbot']['icon']            = 'ti ti-robot';
+            $menu['options']['chatbot']['links']['search'] = '/plugins/newmanagement/front/chatbot.php';
+            $menu['options']['chatbot']['links']['add']    = '/plugins/newmanagement/front/chatbot.php?action=add';
+        }
 
-        $menu['options']['fixedline']['title']           = __('Linhas Fixas', 'newmanagement');
-        $menu['options']['fixedline']['page']            = '/plugins/newmanagement/front/fixedline.php';
-        $menu['options']['fixedline']['icon']            = 'ti ti-phone';
-        $menu['options']['fixedline']['links']['search'] = '/plugins/newmanagement/front/fixedline.php';
-        $menu['options']['fixedline']['links']['add']    = '/plugins/newmanagement/front/fixedline.php?action=add';
+        if (\Session::haveRight('plugin_newmanagement_fixedline', READ)) {
+            $menu['options']['fixedline']['title']           = __('Linhas Fixas', 'newmanagement');
+            $menu['options']['fixedline']['page']            = '/plugins/newmanagement/front/fixedline.php';
+            $menu['options']['fixedline']['icon']            = 'ti ti-phone';
+            $menu['options']['fixedline']['links']['search'] = '/plugins/newmanagement/front/fixedline.php';
+            $menu['options']['fixedline']['links']['add']    = '/plugins/newmanagement/front/fixedline.php?action=add';
+        }
 
-        $menu['options']['task']['title']           = __('Tarefas', 'newmanagement');
-        $menu['options']['task']['page']            = '/plugins/newmanagement/front/task.php';
-        $menu['options']['task']['icon']            = 'ti ti-checklist';
-        $menu['options']['task']['links']['search'] = '/plugins/newmanagement/front/task.php';
-        $menu['options']['task']['links']['add']    = '/plugins/newmanagement/front/task.php?action=add';
+        if (\Session::haveRight('plugin_newmanagement_task', READ)) {
+            $menu['options']['task']['title']           = __('Tarefas', 'newmanagement');
+            $menu['options']['task']['page']            = '/plugins/newmanagement/front/task.php';
+            $menu['options']['task']['icon']            = 'ti ti-checklist';
+            $menu['options']['task']['links']['search'] = '/plugins/newmanagement/front/task.php';
+            $menu['options']['task']['links']['add']    = '/plugins/newmanagement/front/task.php?action=add';
+        }
 
         return $menu;
     }
@@ -197,8 +210,6 @@ class Company extends \CommonDBTM
 
         // ------------------------------------------------------------------
         // Linha 1: Nome (obrigatório) | ID (somente leitura)
-        // Html::autocompletionTextField() foi removido no GLPI 10/11.
-        // Substituído por <input class="form-control"> com htmlspecialchars().
         // ------------------------------------------------------------------
         echo '<tr class="tab_bg_1">';
         echo '<td>' . __('Nome', 'newmanagement') . ' <span class="required">*</span></td>';
@@ -217,8 +228,6 @@ class Company extends \CommonDBTM
 
         // ------------------------------------------------------------------
         // Linha 2: CNPJ (input-group com botão Buscar) | Razão Social
-        // CNPJ mantém HTML manual com input-group (não alterar).
-        // Razão Social: Html::autocompletionTextField() substituído por <input>.
         // ------------------------------------------------------------------
         $cnpj = htmlspecialchars($this->fields['cnpj'] ?? '', ENT_QUOTES);
 
@@ -245,12 +254,12 @@ class Company extends \CommonDBTM
 
         // ------------------------------------------------------------------
         // Linha 3: E-mail | Telefone
-        // Html::autocompletionTextField() substituído por <input class="form-control">.
+        // [FIX] type="email" para validação nativa do browser
         // ------------------------------------------------------------------
         echo '<tr class="tab_bg_1">';
         echo '<td>' . __('E-mail', 'newmanagement') . '</td>';
         echo '<td>';
-        echo '<input type="text" id="email" name="email"'
+        echo '<input type="email" id="email" name="email"'
             . ' value="' . htmlspecialchars($this->fields['email'] ?? '', ENT_QUOTES) . '"'
             . ' class="form-control">';
         echo '</td>';
@@ -263,8 +272,7 @@ class Company extends \CommonDBTM
         echo '</tr>';
 
         // ------------------------------------------------------------------
-        // Linha 4: CEP (input-group com botão Buscar — não alterar) | Status do Contrato
-        // Dropdown::showFromArray() mantido intacto — funciona no GLPI 10/11.
+        // Linha 4: CEP (input-group com botão Buscar) | Status do Contrato
         // ------------------------------------------------------------------
         $cep             = htmlspecialchars($this->fields['cep'] ?? '', ENT_QUOTES);
         $contract_status = (int) ($this->fields['contract_status'] ?? self::CONTRACT_NO_CONTRACT);
@@ -293,8 +301,6 @@ class Company extends \CommonDBTM
 
         // ------------------------------------------------------------------
         // Linha 5: Endereço
-        // Html::textarea() foi removido no GLPI 10/11.
-        // Substituído por <textarea class="form-control"> com htmlspecialchars().
         // ------------------------------------------------------------------
         echo '<tr class="tab_bg_1">';
         echo '<td>' . __('Endereco', 'newmanagement') . '</td>';
@@ -307,7 +313,6 @@ class Company extends \CommonDBTM
 
         // ------------------------------------------------------------------
         // Linha 6: Comentário
-        // Html::textarea() substituído por <textarea class="form-control">.
         // ------------------------------------------------------------------
         echo '<tr class="tab_bg_1">';
         echo '<td>' . __('Comentario', 'newmanagement') . '</td>';
@@ -321,7 +326,8 @@ class Company extends \CommonDBTM
         $this->showFormButtons($options);
 
         // ------------------------------------------------------------------
-        // JavaScript — BrasilAPI (CNPJ + CEP) — mantido intacto
+        // JavaScript — BrasilAPI (CNPJ + CEP)
+        // [FIX] AbortController com timeout de 8s para evitar fetch pendente indefinidamente
         // ------------------------------------------------------------------
         echo <<<'JS'
 <script>
@@ -345,6 +351,13 @@ class Company extends \CommonDBTM
         btn.innerHTML = loading
             ? '<span class="nm-spinner"></span> Buscando…'
             : '<i class="ti ti-search"></i> Buscar';
+    }
+
+    /* [FIX] fetch com timeout via AbortController */
+    function fetchComTimeout(url, timeoutMs = 8000) {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+        return fetch(url, { signal: ctrl.signal }).finally(() => clearTimeout(timer));
     }
 
     /* ── máscara CNPJ ── */
@@ -374,7 +387,7 @@ class Company extends \CommonDBTM
         setLoading('btn-buscar-cnpj', true);
         setFeedback('cnpj-feedback', '', '');
         try {
-            const res  = await fetch('https://brasilapi.com.br/api/cnpj/v1/' + raw);
+            const res  = await fetchComTimeout('https://brasilapi.com.br/api/cnpj/v1/' + raw);
             const data = await res.json();
             if (!res.ok) { setFeedback('cnpj-feedback', data.message || 'CNPJ n\u00e3o encontrado.', 'error'); return; }
 
@@ -398,7 +411,10 @@ class Company extends \CommonDBTM
             }
             setFeedback('cnpj-feedback', '\u2714 Dados preenchidos com sucesso.', 'success');
         } catch (err) {
-            setFeedback('cnpj-feedback', 'Erro de conex\u00e3o com a BrasilAPI.', 'error');
+            const msg = err.name === 'AbortError'
+                ? 'Tempo limite excedido. Tente novamente.'
+                : 'Erro de conex\u00e3o com a BrasilAPI.';
+            setFeedback('cnpj-feedback', msg, 'error');
             console.error('[NM] CNPJ fetch error:', err);
         } finally {
             setLoading('btn-buscar-cnpj', false);
@@ -415,7 +431,7 @@ class Company extends \CommonDBTM
         setLoading('btn-buscar-cep', true);
         setFeedback('cep-feedback', '', '');
         try {
-            const res  = await fetch('https://brasilapi.com.br/api/cep/v2/' + raw);
+            const res  = await fetchComTimeout('https://brasilapi.com.br/api/cep/v2/' + raw);
             const data = await res.json();
             if (!res.ok) { setFeedback('cep-feedback', data.message || 'CEP n\u00e3o encontrado.', 'error'); return; }
 
@@ -428,7 +444,10 @@ class Company extends \CommonDBTM
             set('address', partes.join(', '));
             setFeedback('cep-feedback', '\u2714 Endere\u00e7o preenchido.', 'success');
         } catch (err) {
-            setFeedback('cep-feedback', 'Erro de conex\u00e3o com a BrasilAPI.', 'error');
+            const msg = err.name === 'AbortError'
+                ? 'Tempo limite excedido. Tente novamente.'
+                : 'Erro de conex\u00e3o com a BrasilAPI.';
+            setFeedback('cep-feedback', msg, 'error');
             console.error('[NM] CEP fetch error:', err);
         } finally {
             setLoading('btn-buscar-cep', false);
