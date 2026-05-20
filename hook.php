@@ -16,6 +16,7 @@ function plugin_newmanagement_install() {
 
     // -------------------------------------------------------
     // Tabela: Empresas
+    // [FIX A4] KEY `name` adicionada para evitar full-table-scan em buscas
     // -------------------------------------------------------
     if (!$DB->tableExists('glpi_plugin_newmanagement_companies')) {
         $query = "CREATE TABLE `glpi_plugin_newmanagement_companies` (
@@ -32,7 +33,8 @@ function plugin_newmanagement_install() {
             `date_creation`   timestamp             DEFAULT NULL,
             `date_mod`        timestamp             DEFAULT NULL,
             `is_deleted`      tinyint(1)   NOT NULL DEFAULT 0,
-            PRIMARY KEY (`id`)
+            PRIMARY KEY (`id`),
+            KEY `name` (`name`)
         ) ENGINE=InnoDB DEFAULT CHARSET={$default_charset} COLLATE={$default_collation} ROW_FORMAT=DYNAMIC";
         $DB->doQueryOrDie($query);
     } else {
@@ -43,6 +45,8 @@ function plugin_newmanagement_install() {
             $migration->addField('glpi_plugin_newmanagement_companies', 'cep', 'varchar(10) DEFAULT NULL', ['after' => 'phone']);
         if (!isset($columns['contract_status']))
             $migration->addField('glpi_plugin_newmanagement_companies', 'contract_status', "tinyint(1) NOT NULL DEFAULT 0 COMMENT '0=Sem contrato,1=Ativo,2=Cancelado'", ['after' => 'address']);
+        // [FIX A4] Adiciona índice em bancos já existentes
+        $migration->addKey('glpi_plugin_newmanagement_companies', 'name');
     }
 
     // -------------------------------------------------------
@@ -77,10 +81,8 @@ function plugin_newmanagement_install() {
         if (!isset($cols['web_port']))       $migration->addField('glpi_plugin_newmanagement_ipbx', 'web_port',       'varchar(10)  DEFAULT NULL', ['after' => 'ip_external']);
         if (!isset($cols['ssh_port']))       $migration->addField('glpi_plugin_newmanagement_ipbx', 'ssh_port',       'varchar(10)  DEFAULT NULL', ['after' => 'web_password']);
         if (!isset($cols['ssh_password']))   $migration->addField('glpi_plugin_newmanagement_ipbx', 'ssh_password',   'text DEFAULT NULL',         ['after' => 'ssh_port']);
-        // [FIX] Garantir web_password se ainda nao existir (com tipo correto)
         if (!isset($cols['web_password']))
             $migration->addField('glpi_plugin_newmanagement_ipbx', 'web_password', 'text DEFAULT NULL', ['after' => 'web_port']);
-        // [FIX] Ampliar colunas de senha de varchar(255) para text (sodiumEncrypt pode ultrapassar 255 chars)
         if (isset($cols['web_password']) && $cols['web_password']['Type'] === 'varchar(255)')
             $migration->changeField('glpi_plugin_newmanagement_ipbx', 'web_password', 'web_password', 'text DEFAULT NULL');
         if (isset($cols['ssh_password']) && $cols['ssh_password']['Type'] === 'varchar(255)')
@@ -110,7 +112,6 @@ function plugin_newmanagement_install() {
         ) ENGINE=InnoDB DEFAULT CHARSET={$default_charset} COLLATE={$default_collation} ROW_FORMAT=DYNAMIC";
         $DB->doQueryOrDie($query);
     } else {
-        // [FIX] Bloco else para migration de colunas futuras em ipbx_cloud
         $cols = $DB->listFields('glpi_plugin_newmanagement_ipbx_cloud');
         if (isset($cols['password']) && $cols['password']['Type'] === 'varchar(255)')
             $migration->changeField('glpi_plugin_newmanagement_ipbx_cloud', 'password', 'password', 'text DEFAULT NULL');
@@ -132,6 +133,7 @@ function plugin_newmanagement_install() {
             `department`     varchar(255)          DEFAULT NULL,
             `date_creation`  timestamp             DEFAULT NULL,
             `date_mod`       timestamp             DEFAULT NULL,
+            `is_deleted`     tinyint(1)   NOT NULL DEFAULT 0,
             PRIMARY KEY (`id`),
             KEY `ipbx_id` (`ipbx_id`),
             KEY `companies_id` (`companies_id`)
@@ -139,7 +141,8 @@ function plugin_newmanagement_install() {
         $DB->doQueryOrDie($query);
     } else {
         $cols = $DB->listFields('glpi_plugin_newmanagement_ipbx_extensions');
-        // [FIX] Ampliar coluna de senha de varchar(255) para text
+        if (!isset($cols['is_deleted']))
+            $migration->addField('glpi_plugin_newmanagement_ipbx_extensions', 'is_deleted', 'tinyint(1) NOT NULL DEFAULT 0', ['after' => 'date_mod']);
         if (isset($cols['password']) && $cols['password']['Type'] === 'varchar(255)')
             $migration->changeField('glpi_plugin_newmanagement_ipbx_extensions', 'password', 'password', 'text DEFAULT NULL');
     }
@@ -158,6 +161,7 @@ function plugin_newmanagement_install() {
             `password`      text                  DEFAULT NULL COMMENT 'sodiumEncrypt',
             `date_creation` timestamp             DEFAULT NULL,
             `date_mod`      timestamp             DEFAULT NULL,
+            `is_deleted`    tinyint(1)   NOT NULL DEFAULT 0,
             PRIMARY KEY (`id`),
             KEY `ipbx_id` (`ipbx_id`),
             KEY `companies_id` (`companies_id`)
@@ -165,12 +169,12 @@ function plugin_newmanagement_install() {
         $DB->doQueryOrDie($query);
     } else {
         $cols = $DB->listFields('glpi_plugin_newmanagement_ipbx_devices');
+        if (!isset($cols['is_deleted']))
+            $migration->addField('glpi_plugin_newmanagement_ipbx_devices', 'is_deleted', 'tinyint(1) NOT NULL DEFAULT 0', ['after' => 'date_mod']);
         if (!isset($cols['login']))
             $migration->addField('glpi_plugin_newmanagement_ipbx_devices', 'login', 'varchar(255) DEFAULT NULL', ['after' => 'ip_address']);
-        // [FIX] Ampliar coluna de senha de varchar(255) para text
         if (isset($cols['password']) && $cols['password']['Type'] === 'varchar(255)')
             $migration->changeField('glpi_plugin_newmanagement_ipbx_devices', 'password', 'password', 'text DEFAULT NULL');
-        // [FIX] Adicionar indice companies_id se ainda nao existir
         $migration->addKey('glpi_plugin_newmanagement_ipbx_devices', 'companies_id');
     }
 
@@ -190,6 +194,7 @@ function plugin_newmanagement_install() {
             `supplier`      varchar(255)          DEFAULT NULL,
             `date_creation` timestamp             DEFAULT NULL,
             `date_mod`      timestamp             DEFAULT NULL,
+            `is_deleted`    tinyint(1)   NOT NULL DEFAULT 0,
             PRIMARY KEY (`id`),
             KEY `ipbx_id` (`ipbx_id`),
             KEY `companies_id` (`companies_id`)
@@ -197,9 +202,10 @@ function plugin_newmanagement_install() {
         $DB->doQueryOrDie($query);
     } else {
         $cols = $DB->listFields('glpi_plugin_newmanagement_ipbx_network');
+        if (!isset($cols['is_deleted']))
+            $migration->addField('glpi_plugin_newmanagement_ipbx_network', 'is_deleted', 'tinyint(1) NOT NULL DEFAULT 0', ['after' => 'date_mod']);
         if (!isset($cols['supplier']))
             $migration->addField('glpi_plugin_newmanagement_ipbx_network', 'supplier', 'varchar(255) DEFAULT NULL', ['after' => 'dns_secondary']);
-        // [FIX] Adicionar indice companies_id se ainda nao existir
         $migration->addKey('glpi_plugin_newmanagement_ipbx_network', 'companies_id');
     }
 
@@ -227,6 +233,7 @@ function plugin_newmanagement_install() {
             `comment`          text                  DEFAULT NULL,
             `date_creation`    timestamp             DEFAULT NULL,
             `date_mod`         timestamp             DEFAULT NULL,
+            `is_deleted`       tinyint(1)   NOT NULL DEFAULT 0,
             PRIMARY KEY (`id`),
             KEY `ipbx_id` (`ipbx_id`),
             KEY `companies_id` (`companies_id`)
@@ -234,6 +241,8 @@ function plugin_newmanagement_install() {
         $DB->doQueryOrDie($query);
     } else {
         $cols = $DB->listFields('glpi_plugin_newmanagement_ipbx_lines');
+        if (!isset($cols['is_deleted']))
+            $migration->addField('glpi_plugin_newmanagement_ipbx_lines', 'is_deleted', 'tinyint(1) NOT NULL DEFAULT 0', ['after' => 'date_mod']);
         if (!isset($cols['pilot_number']))      $migration->addField('glpi_plugin_newmanagement_ipbx_lines', 'pilot_number',      'varchar(50)  DEFAULT NULL', ['after' => 'companies_id']);
         if (!isset($cols['line_type']))         $migration->addField('glpi_plugin_newmanagement_ipbx_lines', 'line_type',         'varchar(100) DEFAULT NULL', ['after' => 'pilot_number']);
         if (!isset($cols['operator']))          $migration->addField('glpi_plugin_newmanagement_ipbx_lines', 'operator',          'varchar(100) DEFAULT NULL', ['after' => 'line_type']);
@@ -247,12 +256,12 @@ function plugin_newmanagement_install() {
         if (!isset($cols['activation_date']))   $migration->addField('glpi_plugin_newmanagement_ipbx_lines', 'activation_date',   'date DEFAULT NULL',         ['after' => 'previous_operator']);
         if (!isset($cols['expiration_date']))   $migration->addField('glpi_plugin_newmanagement_ipbx_lines', 'expiration_date',   'date DEFAULT NULL',         ['after' => 'activation_date']);
         if (!isset($cols['status']))            $migration->addField('glpi_plugin_newmanagement_ipbx_lines', 'status',            "tinyint(1) NOT NULL DEFAULT 1 COMMENT '1=Ativo,2=Cancelado'", ['after' => 'expiration_date']);
-        // [FIX] Adicionar indice companies_id se ainda nao existir
         $migration->addKey('glpi_plugin_newmanagement_ipbx_lines', 'companies_id');
     }
 
     // -------------------------------------------------------
     // Tabela: Tasks
+    // [FIX A4] KEY `name` adicionada (campo de busca principal)
     // -------------------------------------------------------
     if (!$DB->tableExists('glpi_plugin_newmanagement_tasks')) {
         $query = "CREATE TABLE `glpi_plugin_newmanagement_tasks` (
@@ -269,12 +278,14 @@ function plugin_newmanagement_install() {
             `date_mod`      timestamp             DEFAULT NULL,
             `is_deleted`    tinyint(1)   NOT NULL DEFAULT 0,
             PRIMARY KEY (`id`),
+            KEY `name` (`name`),
             KEY `companies_id` (`companies_id`)
         ) ENGINE=InnoDB DEFAULT CHARSET={$default_charset} COLLATE={$default_collation} ROW_FORMAT=DYNAMIC";
         $DB->doQueryOrDie($query);
     } else {
-        // [FIX] Bloco else reservado para migration de colunas futuras em tasks
         $cols = $DB->listFields('glpi_plugin_newmanagement_tasks');
+        // [FIX A4] Adiciona índice name em bancos já existentes
+        $migration->addKey('glpi_plugin_newmanagement_tasks', 'name');
     }
 
     // -------------------------------------------------------
@@ -327,12 +338,10 @@ function plugin_newmanagement_install() {
         if (!isset($cols['manager_email']))           $migration->addField('glpi_plugin_newmanagement_chatbots', 'manager_email',           'varchar(255) DEFAULT NULL',     ['after' => 'manager_contact']);
         if (!isset($cols['social_networks']))         $migration->addField('glpi_plugin_newmanagement_chatbots', 'social_networks',         'text DEFAULT NULL',             ['after' => 'manager_email']);
         if (!isset($cols['is_deleted']))              $migration->addField('glpi_plugin_newmanagement_chatbots', 'is_deleted',              'tinyint(1) NOT NULL DEFAULT 0', ['after' => 'date_mod']);
-        // [FIX] Adicionar colunas de senha se nao existirem (com tipo text correto)
         if (!isset($cols['admin_password']))
             $migration->addField('glpi_plugin_newmanagement_chatbots', 'admin_password',      'text DEFAULT NULL', ['after' => 'admin_login']);
         if (!isset($cols['superadmin_password']))
             $migration->addField('glpi_plugin_newmanagement_chatbots', 'superadmin_password', 'text DEFAULT NULL', ['after' => 'superadmin_login']);
-        // [FIX] Ampliar colunas de senha de varchar(255) para text
         if (isset($cols['admin_password'])      && $cols['admin_password']['Type']      === 'varchar(255)')
             $migration->changeField('glpi_plugin_newmanagement_chatbots', 'admin_password',      'admin_password',      'text DEFAULT NULL');
         if (isset($cols['superadmin_password']) && $cols['superadmin_password']['Type'] === 'varchar(255)')
@@ -357,6 +366,7 @@ function plugin_newmanagement_install() {
             `manager`              varchar(255)          DEFAULT NULL,
             `date_creation`        timestamp             DEFAULT NULL,
             `date_mod`             timestamp             DEFAULT NULL,
+            `is_deleted`           tinyint(1)   NOT NULL DEFAULT 0,
             PRIMARY KEY (`id`),
             KEY `chatbot_id` (`chatbot_id`),
             KEY `companies_id` (`companies_id`)
@@ -364,6 +374,8 @@ function plugin_newmanagement_install() {
         $DB->doQueryOrDie($query);
     } else {
         $cols = $DB->listFields('glpi_plugin_newmanagement_chatbot_mass_comm');
+        if (!isset($cols['is_deleted']))
+            $migration->addField('glpi_plugin_newmanagement_chatbot_mass_comm', 'is_deleted', 'tinyint(1) NOT NULL DEFAULT 0', ['after' => 'date_mod']);
         if (!isset($cols['system_name']))          $migration->addField('glpi_plugin_newmanagement_chatbot_mass_comm', 'system_name',          'varchar(255) DEFAULT NULL', ['after' => 'companies_id']);
         if (!isset($cols['activation_date']))      $migration->addField('glpi_plugin_newmanagement_chatbot_mass_comm', 'activation_date',      'date DEFAULT NULL',         ['after' => 'system_name']);
         if (!isset($cols['authenticated_number'])) $migration->addField('glpi_plugin_newmanagement_chatbot_mass_comm', 'authenticated_number', 'varchar(50) DEFAULT NULL',  ['after' => 'activation_date']);
@@ -371,12 +383,10 @@ function plugin_newmanagement_install() {
         if (!isset($cols['access_link']))          $migration->addField('glpi_plugin_newmanagement_chatbot_mass_comm', 'access_link',          'varchar(255) DEFAULT NULL', ['after' => 'homologation_type']);
         if (!isset($cols['login']))                $migration->addField('glpi_plugin_newmanagement_chatbot_mass_comm', 'login',                'varchar(255) DEFAULT NULL', ['after' => 'access_link']);
         if (!isset($cols['manager']))              $migration->addField('glpi_plugin_newmanagement_chatbot_mass_comm', 'manager',              'varchar(255) DEFAULT NULL', ['after' => 'password']);
-        // [FIX] Adicionar/ampliar coluna de senha
         if (!isset($cols['password']))
             $migration->addField('glpi_plugin_newmanagement_chatbot_mass_comm', 'password', 'text DEFAULT NULL', ['after' => 'login']);
         if (isset($cols['password']) && $cols['password']['Type'] === 'varchar(255)')
             $migration->changeField('glpi_plugin_newmanagement_chatbot_mass_comm', 'password', 'password', 'text DEFAULT NULL');
-        // [FIX] Adicionar indice companies_id
         $migration->addKey('glpi_plugin_newmanagement_chatbot_mass_comm', 'companies_id');
     }
 
@@ -394,6 +404,7 @@ function plugin_newmanagement_install() {
             `end_date`         date                  DEFAULT NULL,
             `date_creation`    timestamp             DEFAULT NULL,
             `date_mod`         timestamp             DEFAULT NULL,
+            `is_deleted`       tinyint(1)   NOT NULL DEFAULT 0,
             PRIMARY KEY (`id`),
             KEY `chatbot_id` (`chatbot_id`),
             KEY `companies_id` (`companies_id`)
@@ -401,11 +412,12 @@ function plugin_newmanagement_install() {
         $DB->doQueryOrDie($query);
     } else {
         $cols = $DB->listFields('glpi_plugin_newmanagement_chatbot_wa_restrictions');
+        if (!isset($cols['is_deleted']))
+            $migration->addField('glpi_plugin_newmanagement_chatbot_wa_restrictions', 'is_deleted', 'tinyint(1) NOT NULL DEFAULT 0', ['after' => 'date_mod']);
         if (!isset($cols['whatsapp_number']))  $migration->addField('glpi_plugin_newmanagement_chatbot_wa_restrictions', 'whatsapp_number',  'varchar(50) DEFAULT NULL', ['after' => 'companies_id']);
         if (!isset($cols['restriction_date'])) $migration->addField('glpi_plugin_newmanagement_chatbot_wa_restrictions', 'restriction_date', 'date DEFAULT NULL',        ['after' => 'whatsapp_number']);
         if (!isset($cols['restriction_time'])) $migration->addField('glpi_plugin_newmanagement_chatbot_wa_restrictions', 'restriction_time', 'varchar(50) DEFAULT NULL', ['after' => 'restriction_date']);
         if (!isset($cols['end_date']))         $migration->addField('glpi_plugin_newmanagement_chatbot_wa_restrictions', 'end_date',         'date DEFAULT NULL',        ['after' => 'restriction_time']);
-        // [FIX] Adicionar indice companies_id
         $migration->addKey('glpi_plugin_newmanagement_chatbot_wa_restrictions', 'companies_id');
     }
 
@@ -424,6 +436,7 @@ function plugin_newmanagement_install() {
             `user_type`     varchar(100)          DEFAULT NULL,
             `date_creation` timestamp             DEFAULT NULL,
             `date_mod`      timestamp             DEFAULT NULL,
+            `is_deleted`    tinyint(1)   NOT NULL DEFAULT 0,
             PRIMARY KEY (`id`),
             KEY `chatbot_id` (`chatbot_id`),
             KEY `companies_id` (`companies_id`)
@@ -431,15 +444,15 @@ function plugin_newmanagement_install() {
         $DB->doQueryOrDie($query);
     } else {
         $cols = $DB->listFields('glpi_plugin_newmanagement_chatbot_users');
+        if (!isset($cols['is_deleted']))
+            $migration->addField('glpi_plugin_newmanagement_chatbot_users', 'is_deleted', 'tinyint(1) NOT NULL DEFAULT 0', ['after' => 'date_mod']);
         if (!isset($cols['login']))     $migration->addField('glpi_plugin_newmanagement_chatbot_users', 'login',     'varchar(255) DEFAULT NULL', ['after' => 'user_name']);
         if (!isset($cols['email']))     $migration->addField('glpi_plugin_newmanagement_chatbot_users', 'email',     'varchar(255) DEFAULT NULL', ['after' => 'password']);
         if (!isset($cols['user_type'])) $migration->addField('glpi_plugin_newmanagement_chatbot_users', 'user_type', 'varchar(100) DEFAULT NULL', ['after' => 'email']);
-        // [FIX] Adicionar/ampliar coluna de senha
         if (!isset($cols['password']))
             $migration->addField('glpi_plugin_newmanagement_chatbot_users', 'password', 'text DEFAULT NULL', ['after' => 'login']);
         if (isset($cols['password']) && $cols['password']['Type'] === 'varchar(255)')
             $migration->changeField('glpi_plugin_newmanagement_chatbot_users', 'password', 'password', 'text DEFAULT NULL');
-        // [FIX] Adicionar indice companies_id
         $migration->addKey('glpi_plugin_newmanagement_chatbot_users', 'companies_id');
     }
 
