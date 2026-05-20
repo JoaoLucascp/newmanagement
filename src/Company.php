@@ -202,131 +202,48 @@ class Company extends \CommonDBTM
         return $ong;
     }
 
+    /**
+     * Renderiza o formulário da ficha de Empresa via Twig.
+     *
+     * [FIX A1] Antes: ~60 linhas de echo HTML misturadas com PHP.
+     * Agora: toda apresentação fica em templates/company/form.html.twig;
+     * o método PHP prepara apenas os dados e delega ao TemplateRenderer.
+     *
+     * Vantagens:
+     *  - Twig escapa automaticamente via |e (XSS eliminado por design)
+     *  - Template editável sem tocar em PHP
+     *  - Testes unitários podem verificar os dados sem parsear HTML
+     */
     public function showForm($ID, array $options = []): bool
     {
         $this->initForm($ID, $options);
         $this->showFormHeader($options);
 
-        // ------------------------------------------------------------------
-        // [FIX A3] Registra o script externo via helper nativo do GLPI.
-        // Isso garante que o JS seja carregado no <head> de forma correta,
-        // sem bloco <script> inline dentro do método showForm().
-        // ------------------------------------------------------------------
+        // [FIX A3] Carrega JS externo via helper nativo (sem <script> inline)
         \Html::requireJs('newmanagement_company_form');
 
-        // ------------------------------------------------------------------
-        // Linha 1: Nome (obrigatório) | ID (somente leitura)
-        // ------------------------------------------------------------------
-        echo '<tr class="tab_bg_1">';
-        echo '<td>' . __('Nome', 'newmanagement') . ' <span class="required">*</span></td>';
-        echo '<td>';
-        echo '<input type="text" id="name" name="name"'
-            . ' value="' . htmlspecialchars($this->fields['name'] ?? '', ENT_QUOTES) . '"'
-            . ' class="form-control" required>';
-        echo '</td>';
-        echo '<td>' . __('ID', 'newmanagement') . '</td>';
-        echo '<td>';
-        echo '<input type="text" class="form-control" value="'
-            . ($ID > 0 ? $ID : __('Gerado automaticamente', 'newmanagement'))
-            . '" disabled>';
-        echo '</td>';
-        echo '</tr>';
-
-        // ------------------------------------------------------------------
-        // Linha 2: CNPJ (input-group com botão Buscar) | Razão Social
-        // ------------------------------------------------------------------
-        $cnpj = htmlspecialchars($this->fields['cnpj'] ?? '', ENT_QUOTES);
-
-        echo '<tr class="tab_bg_1">';
-        echo '<td>' . __('CNPJ', 'newmanagement') . '</td>';
-        echo '<td>';
-        echo '<div class="input-group">';
-        echo '<input type="text" id="cnpj" name="cnpj" value="' . $cnpj . '"'
-            . ' class="form-control" placeholder="00.000.000/0000-00" maxlength="18">';
-        echo '<button type="button" class="btn btn-outline-secondary btn-sm"'
-            . ' id="btn-buscar-cnpj" title="' . __('Buscar CNPJ na BrasilAPI', 'newmanagement') . '">';
-        echo '<i class="ti ti-search"></i> ' . __('Buscar', 'newmanagement');
-        echo '</button>';
-        echo '</div>';
-        echo '<span id="cnpj-feedback" class="nm-feedback"></span>';
-        echo '</td>';
-        echo '<td>' . __('Razao Social', 'newmanagement') . '</td>';
-        echo '<td>';
-        echo '<input type="text" id="razao_social" name="razao_social"'
-            . ' value="' . htmlspecialchars($this->fields['razao_social'] ?? '', ENT_QUOTES) . '"'
-            . ' class="form-control">';
-        echo '</td>';
-        echo '</tr>';
-
-        // ------------------------------------------------------------------
-        // Linha 3: E-mail | Telefone
-        // ------------------------------------------------------------------
-        echo '<tr class="tab_bg_1">';
-        echo '<td>' . __('E-mail', 'newmanagement') . '</td>';
-        echo '<td>';
-        echo '<input type="email" id="email" name="email"'
-            . ' value="' . htmlspecialchars($this->fields['email'] ?? '', ENT_QUOTES) . '"'
-            . ' class="form-control">';
-        echo '</td>';
-        echo '<td>' . __('Telefone', 'newmanagement') . '</td>';
-        echo '<td>';
-        echo '<input type="text" id="phone" name="phone"'
-            . ' value="' . htmlspecialchars($this->fields['phone'] ?? '', ENT_QUOTES) . '"'
-            . ' class="form-control" placeholder="(00) 00000-0000">';
-        echo '</td>';
-        echo '</tr>';
-
-        // ------------------------------------------------------------------
-        // Linha 4: CEP (input-group com botão Buscar) | Status do Contrato
-        // ------------------------------------------------------------------
-        $cep             = htmlspecialchars($this->fields['cep'] ?? '', ENT_QUOTES);
+        // --- Preparação dos dados para o template ----------------------------
         $contract_status = (int) ($this->fields['contract_status'] ?? self::CONTRACT_NO_CONTRACT);
 
-        echo '<tr class="tab_bg_1">';
-        echo '<td>' . __('CEP', 'newmanagement') . '</td>';
-        echo '<td>';
-        echo '<div class="input-group">';
-        echo '<input type="text" id="cep" name="cep" value="' . $cep . '"'
-            . ' class="form-control" placeholder="00000-000" maxlength="9">';
-        echo '<button type="button" class="btn btn-outline-secondary btn-sm"'
-            . ' id="btn-buscar-cep" title="' . __('Buscar CEP na BrasilAPI', 'newmanagement') . '">';
-        echo '<i class="ti ti-search"></i> ' . __('Buscar', 'newmanagement');
-        echo '</button>';
-        echo '</div>';
-        echo '<span id="cep-feedback" class="nm-feedback"></span>';
-        echo '</td>';
-        echo '<td>' . __('Status do Contrato', 'newmanagement') . '</td>';
-        echo '<td>';
-        \Dropdown::showFromArray('contract_status', self::getContractStatusOptions(), [
-            'value'               => $contract_status,
-            'display_emptychoice' => false,
-        ]);
-        echo '</td>';
-        echo '</tr>';
+        // Label do campo ID: número real ou texto para registro novo
+        $id_label = $ID > 0
+            ? (string) $ID
+            : __('Gerado automaticamente', 'newmanagement');
 
-        // ------------------------------------------------------------------
-        // Linha 5: Endereço
-        // ------------------------------------------------------------------
-        echo '<tr class="tab_bg_1">';
-        echo '<td>' . __('Endereco', 'newmanagement') . '</td>';
-        echo '<td colspan="3">';
-        echo '<textarea id="address" name="address" class="form-control" rows="2">';
-        echo htmlspecialchars($this->fields['address'] ?? '', ENT_QUOTES);
-        echo '</textarea>';
-        echo '</td>';
-        echo '</tr>';
-
-        // ------------------------------------------------------------------
-        // Linha 6: Comentário
-        // ------------------------------------------------------------------
-        echo '<tr class="tab_bg_1">';
-        echo '<td>' . __('Comentario', 'newmanagement') . '</td>';
-        echo '<td colspan="3">';
-        echo '<textarea id="comment" name="comment" class="form-control" rows="3">';
-        echo htmlspecialchars($this->fields['comment'] ?? '', ENT_QUOTES);
-        echo '</textarea>';
-        echo '</td>';
-        echo '</tr>';
+        // --- Renderiza via Twig ----------------------------------------------
+        \Glpi\Application\View\TemplateRenderer::getInstance()->display(
+            'generic_show_form.html.twig',  // layout pai que insere as <tr> no <table> do GLPI
+            [
+                // Passa o objeto $this; o Twig acessa item.name, item.cnpj, etc.
+                // via __get() do CommonDBTM (campos do banco).
+                'item'              => $this,
+                'id'                => $ID,
+                'id_label'          => $id_label,
+                'contract_options'  => self::getContractStatusOptions(),
+                'contract_selected' => $contract_status,
+                'params'            => $options,
+            ]
+        );
 
         $this->showFormButtons($options);
 

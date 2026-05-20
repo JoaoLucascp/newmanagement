@@ -1,78 +1,104 @@
 {#
-  Newmanagement - Formulário de Empresa
+  Newmanagement — Formulário de Empresa
+  Variáveis recebidas do PHP (Company::showForm):
+    item               — array com os campos do registro (ou valores vazios para novo)
+    id                 — int: ID do registro (0 = novo)
+    id_label           — string: texto a exibir no campo ID (número ou 'Gerado automaticamente')
+    contract_options   — array<int, string>: opções do dropdown Status do Contrato
+    contract_selected  — int: valor selecionado atualmente
+    csrf_token         — string: token CSRF gerado pelo GLPI
+    action_url         — string: URL do form action
 #}
-{% extends 'layout/page.html.twig' %}
+<tr class="tab_bg_1">
+  <td>{{ 'Nome'|__('newmanagement') }} <span class="required">*</span></td>
+  <td>
+    <input type="text" id="name" name="name"
+           value="{{ item.name|default('')|e }}"
+           class="form-control" required>
+  </td>
+  <td>{{ 'ID'|__('newmanagement') }}</td>
+  <td>
+    <input type="text" class="form-control"
+           value="{{ id_label|e }}" disabled>
+  </td>
+</tr>
 
-{% block content %}
-<div class="container-fluid">
-
-  <h2>
-    {% if item.id %}
-      {{ 'Editar Empresa'|__('newmanagement') }} — {{ item.name }}
-    {% else %}
-      {{ 'Nova Empresa'|__('newmanagement') }}
-    {% endif %}
-  </h2>
-
-  <div class="card mt-3">
-    <div class="card-body">
-      <form method="POST" action="">
-        <input type="hidden" name="id" value="{{ item.id|default('') }}">
-        <input type="hidden" name="_glpi_csrf_token" value="{{ csrf_token() }}">
-
-        <div class="row g-3">
-
-          <div class="col-md-6">
-            <label class="form-label" for="name">
-              {{ 'Nome'|__('newmanagement') }} <span class="text-danger">*</span>
-            </label>
-            <input type="text" id="name" name="name" class="form-control"
-                   value="{{ item.name|default('') }}" required>
-          </div>
-
-          <div class="col-md-6">
-            <label class="form-label" for="cnpj">{{ 'CNPJ'|__('newmanagement') }}</label>
-            <input type="text" id="cnpj" name="cnpj" class="form-control"
-                   value="{{ item.cnpj|default('') }}" maxlength="20">
-          </div>
-
-          <div class="col-md-6">
-            <label class="form-label" for="phone">{{ 'Telefone'|__('newmanagement') }}</label>
-            <input type="text" id="phone" name="phone" class="form-control"
-                   value="{{ item.phone|default('') }}">
-          </div>
-
-          <div class="col-md-6">
-            <label class="form-label" for="email">{{ 'E-mail'|__('newmanagement') }}</label>
-            <input type="email" id="email" name="email" class="form-control"
-                   value="{{ item.email|default('') }}">
-          </div>
-
-          <div class="col-12">
-            <label class="form-label" for="address">{{ 'Endereço'|__('newmanagement') }}</label>
-            <textarea id="address" name="address" class="form-control" rows="2">{{ item.address|default('') }}</textarea>
-          </div>
-
-          <div class="col-12">
-            <label class="form-label" for="comment">{{ 'Observações'|__('newmanagement') }}</label>
-            <textarea id="comment" name="comment" class="form-control" rows="3">{{ item.comment|default('') }}</textarea>
-          </div>
-
-        </div>{# /.row #}
-
-        <div class="mt-4 d-flex gap-2">
-          <button type="submit" name="update" class="btn btn-primary">
-            <i class="ti ti-device-floppy"></i>
-            {{ 'Salvar'|__('newmanagement') }}
-          </button>
-          <a href="{{ path('GlpiPlugin\\Newmanagement\\Company') }}" class="btn btn-secondary">
-            {{ 'Cancelar'|__('newmanagement') }}
-          </a>
-        </div>
-
-      </form>
+<tr class="tab_bg_1">
+  <td>{{ 'CNPJ'|__('newmanagement') }}</td>
+  <td>
+    <div class="input-group">
+      <input type="text" id="cnpj" name="cnpj"
+             value="{{ item.cnpj|default('')|e }}"
+             class="form-control" placeholder="00.000.000/0000-00" maxlength="18">
+      <button type="button" class="btn btn-outline-secondary btn-sm"
+              id="btn-buscar-cnpj"
+              title="{{ 'Buscar CNPJ na BrasilAPI'|__('newmanagement') }}">
+        <i class="ti ti-search"></i> {{ 'Buscar'|__('newmanagement') }}
+      </button>
     </div>
-  </div>
+    <span id="cnpj-feedback" class="nm-feedback"></span>
+  </td>
+  <td>{{ 'Razao Social'|__('newmanagement') }}</td>
+  <td>
+    <input type="text" id="razao_social" name="razao_social"
+           value="{{ item.razao_social|default('')|e }}"
+           class="form-control">
+  </td>
+</tr>
 
-</div>
-{% endblock %}
+<tr class="tab_bg_1">
+  <td>{{ 'E-mail'|__('newmanagement') }}</td>
+  <td>
+    <input type="email" id="email" name="email"
+           value="{{ item.email|default('')|e }}"
+           class="form-control">
+  </td>
+  <td>{{ 'Telefone'|__('newmanagement') }}</td>
+  <td>
+    <input type="text" id="phone" name="phone"
+           value="{{ item.phone|default('')|e }}"
+           class="form-control" placeholder="(00) 00000-0000">
+  </td>
+</tr>
+
+<tr class="tab_bg_1">
+  <td>{{ 'CEP'|__('newmanagement') }}</td>
+  <td>
+    <div class="input-group">
+      <input type="text" id="cep" name="cep"
+             value="{{ item.cep|default('')|e }}"
+             class="form-control" placeholder="00000-000" maxlength="9">
+      <button type="button" class="btn btn-outline-secondary btn-sm"
+              id="btn-buscar-cep"
+              title="{{ 'Buscar CEP na BrasilAPI'|__('newmanagement') }}">
+        <i class="ti ti-search"></i> {{ 'Buscar'|__('newmanagement') }}
+      </button>
+    </div>
+    <span id="cep-feedback" class="nm-feedback"></span>
+  </td>
+  <td>{{ 'Status do Contrato'|__('newmanagement') }}</td>
+  <td>
+    <select name="contract_status" class="form-select">
+      {% for value, label in contract_options %}
+        <option value="{{ value }}"
+          {% if value == contract_selected %}selected{% endif %}>
+          {{ label }}
+        </option>
+      {% endfor %}
+    </select>
+  </td>
+</tr>
+
+<tr class="tab_bg_1">
+  <td>{{ 'Endereco'|__('newmanagement') }}</td>
+  <td colspan="3">
+    <textarea id="address" name="address" class="form-control" rows="2">{{ item.address|default('')|e }}</textarea>
+  </td>
+</tr>
+
+<tr class="tab_bg_1">
+  <td>{{ 'Comentario'|__('newmanagement') }}</td>
+  <td colspan="3">
+    <textarea id="comment" name="comment" class="form-control" rows="3">{{ item.comment|default('')|e }}</textarea>
+  </td>
+</tr>
