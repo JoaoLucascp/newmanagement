@@ -1,0 +1,199 @@
+{#
+  Newmanagement — Aba IPBX On-Premise dentro da ficha de Empresa
+  Variáveis recebidas (Ipbx::showTabForCompany):
+    action_url        — string: URL do endpoint ajax/ipbx_sub.php
+    companies_id      — int
+    ipbx_id           — int (0 = ainda não existe)
+    fields            — array com os campos do IPBX (senhas já zeradas)
+    ipbx_action       — string: 'add_ipbx' | 'update_ipbx'
+    csrf              — string: token CSRF
+    can_write         — bool
+    can_delete        — bool
+    web_placeholder   — string: placeholder do campo senha web
+    ssh_placeholder   — string: placeholder do campo senha ssh
+    extensions        — array de rows da tabela de ramais
+    devices           — array de rows da tabela de dispositivos
+    network           — array de rows da tabela de rede
+#}
+<div class="nm-ipbx-tab"
+     data-action-url="{{ action_url|e('html_attr') }}"
+     data-companies-id="{{ companies_id }}">
+
+  {# === Formulário principal === #}
+  <div id="nm-ipbx-form">
+    <input type="hidden" id="nm-ipbx-csrf"         value="{{ csrf|e('html_attr') }}">
+    <input type="hidden" id="nm-ipbx-action"       value="{{ ipbx_action }}">
+    <input type="hidden" id="nm-ipbx-id"           value="{{ ipbx_id }}">
+    <input type="hidden" id="nm-ipbx-companies-id" value="{{ companies_id }}">
+
+    <table class="tab_cadre_fixe">
+
+      <tr class="tab_bg_1">
+        <td>{{ 'Modelo'|__('newmanagement') }}</td>
+        <td>
+          <input type="text" id="nm-ipbx-model" autocomplete="off"
+                 value="{{ fields.model|default('')|e }}"
+                 class="form-control"
+                 {{ not can_write ? 'readonly' }}
+          >
+        </td>
+        <td>{{ 'Versão'|__('newmanagement') }}</td>
+        <td>
+          <input type="text" id="nm-ipbx-server_version" autocomplete="off"
+                 value="{{ fields.server_version|default('')|e }}"
+                 class="form-control"
+                 {{ not can_write ? 'readonly' }}
+          >
+        </td>
+      </tr>
+
+      <tr class="tab_bg_1">
+        <td>{{ 'IP Local'|__('newmanagement') }}</td>
+        <td>
+          <input type="text" id="nm-ipbx-ip_local" autocomplete="off"
+                 value="{{ fields.ip_local|default('')|e }}"
+                 class="form-control" placeholder="192.168.1.1"
+                 {{ not can_write ? 'readonly' }}
+          >
+        </td>
+        <td>{{ 'IP Externo'|__('newmanagement') }}</td>
+        <td>
+          <input type="text" id="nm-ipbx-ip_external" autocomplete="off"
+                 value="{{ fields.ip_external|default('')|e }}"
+                 class="form-control" placeholder="201.x.x.x"
+                 {{ not can_write ? 'readonly' }}
+          >
+        </td>
+      </tr>
+
+      <tr class="tab_bg_1">
+        <td>{{ 'Porta Web'|__('newmanagement') }}</td>
+        <td>
+          <input type="text" id="nm-ipbx-web_port" autocomplete="off"
+                 value="{{ fields.web_port|default('')|e }}"
+                 class="form-control" placeholder="80"
+                 {{ not can_write ? 'readonly' }}
+          >
+        </td>
+        <td>{{ 'Senha Web'|__('newmanagement') }}</td>
+        <td>
+          <div class="input-group">
+            <input type="password" id="nm-web-password"
+                   class="form-control" autocomplete="new-password"
+                   value=""
+                   placeholder="{{ web_placeholder|e('html_attr') }}"
+                   {{ not can_write ? 'readonly' }}
+            >
+            <button type="button" class="btn btn-sm btn-icon nm-btn-eye"
+                    data-target="nm-web-password">
+              <i class="ti ti-eye"></i>
+            </button>
+          </div>
+        </td>
+      </tr>
+
+      <tr class="tab_bg_1">
+        <td>{{ 'Porta SSH'|__('newmanagement') }}</td>
+        <td>
+          <input type="text" id="nm-ipbx-ssh_port" autocomplete="off"
+                 value="{{ fields.ssh_port|default('')|e }}"
+                 class="form-control" placeholder="22"
+                 {{ not can_write ? 'readonly' }}
+          >
+        </td>
+        <td>{{ 'Senha SSH'|__('newmanagement') }}</td>
+        <td>
+          <div class="input-group">
+            <input type="password" id="nm-ssh-password"
+                   class="form-control" autocomplete="new-password"
+                   value=""
+                   placeholder="{{ ssh_placeholder|e('html_attr') }}"
+                   {{ not can_write ? 'readonly' }}
+            >
+            <button type="button" class="btn btn-sm btn-icon nm-btn-eye"
+                    data-target="nm-ssh-password">
+              <i class="ti ti-eye"></i>
+            </button>
+          </div>
+        </td>
+      </tr>
+
+      <tr class="tab_bg_1">
+        <td>{{ 'Comentário'|__('newmanagement') }}</td>
+        <td colspan="3">
+          <textarea id="nm-ipbx-comment" class="form-control" rows="2"
+                    {{ not can_write ? 'readonly' }}
+          >{{ fields.comment|default('')|e }}</textarea>
+        </td>
+      </tr>
+
+    </table>
+  </div>{# /#nm-ipbx-form #}
+
+  {# === Ramais === #}
+  <div class="nm-subsection mt-3">
+    <div class="d-flex align-items-center mb-2">
+      <i class="ti ti-phone-call me-2 fs-5 text-muted"></i>
+      <span class="fw-bold text-muted text-uppercase" style="font-size:0.75rem;letter-spacing:.05em">
+        {{ 'Ramais'|__('newmanagement') }}
+      </span>
+      <button type="button"
+              class="btn btn-sm btn-icon ms-auto nm-toggle-section"
+              data-target="nm-ext-tbody"
+              aria-expanded="true"
+              title="Recolher/Expandir">
+        <i class="ti ti-chevron-up"></i>
+      </button>
+    </div>
+    {% include '@GlpiPlugin/Newmanagement/ipbx/partials/extensions.html.twig' %}
+  </div>
+
+  {# === Dispositivos === #}
+  <div class="nm-subsection mt-3">
+    <div class="d-flex align-items-center mb-2">
+      <i class="ti ti-device-desktop me-2 fs-5 text-muted"></i>
+      <span class="fw-bold text-muted text-uppercase" style="font-size:0.75rem;letter-spacing:.05em">
+        {{ 'Dispositivos'|__('newmanagement') }}
+      </span>
+      <button type="button"
+              class="btn btn-sm btn-icon ms-auto nm-toggle-section"
+              data-target="nm-dev-tbody"
+              aria-expanded="true"
+              title="Recolher/Expandir">
+        <i class="ti ti-chevron-up"></i>
+      </button>
+    </div>
+    {% include '@GlpiPlugin/Newmanagement/ipbx/partials/devices.html.twig' %}
+  </div>
+
+  {# === Rede da Empresa === #}
+  <div class="nm-subsection mt-3">
+    <div class="d-flex align-items-center mb-2">
+      <i class="ti ti-network me-2 fs-5 text-muted"></i>
+      <span class="fw-bold text-muted text-uppercase" style="font-size:0.75rem;letter-spacing:.05em">
+        {{ 'Rede da Empresa'|__('newmanagement') }}
+      </span>
+      <button type="button"
+              class="btn btn-sm btn-icon ms-auto nm-toggle-section"
+              data-target="nm-net-tbody"
+              aria-expanded="true"
+              title="Recolher/Expandir">
+        <i class="ti ti-chevron-up"></i>
+      </button>
+    </div>
+    {% include '@GlpiPlugin/Newmanagement/ipbx/partials/network.html.twig' %}
+  </div>
+
+  {# === Botão Salvar === #}
+  {% if can_write %}
+  <div class="text-end mt-3 mb-3">
+    <button type="button" id="nm-save-all"
+            class="btn btn-primary"
+            data-action-url="{{ action_url|e('html_attr') }}">
+      <i class="ti ti-device-floppy"></i>
+      {{ 'Salvar'|__('newmanagement') }}
+    </button>
+  </div>
+  {% endif %}
+
+</div>{# /.nm-ipbx-tab #}
