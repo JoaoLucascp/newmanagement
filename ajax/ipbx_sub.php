@@ -90,11 +90,12 @@ try {
             Session::checkRight(Ipbx::$rightname, CREATE);
             $ipbx_id = (int)($_POST['ipbx_id'] ?? 0);
             if ($ipbx_id <= 0) nmJson(false, ['error' => 'ipbx_id inválido']);
-            $DB->insert('glpi_plugin_newmanagement_ipbx_extensions', [
+            $DB->insert(Ipbx::TABLE_EXTENSIONS, [
                 'ipbx_id'       => $ipbx_id,
                 'companies_id'  => $companies_id,
                 'number'        => $_POST['number']       ?? '',
-                'password'      => $_POST['password']     ?? '',
+                // [FIX] Senha de ramal agora criptografada igual ao IPBX principal
+                'password'      => \Toolbox::sodiumEncrypt($_POST['password'] ?? ''),
                 'device_ip'     => $_POST['device_ip']    ?? '',
                 'user_name'     => $_POST['user_name']    ?? '',
                 'records_calls' => (int)($_POST['records_calls'] ?? 0),
@@ -103,7 +104,7 @@ try {
                 'date_mod'      => $now,
             ]);
             $rowId = $DB->insertId();
-            $row = $DB->request(['FROM' => 'glpi_plugin_newmanagement_ipbx_extensions', 'WHERE' => ['id' => $rowId]])->current();
+            $row = $DB->request(['FROM' => Ipbx::TABLE_EXTENSIONS, 'WHERE' => ['id' => $rowId]])->current();
             $csrf = \Session::getNewCSRFToken();
             $actionUrl = \Plugin::getWebDir('newmanagement') . '/ajax/ipbx_sub.php';
             $html = Ipbx::renderExtensionRow((int)$rowId, $row, $companies_id, $csrf, $actionUrl);
@@ -111,7 +112,11 @@ try {
 
         case 'delete_extension':
             Session::checkRight(Ipbx::$rightname, DELETE);
-            $DB->delete('glpi_plugin_newmanagement_ipbx_extensions', ['id' => (int)($_POST['id'] ?? 0)]);
+            // [FIX] companies_id na cláusula para impedir deleção cruzada entre empresas
+            $DB->delete(Ipbx::TABLE_EXTENSIONS, [
+                'id'           => (int)($_POST['id'] ?? 0),
+                'companies_id' => $companies_id,
+            ]);
             nmJson(true);
 
         // ------------------------------------------------------------------
@@ -121,18 +126,19 @@ try {
             Session::checkRight(Ipbx::$rightname, CREATE);
             $ipbx_id = (int)($_POST['ipbx_id'] ?? 0);
             if ($ipbx_id <= 0) nmJson(false, ['error' => 'ipbx_id inválido']);
-            $DB->insert('glpi_plugin_newmanagement_ipbx_devices', [
+            $DB->insert(Ipbx::TABLE_DEVICES, [
                 'ipbx_id'       => $ipbx_id,
                 'companies_id'  => $companies_id,
                 'device_type'   => $_POST['device_type'] ?? '',
                 'ip_address'    => $_POST['ip_address']  ?? '',
                 'login'         => $_POST['login']       ?? '',
-                'password'      => $_POST['password']    ?? '',
+                // [FIX] Senha de dispositivo agora criptografada igual ao IPBX principal
+                'password'      => \Toolbox::sodiumEncrypt($_POST['password'] ?? ''),
                 'date_creation' => $now,
                 'date_mod'      => $now,
             ]);
             $rowId = $DB->insertId();
-            $row = $DB->request(['FROM' => 'glpi_plugin_newmanagement_ipbx_devices', 'WHERE' => ['id' => $rowId]])->current();
+            $row = $DB->request(['FROM' => Ipbx::TABLE_DEVICES, 'WHERE' => ['id' => $rowId]])->current();
             $csrf = \Session::getNewCSRFToken();
             $actionUrl = \Plugin::getWebDir('newmanagement') . '/ajax/ipbx_sub.php';
             $html = Ipbx::renderDeviceRow((int)$rowId, $row, $companies_id, $csrf, $actionUrl);
@@ -140,7 +146,11 @@ try {
 
         case 'delete_device':
             Session::checkRight(Ipbx::$rightname, DELETE);
-            $DB->delete('glpi_plugin_newmanagement_ipbx_devices', ['id' => (int)($_POST['id'] ?? 0)]);
+            // [FIX] companies_id na cláusula para impedir deleção cruzada entre empresas
+            $DB->delete(Ipbx::TABLE_DEVICES, [
+                'id'           => (int)($_POST['id'] ?? 0),
+                'companies_id' => $companies_id,
+            ]);
             nmJson(true);
 
         // ------------------------------------------------------------------
@@ -150,7 +160,7 @@ try {
             Session::checkRight(Ipbx::$rightname, CREATE);
             $ipbx_id = (int)($_POST['ipbx_id'] ?? 0);
             if ($ipbx_id <= 0) nmJson(false, ['error' => 'ipbx_id inválido']);
-            $DB->insert('glpi_plugin_newmanagement_ipbx_network', [
+            $DB->insert(Ipbx::TABLE_NETWORK, [
                 'ipbx_id'       => $ipbx_id,
                 'companies_id'  => $companies_id,
                 'ip_network'    => $_POST['ip_network']    ?? '',
@@ -163,7 +173,7 @@ try {
                 'date_mod'      => $now,
             ]);
             $rowId = $DB->insertId();
-            $row = $DB->request(['FROM' => 'glpi_plugin_newmanagement_ipbx_network', 'WHERE' => ['id' => $rowId]])->current();
+            $row = $DB->request(['FROM' => Ipbx::TABLE_NETWORK, 'WHERE' => ['id' => $rowId]])->current();
             $csrf = \Session::getNewCSRFToken();
             $actionUrl = \Plugin::getWebDir('newmanagement') . '/ajax/ipbx_sub.php';
             $html = Ipbx::renderNetworkRow((int)$rowId, $row, $companies_id, $csrf, $actionUrl);
@@ -171,7 +181,11 @@ try {
 
         case 'delete_network':
             Session::checkRight(Ipbx::$rightname, DELETE);
-            $DB->delete('glpi_plugin_newmanagement_ipbx_network', ['id' => (int)($_POST['id'] ?? 0)]);
+            // [FIX] companies_id na cláusula para impedir deleção cruzada entre empresas
+            $DB->delete(Ipbx::TABLE_NETWORK, [
+                'id'           => (int)($_POST['id'] ?? 0),
+                'companies_id' => $companies_id,
+            ]);
             nmJson(true);
 
         // ------------------------------------------------------------------
@@ -228,18 +242,28 @@ try {
                     'comment'           => $_POST['comment']          ?? '',
                     'date_mod'          => $now,
                 ],
-                ['id' => (int)($_POST['id'] ?? 0)]
+                // [FIX] companies_id na cláusula para impedir update cruzado entre empresas
+                [
+                    'id'           => (int)($_POST['id'] ?? 0),
+                    'companies_id' => $companies_id,
+                ]
             );
             nmJson(true);
 
         case 'delete_line':
             Session::checkRight(Ipbx::$rightname, DELETE);
-            $DB->delete('glpi_plugin_newmanagement_ipbx_lines', ['id' => (int)($_POST['id'] ?? 0)]);
+            // [FIX] companies_id na cláusula para impedir deleção cruzada entre empresas
+            $DB->delete('glpi_plugin_newmanagement_ipbx_lines', [
+                'id'           => (int)($_POST['id'] ?? 0),
+                'companies_id' => $companies_id,
+            ]);
             nmJson(true);
 
         default:
-            nmJson(false, ['error' => 'Ação desconhecida: ' . $action]);
+            nmJson(false, ['error' => 'Ação desconhecida']);
     }
 } catch (\Throwable $e) {
-    nmJson(false, ['error' => $e->getMessage()]);
+    // [FIX] Loga o erro internamente sem vazar detalhes técnicos para o front
+    \Toolbox::logDebug('ipbx_sub.php error: ' . $e->getMessage());
+    nmJson(false, ['error' => 'Erro interno ao processar requisição']);
 }
