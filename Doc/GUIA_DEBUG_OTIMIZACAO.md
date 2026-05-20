@@ -2,11 +2,11 @@
 
 ## 📌 CONTEXTO DO PROJETO
 
-**Plugin:** Newmanagement v1.0.0  
-**Plataforma:** GLPI 11.0.6  
-**Versão PHP:** 8.1+  
-**Banco de Dados:** MySQL/MariaDB  
-**Propósito:** Gestão integrada de infraestrutura telefônica e tarefas operacionais  
+**Plugin:** Newmanagement v1.0.0
+**Plataforma:** GLPI 11.0.6
+**Versão PHP:** 8.4.19
+**Banco de Dados:** MySQL
+**Propósito:** Gestão integrada de infraestrutura telefônica e tarefas operacionais
 
 ---
 
@@ -21,76 +21,85 @@
 ### FASE 1: ANÁLISE DE CONFORMIDADE (Entrada)
 
 #### 1.1 Arquitetura e Padrões
+
 - [ ] **Verificar estrutura PSR-4** — Namespaces e autoloading corretos
+
   - Validar: `GlpiPlugin\Newmanagement\*` em `src/`
   - Checar: Composer.json (se aplicável)
   - Confirmar: Compatibilidade com GLPI Autoloader
-
 - [ ] **Validar herança de classes**
+
   - Todas as entidades herdam de `CommonDBTM`?
   - Propriedades estáticas definidas corretamente?
   - Métodos essenciais implementados (getTable, getTypeName, etc)?
-
 - [ ] **Revisar integração de hooks**
+
   - Hooks registrados em setup.php?
   - CSRF protection habilitado?
   - Menu integration correto?
   - Asset registration (CSS/JS) válido?
 
 #### 1.2 Segurança
+
 - [ ] **Prevenção de SQL Injection**
+
   - Todas as queries usam `$DB->prepare()` ou `$DB->queryOrDie()`?
   - Placeholders com `?` ou named placeholders?
   - Sem concatenação de strings em SQL?
-
 - [ ] **Proteção XSS**
+
   - Templates Twig usam `{{ }}` (auto-escape)?
   - Sem uso de `{{ var|raw }}` perigoso?
   - JavaScript sanitizado?
-
 - [ ] **Validação de entrada**
+
   - POST/GET data validada?
   - Tipos esperados verificados?
   - Caracteres especiais tratados?
-
 - [ ] **Controle de acesso**
+
   - `$rightname` definido em cada classe?
   - `Session::checkRight()` usado em front-ends?
   - Verificação de entidade/visibilidade?
 
 #### 1.3 Banco de Dados
+
 - [ ] **Estrutura das tabelas**
+
   - Charset UTF-8 em todas?
   - Collation consistente?
   - Soft delete (is_deleted) implementado?
   - Timestamps (date_creation, date_mod)?
   - Índices apropriados para buscas?
   - Foreign keys definidas?
-
 - [ ] **Migração de banco**
+
   - Versão de migração gerenciada?
   - Upgrade paths para versões antigas?
   - Rollback procedures documentadas?
 
 #### 1.4 Frontend
+
 - [ ] **Twig templates**
+
   - Todos os templates em `templates/` com `.html.twig`?
   - Herança de templates base do GLPI?
   - Blocos customizáveis definidos?
   - Macros reutilizáveis?
-
 - [ ] **Formulários**
+
   - Uso de `HTMLForm` nativo do GLPI?
   - Validação client-side?
   - Mensagens de erro claras?
-
 - [ ] **CSS/JavaScript**
+
   - CSS minificado?
   - Prefixos CSS para compatibilidade?
   - JavaScript modular?
   - AJAX com GLPI CSRF token?
 
 #### 1.5 I18n (Internacionalização)
+
 - [ ] **Strings traduzíveis**
   - Todos os textos envolvidos em `__()` ou `_n()`?
   - Contexto apropriado em gettext?
@@ -104,6 +113,7 @@
 #### 2.1 Problemas Comuns em Plugins GLPI
 
 **Verificar:**
+
 ```
 ❌ Código comentado não removido
 ❌ Variáveis globais desnecessárias ($GLOBALS)
@@ -120,6 +130,7 @@
 #### 2.2 Potenciais Vulnerabilidades
 
 **Validar:**
+
 - Escapar variáveis em templates
 - Validar tipos em métodos
 - Limpar dados de entrada
@@ -130,6 +141,7 @@
 #### 2.3 Padrões Anti-
 
 **Evitar:**
+
 ```php
 // ❌ RUIM: Concatenação direta
 $query = "SELECT * FROM table WHERE id = " . $id;
@@ -158,6 +170,7 @@ if (!$this->canCreate()) { return false; }
 #### 3.1 Reutilização de Código GLPI
 
 **Procurar em GLPI Core:**
+
 - ✅ Componentes de formulário já prontos
 - ✅ Paginadores nativos
 - ✅ Buscadores integrados
@@ -168,6 +181,7 @@ if (!$this->canCreate()) { return false; }
 - ✅ Workflows automáticos
 
 **Substituir código custom por:**
+
 ```php
 // ❌ Seu paginador custom
 // ✅ Use: Glpi\Toolbox\Pagination
@@ -185,6 +199,7 @@ if (!$this->canCreate()) { return false; }
 #### 3.2 Performance
 
 **Implementar:**
+
 - Índices de banco de dados para campos buscáveis
 - Lazy loading de relacionamentos
 - Cache de resultados (Redis/APCu)
@@ -194,6 +209,7 @@ if (!$this->canCreate()) { return false; }
 #### 3.3 Manutenibilidade
 
 **Aplicar:**
+
 - PHPStan nível 8 (análise estática)
 - PHP_CodeSniffer com padrão PSR-12
 - PHPUnit para testes automatizados
@@ -299,6 +315,7 @@ newmanagement/
 #### 4.2 Padrões de Código Esperados
 
 **Namespace:**
+
 ```php
 namespace GlpiPlugin\Newmanagement;
 
@@ -307,11 +324,12 @@ namespace GlpiPlugin\Newmanagement\Common;
 ```
 
 **Classe CommonDBTM:**
+
 ```php
 class Company extends \CommonDBTM
 {
     public static $rightname = 'plugin_newmanagement_company';
-    
+  
     public static function getTypeName($nb = 0): string {}
     public static function getTable($classname = null): string {}
     public function post_getFromForm(): array {}
@@ -321,6 +339,7 @@ class Company extends \CommonDBTM
 ```
 
 **Validação:**
+
 ```php
 protected function beforeInsert(): bool
 {
@@ -339,6 +358,7 @@ protected function beforeInsert(): bool
 #### 5.1 SQL Injection Prevention
 
 **Audit Checklist:**
+
 ```sql
 -- ❌ VULNERÁVEL
 $result = $DB->query("SELECT * FROM table WHERE id = " . $_GET['id']);
@@ -353,6 +373,7 @@ $result = $DB->query("SELECT * FROM table WHERE id = :id", ['id' => $_GET['id']]
 #### 5.2 XSS Prevention
 
 **Validar Templates:**
+
 ```twig
 {# ❌ VULNERÁVEL #}
 {{ user_input|raw }}
@@ -367,6 +388,7 @@ $result = $DB->query("SELECT * FROM table WHERE id = :id", ['id' => $_GET['id']]
 #### 5.3 CSRF Protection
 
 **Verificar:**
+
 ```php
 // Em setup.php
 $PLUGIN_HOOKS['csrf_compliant']['newmanagement'] = true;
@@ -378,6 +400,7 @@ $PLUGIN_HOOKS['csrf_compliant']['newmanagement'] = true;
 #### 5.4 Authentication & Authorization
 
 **Validar:**
+
 ```php
 // Cada método deve validar direitos
 public function display() {
@@ -395,6 +418,7 @@ public function display() {
 #### 6.1 Testes Automatizados (PHPUnit)
 
 **Implementar:**
+
 ```
 Tests/Unit/
 ├── CompanyTest.php          # Testes de modelo
@@ -414,6 +438,7 @@ Tests/Feature/
 #### 6.2 Análise Estática (PHPStan)
 
 **Nível 8 — Máximo:**
+
 - Type hints 100%
 - Return types definidos
 - Property types tipadas
@@ -422,6 +447,7 @@ Tests/Feature/
 #### 6.3 Code Style (PSR-12)
 
 **Validar com PHP_CodeSniffer:**
+
 ```bash
 phpcs --standard=PSR12 src/
 ```
@@ -429,6 +455,7 @@ phpcs --standard=PSR12 src/
 #### 6.4 Cobertura de Testes
 
 **Meta:** 80%+ de cobertura
+
 ```bash
 phpunit --coverage-html=coverage/
 ```
@@ -440,17 +467,19 @@ phpunit --coverage-html=coverage/
 #### 7.1 Documentação Técnica
 
 **Arquivos necessários:**
-- [x] README.md — Guia rápido
-- [x] DOCUMENTACAO_NEWMANAGEMENT.md — Este documento
-- [ ] ARQUITETURA.md — Diagramas e design
-- [ ] API.md — Referência completa
-- [ ] DATABASE.md — Schema SQL comentado
-- [ ] SEGURANCA.md — Boas práticas
-- [ ] CHANGELOG.md — Histórico de versões
+
+- [X] README.md — Guia rápido
+- [X] DOCUMENTACAO_NEWMANAGEMENT.md — Este documento
+- [X] ARQUITETURA.md — Diagramas e design
+- [X] API.md — Referência completa
+- [X] DATABASE.md — Schema SQL comentado
+- [X] SEGURANCA.md — Boas práticas
+- [X] CHANGELOG.md — Histórico de versões
 
 #### 7.2 Documentação de Código
 
 **PHPDoc em todas as classes:**
+
 ```php
 /**
  * Company class - Gestão de empresas
@@ -508,39 +537,40 @@ PATCH: Bug fixes
 ### O Plugin Deve:
 
 1. ✅ **100% Conforme GLPI 11.0.6**
+
    - PSR-4 namespacing correto
    - CommonDBTM herança
    - Hooks registration
    - Twig templates
    - Asset registration
-
 2. ✅ **Segurança em Primeiro Lugar**
+
    - 0 SQL Injections
    - 0 XSS vulnerabilities
    - CSRF protection
    - Input validation
    - Access control
-
 3. ✅ **Máximo Reuso de Código GLPI**
+
    - Usar componentes nativos
    - Herdar funcionalidades
    - Estender padrões existentes
    - Minimizar custom code
-
 4. ✅ **Performance Otimizada**
+
    - Índices de banco corretos
    - Queries otimizadas
    - Caching implementado
    - Lazy loading
-
 5. ✅ **Completamente Documentado**
+
    - README.md
    - DOCUMENTACAO_NEWMANAGEMENT.md
    - PHPDoc em código
    - Exemplos de uso
    - Guia de contribuição
-
 6. ✅ **Testável e Mantível**
+
    - Testes 80%+ cobertura
    - Análise estática PHPStan 8
    - Code style PSR-12
@@ -551,16 +581,16 @@ PATCH: Bug fixes
 
 ## 📊 MÉTRICAS DE SUCESSO
 
-| Métrica | Meta | Checagem |
-|---------|------|----------|
-| PSR-12 Compliance | 100% | ✅ |
-| Test Coverage | 80%+ | ⏳ |
-| Security Issues | 0 | ✅ |
-| PHPStan Level | 8 | ⏳ |
-| Performance (avg) | < 200ms | ✅ |
-| Code Duplication | < 5% | ⏳ |
-| Documentation | Completa | ✅ |
-| GLPI Compliance | 100% | ✅ |
+| Métrica          | Meta     | Checagem |
+| ----------------- | -------- | -------- |
+| PSR-12 Compliance | 100%     | ✅       |
+| Test Coverage     | 80%+     | ⏳       |
+| Security Issues   | 0        | ✅       |
+| PHPStan Level     | 8        | ⏳       |
+| Performance (avg) | < 200ms  | ✅       |
+| Code Duplication  | < 5%     | ⏳       |
+| Documentation     | Completa | ✅       |
+| GLPI Compliance   | 100%     | ✅       |
 
 ---
 
@@ -577,7 +607,6 @@ PATCH: Bug fixes
 
 ---
 
-**Documento criado em:** 20/05/2026  
-**Próxima revisão:** Após cada release major  
-**Responsável:** Equipe de Desenvolvimento Newmanagement
-
+**Documento criado em:** 20/05/2026
+**Próxima revisão:** Após cada release major
+**Responsável:** João Lucas
