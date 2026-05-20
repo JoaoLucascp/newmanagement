@@ -21,9 +21,12 @@ function nmJson(bool $ok, array $extra = []): void {
     exit;
 }
 
-function nmEncrypt(string $value): string {
-    if ($value === '') return '';
-    return \Toolbox::encrypt($value);
+/**
+ * Criptografa senha com sodiumEncrypt; retorna null para valores vazios
+ * para evitar que blobs criptografados inúteis sejam gravados no banco.
+ */
+function nmEncryptPassword(string $value): ?string {
+    return $value !== '' ? \Toolbox::sodiumEncrypt($value) : null;
 }
 
 $action       = $_POST['action']       ?? '';
@@ -61,7 +64,7 @@ function nmBulkUsers(int $chatbotId, int $companiesId, array $users, string $now
             'companies_id'  => $companiesId,
             'user_name'     => $uname,
             'login'         => $ulogin,
-            'password'      => nmEncrypt(trim($pwds[$idx]  ?? '')),
+            'password'      => nmEncryptPassword(trim($pwds[$idx] ?? '')),
             'email'         => trim($emails[$idx] ?? ''),
             'user_type'     => trim($types[$idx]  ?? 'usuario'),
             'date_creation' => $now,
@@ -93,7 +96,7 @@ function nmBulkMassComm(int $chatbotId, int $companiesId, array $mc, string $now
             'homologation_type'    => trim($homs[$idx]  ?? ''),
             'access_link'          => trim($links[$idx] ?? ''),
             'login'                => trim($logins[$idx] ?? ''),
-            'password'             => nmEncrypt(trim($pwds[$idx] ?? '')),
+            'password'             => nmEncryptPassword(trim($pwds[$idx] ?? '')),
             'manager'              => trim($mgrs[$idx]  ?? ''),
             'date_creation'        => $now,
             'date_mod'             => $now,
@@ -141,9 +144,9 @@ try {
                 'supervisors_count'       => $n('supervisors_count'),
                 'admins_count'            => $n('admins_count'),
                 'admin_login'             => $s('admin_login'),
-                'admin_password'          => nmEncrypt($s('admin_password')),
+                'admin_password'          => nmEncryptPassword($s('admin_password')),
                 'superadmin_login'        => $s('superadmin_login'),
-                'superadmin_password'     => nmEncrypt($s('superadmin_password')),
+                'superadmin_password'     => nmEncryptPassword($s('superadmin_password')),
                 'manager_name'            => $s('manager_name'),
                 'manager_contact'         => $s('manager_contact'),
                 'manager_email'           => $s('manager_email'),
@@ -187,10 +190,11 @@ try {
                 'comment'                 => $s('comment'),
                 'date_mod'                => $now,
             ];
+            // Só atualiza senha se um novo valor foi enviado
             if ($s('admin_password') !== '')
-                $data['admin_password']      = nmEncrypt($s('admin_password'));
+                $data['admin_password']      = nmEncryptPassword($s('admin_password'));
             if ($s('superadmin_password') !== '')
-                $data['superadmin_password'] = nmEncrypt($s('superadmin_password'));
+                $data['superadmin_password'] = nmEncryptPassword($s('superadmin_password'));
             $DB->update('glpi_plugin_newmanagement_chatbots', $data, ['id' => $id]);
             if (!empty($_POST['chatbot_users']) && is_array($_POST['chatbot_users'])) {
                 $DB->delete('glpi_plugin_newmanagement_chatbot_users', ['chatbot_id' => $id]);
@@ -219,7 +223,7 @@ try {
                 'homologation_type'    => $s('homologation_type'),
                 'access_link'          => $s('access_link'),
                 'login'                => $s('login'),
-                'password'             => nmEncrypt($s('password')),
+                'password'             => nmEncryptPassword($s('password')),
                 'manager'              => $s('manager'),
                 'date_creation'        => $now,
                 'date_mod'             => $now,
@@ -267,7 +271,7 @@ try {
                 'companies_id'  => $companies_id,
                 'user_name'     => $s('user_name'),
                 'login'         => $s('login'),
-                'password'      => nmEncrypt($s('password')),
+                'password'      => nmEncryptPassword($s('password')),
                 'email'         => $s('email'),
                 'user_type'     => $s('user_type'),
                 'date_creation' => $now,
