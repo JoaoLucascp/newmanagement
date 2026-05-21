@@ -28,13 +28,13 @@
     <table class="tab_cadre_fixe nm-table">
 
       <tr class="tab_bg_1">
-        <td>{{ 'Modelo do Chatbot'|trans({}, 'newmanagement') }}</td>
+        <td>{{ __('Modelo do Chatbot', 'newmanagement') }}</td>
         <td><input type="text" id="nm-chatbot-model"
              value="{{ f.model|e('html_attr') }}"
              class="form-control"
              {{ not can_write ? 'readonly disabled' }}
         ></td>
-        <td>{{ 'ID de Cadastro'|trans({}, 'newmanagement') }}</td>
+        <td>{{ __('ID de Cadastro', 'newmanagement') }}</td>
         <td><input type="text" id="nm-chatbot-registration_id"
              value="{{ f.chatbot_registration_id|e('html_attr') }}"
              class="form-control"
@@ -43,13 +43,13 @@
       </tr>
 
       <tr class="tab_bg_1">
-        <td>{{ 'Data de Ativação'|trans({}, 'newmanagement') }}</td>
+        <td>{{ __('Data de Ativação', 'newmanagement') }}</td>
         <td><input type="date" id="nm-chatbot-activation_date"
              value="{{ f.activation_date|e('html_attr') }}"
              class="form-control"
              {{ not can_write ? 'readonly disabled' }}
         ></td>
-        <td>{{ 'Número WhatsApp'|trans({}, 'newmanagement') }}</td>
+        <td>{{ __('Número WhatsApp', 'newmanagement') }}</td>
         <td><input type="text" id="nm-chatbot-whatsapp"
              value="{{ f.whatsapp_number|e('html_attr') }}"
              class="form-control"
@@ -59,14 +59,14 @@
       </tr>
 
       <tr class="tab_bg_1">
-        <td>{{ 'Link de Acesso'|trans({}, 'newmanagement') }}</td>
+        <td>{{ __('Link de Acesso', 'newmanagement') }}</td>
         <td><input type="url" id="nm-chatbot-access_link"
              value="{{ f.access_link|e('html_attr') }}"
              class="form-control"
              placeholder="https://"
              {{ not can_write ? 'readonly disabled' }}
         ></td>
-        <td>{{ 'Plano Contratado'|trans({}, 'newmanagement') }}</td>
+        <td>{{ __('Plano Contratado', 'newmanagement') }}</td>
         <td><input type="text" id="nm-chatbot-plan"
              value="{{ f.plan|e('html_attr') }}"
              class="form-control"
@@ -75,13 +75,13 @@
       </tr>
 
       <tr class="tab_bg_1">
-        <td>{{ 'Qtd. Usuários'|trans({}, 'newmanagement') }}</td>
+        <td>{{ __('Qtd. Usuários', 'newmanagement') }}</td>
         <td><input type="number" id="nm-chatbot-users_count"
              value="{{ f.users_count|e('html_attr') }}"
              class="form-control" min="0"
              {{ not can_write ? 'readonly disabled' }}
         ></td>
-        <td>{{ 'Qtd. Supervisores'|trans({}, 'newmanagement') }}</td>
+        <td>{{ __('Qtd. Supervisores', 'newmanagement') }}</td>
         <td><input type="number" id="nm-chatbot-supervisors_count"
              value="{{ f.supervisors_count|e('html_attr') }}"
              class="form-control" min="0"
@@ -90,13 +90,13 @@
       </tr>
 
       <tr class="tab_bg_1">
-        <td>{{ 'Qtd. Administradores'|trans({}, 'newmanagement') }}</td>
+        <td>{{ __('Qtd. Administradores', 'newmanagement') }}</td>
         <td><input type="number" id="nm-chatbot-admins_count"
              value="{{ f.admins_count|e('html_attr') }}"
              class="form-control" min="0"
              {{ not can_write ? 'readonly disabled' }}
         ></td>
-        <td>{{ 'Redes Sociais Ativas'|trans({}, 'newmanagement') }}</td>
+        <td>{{ __('Redes Sociais Ativas', 'newmanagement') }}</td>
         <td><input type="text" id="nm-chatbot-social_networks"
              value="{{ f.social_networks|e('html_attr') }}"
              class="form-control"
@@ -106,17 +106,17 @@
       </tr>
 
       <tr class="noHover">
-        <th colspan="4">{{ 'Credenciais de Administrador'|trans({}, 'newmanagement') }}</th>
+        <th colspan="4">{{ __('Credenciais de Administrador', 'newmanagement') }}</th>
       </tr>
 
       <tr class="tab_bg_1">
-        <td>{{ 'Login Admin'|trans({}, 'newmanagement') }}</td>
+        <td>{{ __('Login Admin', 'newmanagement') }}</td>
         <td><input type="text" id="nm-chatbot-admin_login"
              value="{{ f.admin_login|e('html_attr') }}"
              class="form-control" autocomplete="off"
              {{ not can_write ? 'readonly disabled' }}
         ></td>
-        <td>{{ 'Senha Admin'|trans({}, 'newmanagement') }}</td>
+        <td>{{ __('Senha Admin', 'newmanagement') }}</td>
         <td>
           <div class="input-group">
             <input type="password" id="nm-chatbot-admin_password"
@@ -135,13 +135,13 @@
       </tr>
 
       <tr class="tab_bg_1">
-        <td>{{ 'Login Super-Admin'|trans({}, 'newmanagement') }}</td>
+        <td>{{ __('Login Super-Admin', 'newmanagement') }}</td>
         <td><input type="text" id="nm-chatbot-superadmin_login"
              value="{{ f.superadmin_login|e('html_attr') }}"
              class="form-control" autocomplete="off"
              {{ not can_write ? 'readonly disabled' }}
         ></td>
-        <td>{{ 'Senha Super-Admin'|trans({}, 'newmanagement') }}</td>
+        <td>{{ __('Senha Super-Admin', 'newmanagement') }}</td>
         <td>
           <div class="input-group">
             <input type="password" id="nm-chatbot-superadmin_password"
@@ -160,17 +160,17 @@
       </tr>
 
       <tr class="noHover">
-        <th colspan="4">{{ 'Responsável pelo Chatbot'|trans({}, 'newmanagement') }}</th>
+        <th colspan="4">{{ __('Responsável pelo Chatbot', 'newmanagement') }}</th>
       </tr>
 
       <tr class="tab_bg_1">
-        <td>{{ 'Nome do Responsável'|trans({}, 'newmanagement') }}</td>
+        <td>{{ __('Nome do Responsável', 'newmanagement') }}</td>
         <td><input type="text" id="nm-chatbot-manager_name"
              value="{{ f.manager_name|e('html_attr') }}"
              class="form-control"
              {{ not can_write ? 'readonly disabled' }}
         ></td>
-        <td>{{ 'Contato do Responsável'|trans({}, 'newmanagement') }}</td>
+        <td>{{ __('Contato do Responsável', 'newmanagement') }}</td>
         <td><input type="text" id="nm-chatbot-manager_contact"
              value="{{ f.manager_contact|e('html_attr') }}"
              class="form-control"
@@ -180,7 +180,7 @@
       </tr>
 
       <tr class="tab_bg_1">
-        <td>{{ 'E-mail do Responsável'|trans({}, 'newmanagement') }}</td>
+        <td>{{ __('E-mail do Responsável', 'newmanagement') }}</td>
         <td colspan="3">
           <input type="email" id="nm-chatbot-manager_email"
                  value="{{ f.manager_email|e('html_attr') }}"
@@ -191,7 +191,7 @@
       </tr>
 
       <tr class="tab_bg_1">
-        <td>{{ 'Comentário'|trans({}, 'newmanagement') }}</td>
+        <td>{{ __('Comentário', 'newmanagement') }}</td>
         <td colspan="3">
           <textarea id="nm-chatbot-comment" class="form-control" rows="2"
                     {{ not can_write ? 'readonly disabled' }}
@@ -271,7 +271,7 @@
               class="btn btn-primary"
               data-action-url="{{ action_url|e('html_attr') }}">
         <i class="ti ti-device-floppy"></i>
-        {{ 'Salvar Chatbot'|trans({}, 'newmanagement') }}
+        {{ __('Salvar Chatbot', 'newmanagement') }}
       </button>
     </div>
   {% endif %}
