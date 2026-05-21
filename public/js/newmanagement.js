@@ -81,15 +81,20 @@ function nmSetLoading(btnId, loading) {
 // ---------------------------------------------------------------------------
 // CSRF Helper — GLPI 11 exige X-Glpi-Csrf-Token em todo POST
 //
+// GLPI 11 armazena o token em: <meta property="glpi:csrf_token" content="...">
+// O atributo é "property", NÃO "name". Usar o seletor errado retorna null
+// e o token enviado fica vazio, causando 403 em todas as chamadas POST.
+//
 // IMPORTANTE: O GLPI 11 usa tokens CSRF single-use.
-// Nunca armazenar o token em data-attributes ou variáveis de longa duração.
 // Sempre chamar nmGetCsrfToken() NO MOMENTO do fetch para obter o token
-// atual do <meta name="glpi-csrf-token">, que o GLPI atualiza a cada resposta.
+// atual, que o GLPI atualiza a cada resposta.
 // ---------------------------------------------------------------------------
 
 function nmGetCsrfToken() {
-    const meta = document.querySelector('meta[name="glpi-csrf-token"]');
+    // GLPI 11: <meta property="glpi:csrf_token" content="...">
+    const meta = document.querySelector('meta[property="glpi:csrf_token"]');
     if (meta) return meta.getAttribute('content');
+    // Fallback GLPI 10: <input name="_glpi_csrf_token">
     const hidden = document.querySelector('input[name="_glpi_csrf_token"]');
     if (hidden) return hidden.value;
     const nmHidden = document.getElementById('nm-chatbot-csrf');
@@ -107,9 +112,8 @@ function nmGetCsrfToken() {
 // causando 403 no GLPI 11 (tokens single-use do CheckCsrfListener).
 //
 // GLPI 11 (Symfony CheckCsrfListener) valida o token de duas formas:
-//   1. Header  X-Glpi-Csrf-Token  → para chamadas XHR/fetch genéricas
-//   2. Body    _glpi_csrf_token   → obrigatório em endpoints ajax/*.php
-//              que chamam Session::checkCSRF($_POST)
+//   1. Header  X-Glpi-Csrf-Token  → interceptado pelo Symfony antes do PHP
+//   2. Body    _glpi_csrf_token   → validado por Session::checkCSRF($_POST)
 // Enviamos os dois para garantir compatibilidade com GLPI 10 e 11.
 // ---------------------------------------------------------------------------
 
