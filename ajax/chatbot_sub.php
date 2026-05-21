@@ -23,7 +23,7 @@ Session::checkRight('plugin_newmanagement_chatbot', READ);
 
 header('Content-Type: application/json; charset=utf-8');
 
-function nmJson(bool $ok, array $extra = []): void {
+function nmChatbotJson(bool $ok, array $extra = []): void {
     echo json_encode(array_merge(['success' => $ok], $extra));
     exit;
 }
@@ -32,7 +32,7 @@ function nmJson(bool $ok, array $extra = []): void {
  * Criptografa senha com sodiumEncrypt; retorna null para valores vazios
  * para evitar que blobs criptografados inúteis sejam gravados no banco.
  */
-function nmEncryptPassword(string $value): ?string {
+function nmChatbotEncryptPassword(string $value): ?string {
     return $value !== '' ? \Toolbox::sodiumEncrypt($value) : null;
 }
 
@@ -41,7 +41,7 @@ $companies_id = (int)($_POST['companies_id'] ?? 0);
 $id           = (int)($_POST['id']     ?? 0);
 
 if ($companies_id <= 0) {
-    nmJson(false, ['error' => 'companies_id inválido']);
+    nmChatbotJson(false, ['error' => 'companies_id inválido']);
 }
 
 global $DB;
@@ -54,8 +54,10 @@ $d = function(string $key): ?string {
     return ($val !== '' && $val !== '0000-00-00') ? $val : null;
 };
 
-function nmBulkUsers(int $chatbotId, int $companiesId, array $users, string $now): void {
-    global $DB;
+/**
+ * Insere usuários em lote — método interno (não global para evitar conflito de nomes).
+ */
+$bulkUsers = static function(int $chatbotId, int $companiesId, array $users, string $now) use ($DB): void {
     $names  = $users['user_name'] ?? [];
     $logins = $users['login']     ?? [];
     $pwds   = $users['password']  ?? [];
@@ -71,17 +73,16 @@ function nmBulkUsers(int $chatbotId, int $companiesId, array $users, string $now
             'companies_id'  => $companiesId,
             'user_name'     => $uname,
             'login'         => $ulogin,
-            'password'      => nmEncryptPassword(trim($pwds[$idx] ?? '')),
+            'password'      => nmChatbotEncryptPassword(trim($pwds[$idx] ?? '')),
             'email'         => trim($emails[$idx] ?? ''),
             'user_type'     => trim($types[$idx]  ?? 'usuario'),
             'date_creation' => $now,
             'date_mod'      => $now,
         ]);
     }
-}
+};
 
-function nmBulkMassComm(int $chatbotId, int $companiesId, array $mc, string $now): void {
-    global $DB;
+$bulkMassComm = static function(int $chatbotId, int $companiesId, array $mc, string $now) use ($DB): void {
     $names  = $mc['system_name']          ?? [];
     $acts   = $mc['activation_date']      ?? [];
     $auths  = $mc['authenticated_number'] ?? [];
@@ -103,16 +104,15 @@ function nmBulkMassComm(int $chatbotId, int $companiesId, array $mc, string $now
             'homologation_type'    => trim($homs[$idx]  ?? ''),
             'access_link'          => trim($links[$idx] ?? ''),
             'login'                => trim($logins[$idx] ?? ''),
-            'password'             => nmEncryptPassword(trim($pwds[$idx] ?? '')),
+            'password'             => nmChatbotEncryptPassword(trim($pwds[$idx] ?? '')),
             'manager'              => trim($mgrs[$idx]  ?? ''),
             'date_creation'        => $now,
             'date_mod'             => $now,
         ]);
     }
-}
+};
 
-function nmBulkWaRestrictions(int $chatbotId, int $companiesId, array $wa, string $now): void {
-    global $DB;
+$bulkWaRestrictions = static function(int $chatbotId, int $companiesId, array $wa, string $now) use ($DB): void {
     $nums   = $wa['whatsapp_number']  ?? [];
     $rdates = $wa['restriction_date'] ?? [];
     $rtimes = $wa['restriction_time'] ?? [];
@@ -132,7 +132,7 @@ function nmBulkWaRestrictions(int $chatbotId, int $companiesId, array $wa, strin
             'date_mod'         => $now,
         ]);
     }
-}
+};
 
 try {
     switch ($action) {
@@ -152,9 +152,9 @@ try {
                 'supervisors_count'       => $n('supervisors_count'),
                 'admins_count'            => $n('admins_count'),
                 'admin_login'             => $s('admin_login'),
-                'admin_password'          => nmEncryptPassword($s('admin_password')),
+                'admin_password'          => nmChatbotEncryptPassword($s('admin_password')),
                 'superadmin_login'        => $s('superadmin_login'),
-                'superadmin_password'     => nmEncryptPassword($s('superadmin_password')),
+                'superadmin_password'     => nmChatbotEncryptPassword($s('superadmin_password')),
                 'manager_name'            => $s('manager_name'),
                 'manager_contact'         => $s('manager_contact'),
                 'manager_email'           => $s('manager_email'),
@@ -166,19 +166,29 @@ try {
             ];
             $DB->insert('glpi_plugin_newmanagement_chatbots', $data);
             $newId = $DB->insertId();
-            if (!$newId) nmJson(false, ['error' => 'Falha ao inserir chatbot no banco']);
+            if (!$newId) nmChatbotJson(false, ['error' => 'Falha ao inserir chatbot no banco']);
             if (!empty($_POST['chatbot_users']) && is_array($_POST['chatbot_users']))
-                nmBulkUsers($newId, $companies_id, $_POST['chatbot_users'], $now);
+                $bulkUsers($newId, $companies_id, $_POST['chatbot_users'], $now);
             if (!empty($_POST['chatbot_mass_comm']) && is_array($_POST['chatbot_mass_comm']))
-                nmBulkMassComm($newId, $companies_id, $_POST['chatbot_mass_comm'], $now);
+                $bulkMassComm($newId, $companies_id, $_POST['chatbot_mass_comm'], $now);
             if (!empty($_POST['chatbot_wa_restrictions']) && is_array($_POST['chatbot_wa_restrictions']))
-                nmBulkWaRestrictions($newId, $companies_id, $_POST['chatbot_wa_restrictions'], $now);
-            nmJson(true, ['id' => $newId]);
+                $bulkWaRestrictions($newId, $companies_id, $_POST['chatbot_wa_restrictions'], $now);
+            nmChatbotJson(true, ['id' => $newId]);
 
         case 'update_chatbot':
             // [C2] Direito exato: UPDATE
             Session::checkRight('plugin_newmanagement_chatbot', UPDATE);
-            if ($id <= 0) nmJson(false, ['error' => 'ID inválido']);
+            if ($id <= 0) nmChatbotJson(false, ['error' => 'ID inválido']);
+
+            // [FIX] Verifica se o chatbot pertence ao companies_id do usuário autenticado
+            $existing = $DB->request([
+                'FROM'  => 'glpi_plugin_newmanagement_chatbots',
+                'WHERE' => ['id' => $id, 'companies_id' => $companies_id],
+            ])->current();
+            if (!$existing) {
+                nmChatbotJson(false, ['error' => 'Chatbot não encontrado ou sem permissão']);
+            }
+
             $data = [
                 'companies_id'            => $companies_id,
                 'model'                   => $s('model'),
@@ -200,29 +210,29 @@ try {
                 'date_mod'                => $now,
             ];
             if ($s('admin_password') !== '')
-                $data['admin_password']      = nmEncryptPassword($s('admin_password'));
+                $data['admin_password']      = nmChatbotEncryptPassword($s('admin_password'));
             if ($s('superadmin_password') !== '')
-                $data['superadmin_password'] = nmEncryptPassword($s('superadmin_password'));
-            $DB->update('glpi_plugin_newmanagement_chatbots', $data, ['id' => $id]);
+                $data['superadmin_password'] = nmChatbotEncryptPassword($s('superadmin_password'));
+            $DB->update('glpi_plugin_newmanagement_chatbots', $data, ['id' => $id, 'companies_id' => $companies_id]);
             if (!empty($_POST['chatbot_users']) && is_array($_POST['chatbot_users'])) {
                 $DB->delete('glpi_plugin_newmanagement_chatbot_users', ['chatbot_id' => $id]);
-                nmBulkUsers($id, $companies_id, $_POST['chatbot_users'], $now);
+                $bulkUsers($id, $companies_id, $_POST['chatbot_users'], $now);
             }
             if (!empty($_POST['chatbot_mass_comm']) && is_array($_POST['chatbot_mass_comm'])) {
                 $DB->delete('glpi_plugin_newmanagement_chatbot_mass_comm', ['chatbot_id' => $id]);
-                nmBulkMassComm($id, $companies_id, $_POST['chatbot_mass_comm'], $now);
+                $bulkMassComm($id, $companies_id, $_POST['chatbot_mass_comm'], $now);
             }
             if (!empty($_POST['chatbot_wa_restrictions']) && is_array($_POST['chatbot_wa_restrictions'])) {
                 $DB->delete('glpi_plugin_newmanagement_chatbot_wa_restrictions', ['chatbot_id' => $id]);
-                nmBulkWaRestrictions($id, $companies_id, $_POST['chatbot_wa_restrictions'], $now);
+                $bulkWaRestrictions($id, $companies_id, $_POST['chatbot_wa_restrictions'], $now);
             }
-            nmJson(true);
+            nmChatbotJson(true);
 
         case 'add_mass_comm':
             // [C2] Direito exato: CREATE
             Session::checkRight('plugin_newmanagement_chatbot', CREATE);
             $chatbot_id = $n('chatbot_id');
-            if ($chatbot_id <= 0) nmJson(false, ['error' => 'chatbot_id inválido']);
+            if ($chatbot_id <= 0) nmChatbotJson(false, ['error' => 'chatbot_id inválido']);
             $DB->insert('glpi_plugin_newmanagement_chatbot_mass_comm', [
                 'chatbot_id'           => $chatbot_id,
                 'companies_id'         => $companies_id,
@@ -232,27 +242,31 @@ try {
                 'homologation_type'    => $s('homologation_type'),
                 'access_link'          => $s('access_link'),
                 'login'                => $s('login'),
-                'password'             => nmEncryptPassword($s('password')),
+                'password'             => nmChatbotEncryptPassword($s('password')),
                 'manager'              => $s('manager'),
                 'date_creation'        => $now,
                 'date_mod'             => $now,
             ]);
             $newId = $DB->insertId();
-            if (!$newId) nmJson(false, ['error' => 'Falha ao inserir comunicação em massa']);
-            nmJson(true, ['id' => $newId]);
+            if (!$newId) nmChatbotJson(false, ['error' => 'Falha ao inserir comunicação em massa']);
+            nmChatbotJson(true, ['id' => $newId]);
 
         case 'delete_mass_comm':
             // [C2] Direito exato: DELETE
             Session::checkRight('plugin_newmanagement_chatbot', DELETE);
-            if ($id <= 0) nmJson(false, ['error' => 'ID inválido']);
-            $DB->delete('glpi_plugin_newmanagement_chatbot_mass_comm', ['id' => $id]);
-            nmJson(true);
+            if ($id <= 0) nmChatbotJson(false, ['error' => 'ID inválido']);
+            // [FIX] Garante que o registro pertence ao companies_id autenticado
+            $DB->delete('glpi_plugin_newmanagement_chatbot_mass_comm', [
+                'id'           => $id,
+                'companies_id' => $companies_id,
+            ]);
+            nmChatbotJson(true);
 
         case 'add_wa_restriction':
             // [C2] Direito exato: CREATE
             Session::checkRight('plugin_newmanagement_chatbot', CREATE);
             $chatbot_id = $n('chatbot_id');
-            if ($chatbot_id <= 0) nmJson(false, ['error' => 'chatbot_id inválido']);
+            if ($chatbot_id <= 0) nmChatbotJson(false, ['error' => 'chatbot_id inválido']);
             $DB->insert('glpi_plugin_newmanagement_chatbot_wa_restrictions', [
                 'chatbot_id'       => $chatbot_id,
                 'companies_id'     => $companies_id,
@@ -264,48 +278,56 @@ try {
                 'date_mod'         => $now,
             ]);
             $newId = $DB->insertId();
-            if (!$newId) nmJson(false, ['error' => 'Falha ao inserir restrição WA']);
-            nmJson(true, ['id' => $newId]);
+            if (!$newId) nmChatbotJson(false, ['error' => 'Falha ao inserir restrição WA']);
+            nmChatbotJson(true, ['id' => $newId]);
 
         case 'delete_wa_restriction':
             // [C2] Direito exato: DELETE
             Session::checkRight('plugin_newmanagement_chatbot', DELETE);
-            if ($id <= 0) nmJson(false, ['error' => 'ID inválido']);
-            $DB->delete('glpi_plugin_newmanagement_chatbot_wa_restrictions', ['id' => $id]);
-            nmJson(true);
+            if ($id <= 0) nmChatbotJson(false, ['error' => 'ID inválido']);
+            // [FIX] Garante que o registro pertence ao companies_id autenticado
+            $DB->delete('glpi_plugin_newmanagement_chatbot_wa_restrictions', [
+                'id'           => $id,
+                'companies_id' => $companies_id,
+            ]);
+            nmChatbotJson(true);
 
         case 'add_chatbot_user':
             // [C2] Direito exato: CREATE
             Session::checkRight('plugin_newmanagement_chatbot', CREATE);
             $chatbot_id = $n('chatbot_id');
-            if ($chatbot_id <= 0) nmJson(false, ['error' => 'chatbot_id inválido']);
+            if ($chatbot_id <= 0) nmChatbotJson(false, ['error' => 'chatbot_id inválido']);
             $DB->insert('glpi_plugin_newmanagement_chatbot_users', [
                 'chatbot_id'    => $chatbot_id,
                 'companies_id'  => $companies_id,
                 'user_name'     => $s('user_name'),
                 'login'         => $s('login'),
-                'password'      => nmEncryptPassword($s('password')),
+                'password'      => nmChatbotEncryptPassword($s('password')),
                 'email'         => $s('email'),
                 'user_type'     => $s('user_type'),
                 'date_creation' => $now,
                 'date_mod'      => $now,
             ]);
             $newId = $DB->insertId();
-            if (!$newId) nmJson(false, ['error' => 'Falha ao inserir usuário do chatbot']);
-            nmJson(true, ['id' => $newId]);
+            if (!$newId) nmChatbotJson(false, ['error' => 'Falha ao inserir usuário do chatbot']);
+            nmChatbotJson(true, ['id' => $newId]);
 
         case 'delete_chatbot_user':
             // [C2] Direito exato: DELETE
             Session::checkRight('plugin_newmanagement_chatbot', DELETE);
-            if ($id <= 0) nmJson(false, ['error' => 'ID inválido']);
-            $DB->delete('glpi_plugin_newmanagement_chatbot_users', ['id' => $id]);
-            nmJson(true);
+            if ($id <= 0) nmChatbotJson(false, ['error' => 'ID inválido']);
+            // [FIX] Garante que o registro pertence ao companies_id autenticado
+            $DB->delete('glpi_plugin_newmanagement_chatbot_users', [
+                'id'           => $id,
+                'companies_id' => $companies_id,
+            ]);
+            nmChatbotJson(true);
 
         default:
-            nmJson(false, ['error' => 'Ação desconhecida: ' . $action]);
+            nmChatbotJson(false, ['error' => 'Ação desconhecida: ' . htmlspecialchars($action, ENT_QUOTES)]);
     }
 } catch (\Throwable $e) {
     // [C2] Não vazar stack trace para o cliente
     \Toolbox::logDebug('chatbot_sub.php error: ' . $e->getMessage());
-    nmJson(false, ['error' => 'Erro interno ao processar requisição']);
+    nmChatbotJson(false, ['error' => 'Erro interno ao processar requisição']);
 }
