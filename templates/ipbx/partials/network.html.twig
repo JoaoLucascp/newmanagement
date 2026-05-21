@@ -1,5 +1,18 @@
 {#
   Partial: Tabela de Rede da Empresa com paginação server-side.
+
+  Variáveis esperadas:
+    network        — array de rows da página atual
+    net_page       — int: página atual (base 1)
+    net_total      — int: total de registros
+    net_page_size  — int: itens por página
+    ipbx_id        — int
+    companies_id   — int
+    csrf           — string
+    action_url     — string
+    paginate_url   — string
+    can_write      — bool
+    can_delete     — bool
 #}
 
 {# CORRIGIDO: max(a,b) é função nativa do Twig #}
@@ -63,6 +76,7 @@
     </tbody>
   </table>
 
+  {# Paginação #}
   <div id="nm-net-pagination"
        class="d-flex align-items-center justify-content-between mt-2"
        {% if net_pages <= 1 %}style="display:none!important"{% endif %}>
@@ -99,6 +113,7 @@
     </div>
   </div>
 
+  {# Formulário de adição #}
   {% if can_write and ipbx_id > 0 %}
   <div class="nm-add-form mt-3" id="nm-net-add-form">
     <table class="tab_cadre_fixe">
@@ -111,4 +126,15 @@
         <td><input type="text" class="form-control form-control-sm" id="nm-net-supplier"      autocomplete="off" placeholder="{{ __('Fornecedor', 'newmanagement') }}"></td>
         <td>
           <button type="button" class="btn btn-sm btn-success nm-add-net-btn"
-  
+                  data-ipbx-id="{{ ipbx_id }}"
+                  data-companies-id="{{ companies_id }}"
+                  title="{{ __('Adicionar rede', 'newmanagement') }}">
+            <i class="ti ti-plus"></i>
+          </button>
+        </td>
+      </tr>
+    </table>
+  </div>
+  {% endif %}
+
+</div>
