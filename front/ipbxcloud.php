@@ -15,36 +15,65 @@ $ipbxcloud = new IpbxCloud();
 
 // --- AÇÕES POST ---
 if (isset($_POST['update'])) {
-    Session::checkCsrfToken();
+    // [FIX] checkCSRF é o método correto no GLPI 11 para validar token POST
+    Session::checkCSRF($_POST);
     Session::checkRight(IpbxCloud::$rightname, UPDATE);
     $ipbxcloud->update($_POST);
+    Session::addMessageAfterRedirect(
+        __('IPBX Cloud atualizado com sucesso.', 'newmanagement'),
+        true,
+        INFO
+    );
     Html::back();
 }
 
 if (isset($_POST['add'])) {
-    Session::checkCsrfToken();
+    Session::checkCSRF($_POST);
     Session::checkRight(IpbxCloud::$rightname, CREATE);
     $newid = $ipbxcloud->add($_POST);
-    Html::redirect(IpbxCloud::getFormURL() . '?id=' . $newid);
+    if ($newid) {
+        Session::addMessageAfterRedirect(
+            __('IPBX Cloud criado com sucesso.', 'newmanagement'),
+            true,
+            INFO
+        );
+        Html::redirect(IpbxCloud::getFormURL() . '?id=' . $newid);
+    } else {
+        Session::addMessageAfterRedirect(
+            __('Erro ao criar IPBX Cloud. Verifique os dados e tente novamente.', 'newmanagement'),
+            true,
+            ERROR
+        );
+        Html::back();
+    }
 }
 
 if (isset($_POST['delete'])) {
-    Session::checkCsrfToken();
+    Session::checkCSRF($_POST);
     Session::checkRight(IpbxCloud::$rightname, DELETE);
     $ipbxcloud->delete($_POST);
+    Session::addMessageAfterRedirect(
+        __('IPBX Cloud removido com sucesso.', 'newmanagement'),
+        true,
+        INFO
+    );
     Html::redirect(IpbxCloud::getSearchURL());
 }
 
 // --- EXIBIÇÃO ---
 if (isset($_GET['id'])) {
-    $ipbxcloud->getFromDB((int) $_GET['id']);
+    $id = (int) $_GET['id'];
+    // [FIX] Exibe erro 404 nativo do GLPI se o registro não existir
+    if (!$ipbxcloud->getFromDB($id)) {
+        Html::displayNotFoundError();
+    }
     Html::header(
         IpbxCloud::getTypeName(1),
         '',
         'tools',
         'GlpiPlugin\\Newmanagement\\IpbxCloud'
     );
-    $ipbxcloud->showForm((int) $_GET['id']);
+    $ipbxcloud->showForm($id);
     Html::footer();
 } elseif (isset($_GET['action']) && $_GET['action'] === 'add') {
     Html::header(

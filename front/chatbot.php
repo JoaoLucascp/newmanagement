@@ -15,36 +15,65 @@ $chatbot = new Chatbot();
 
 // --- AÇÕES POST ---
 if (isset($_POST['update'])) {
-    Session::checkCsrfToken();
+    // [FIX] checkCSRF é o método correto no GLPI 11 para validar token POST
+    Session::checkCSRF($_POST);
     Session::checkRight(Chatbot::$rightname, UPDATE);
     $chatbot->update($_POST);
+    Session::addMessageAfterRedirect(
+        __('Chatbot atualizado com sucesso.', 'newmanagement'),
+        true,
+        INFO
+    );
     Html::back();
 }
 
 if (isset($_POST['add'])) {
-    Session::checkCsrfToken();
+    Session::checkCSRF($_POST);
     Session::checkRight(Chatbot::$rightname, CREATE);
     $newid = $chatbot->add($_POST);
-    Html::redirect(Chatbot::getFormURL() . '?id=' . $newid);
+    if ($newid) {
+        Session::addMessageAfterRedirect(
+            __('Chatbot criado com sucesso.', 'newmanagement'),
+            true,
+            INFO
+        );
+        Html::redirect(Chatbot::getFormURL() . '?id=' . $newid);
+    } else {
+        Session::addMessageAfterRedirect(
+            __('Erro ao criar Chatbot. Verifique os dados e tente novamente.', 'newmanagement'),
+            true,
+            ERROR
+        );
+        Html::back();
+    }
 }
 
 if (isset($_POST['delete'])) {
-    Session::checkCsrfToken();
+    Session::checkCSRF($_POST);
     Session::checkRight(Chatbot::$rightname, DELETE);
     $chatbot->delete($_POST);
+    Session::addMessageAfterRedirect(
+        __('Chatbot removido com sucesso.', 'newmanagement'),
+        true,
+        INFO
+    );
     Html::redirect(Chatbot::getSearchURL());
 }
 
 // --- EXIBIÇÃO ---
 if (isset($_GET['id'])) {
-    $chatbot->getFromDB((int) $_GET['id']);
+    $id = (int) $_GET['id'];
+    // [FIX] Exibe erro 404 nativo do GLPI se o registro não existir
+    if (!$chatbot->getFromDB($id)) {
+        Html::displayNotFoundError();
+    }
     Html::header(
         Chatbot::getTypeName(1),
         '',
         'tools',
         'GlpiPlugin\\Newmanagement\\Chatbot'
     );
-    $chatbot->showForm((int) $_GET['id']);
+    $chatbot->showForm($id);
     Html::footer();
 } elseif (isset($_GET['action']) && $_GET['action'] === 'add') {
     Html::header(

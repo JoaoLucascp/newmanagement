@@ -16,7 +16,10 @@ $task = new Task();
 $id   = (int) ($_GET['id'] ?? 0);
 
 if ($id > 0) {
-    $task->getFromDB($id);
+    // [FIX] Exibe erro 404 nativo do GLPI se o registro não existir
+    if (!$task->getFromDB($id)) {
+        \Html::displayNotFoundError();
+    }
 }
 
 \Html::header(
