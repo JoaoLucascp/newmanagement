@@ -1,0 +1,229 @@
+{#
+  templates/ipbx/tab_extensions.html.twig
+  Aba de Ramais dentro da ficha do IPBX On-Premise.
+
+  Variáveis recebidas de IpbxExtension::showForIpbx():
+    rows         — array de registros existentes
+    ipbx_id      — int
+    companies_id — int
+    can_write    — bool
+    can_delete   — bool
+    csrf         — string
+    action_url   — string
+#}
+<div class="nm-ext-tab"
+     data-action-url="{{ action_url|e('html_attr') }}"
+     data-ipbx-id="{{ ipbx_id }}"
+     data-companies-id="{{ companies_id }}">
+
+  {# === Lista de ramais existentes === #}
+  <table class="tab_cadre_fixe" id="nm-ext-list">
+    <thead>
+      <tr class="tab_bg_2">
+        <th>{{ 'Ramal'|trans({}, 'newmanagement') }}</th>
+        <th>{{ 'Usuário'|trans({}, 'newmanagement') }}</th>
+        <th>{{ 'IP Dispositivo'|trans({}, 'newmanagement') }}</th>
+        <th>{{ 'Departamento'|trans({}, 'newmanagement') }}</th>
+        <th>{{ 'Grava?'|trans({}, 'newmanagement') }}</th>
+        {% if can_delete %}<th></th>{% endif %}
+      </tr>
+    </thead>
+    <tbody id="nm-ext-rows">
+      {% for row in rows %}
+      <tr id="nm-ext-row-{{ row.id }}">
+        <td>{{ row.number|e }}</td>
+        <td>{{ row.user_name|default('-')|e }}</td>
+        <td>{{ row.device_ip|default('-')|e }}</td>
+        <td>{{ row.department|default('-')|e }}</td>
+        <td>
+          {% if row.records_calls %}
+            <span class="badge bg-success">{{ 'Sim'|trans({}, 'newmanagement') }}</span>
+          {% else %}
+            <span class="badge bg-secondary">{{ 'Não'|trans({}, 'newmanagement') }}</span>
+          {% endif %}
+        </td>
+        {% if can_delete %}
+        <td>
+          <button type="button" class="btn btn-sm btn-danger nm-ext-delete"
+                  data-id="{{ row.id }}"
+                  data-csrf="{{ csrf|e('html_attr') }}">
+            <i class="ti ti-trash"></i>
+          </button>
+        </td>
+        {% endif %}
+      </tr>
+      {% else %}
+      <tr id="nm-ext-empty">
+        <td colspan="{{ can_delete ? 6 : 5 }}" class="text-center text-muted py-3">
+          {{ 'Nenhum ramal cadastrado.'|trans({}, 'newmanagement') }}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {# === Formulário de adição === #}
+  {% if can_write %}
+  <div class="card mt-3">
+    <div class="card-header">
+      <strong>{{ 'Adicionar Ramal'|trans({}, 'newmanagement') }}</strong>
+    </div>
+    <div class="card-body">
+      <input type="hidden" id="nm-ext-csrf"         value="{{ csrf|e('html_attr') }}">
+      <input type="hidden" id="nm-ext-ipbx-id"      value="{{ ipbx_id }}">
+      <input type="hidden" id="nm-ext-companies-id" value="{{ companies_id }}">
+
+      <table class="tab_cadre_fixe">
+        <tr class="tab_bg_1">
+          <td>{{ 'Número'|trans({}, 'newmanagement') }} <span class="text-danger">*</span></td>
+          <td><input type="text" id="nm-ext-number"      class="form-control" placeholder="Ex: 1001"></td>
+          <td>{{ 'Senha SIP'|trans({}, 'newmanagement') }}</td>
+          <td><input type="password" id="nm-ext-password" class="form-control" autocomplete="new-password"></td>
+        </tr>
+        <tr class="tab_bg_1">
+          <td>{{ 'Usuário'|trans({}, 'newmanagement') }}</td>
+          <td><input type="text" id="nm-ext-user_name"  class="form-control" placeholder="Nome do usuário"></td>
+          <td>{{ 'IP Dispositivo'|trans({}, 'newmanagement') }}</td>
+          <td><input type="text" id="nm-ext-device_ip"  class="form-control" placeholder="Ex: 192.168.1.x"></td>
+        </tr>
+        <tr class="tab_bg_1">
+          <td>{{ 'Departamento'|trans({}, 'newmanagement') }}</td>
+          <td><input type="text" id="nm-ext-department" class="form-control" placeholder="Ex: Comercial"></td>
+          <td>{{ 'Grava Chamadas?'|trans({}, 'newmanagement') }}</td>
+          <td>
+            <select id="nm-ext-records_calls" class="form-select">
+              <option value="0">{{ 'Não'|trans({}, 'newmanagement') }}</option>
+              <option value="1">{{ 'Sim'|trans({}, 'newmanagement') }}</option>
+            </select>
+          </td>
+        </tr>
+      </table>
+
+      <div class="d-flex justify-content-end mt-3">
+        <button type="button" id="nm-ext-save" class="btn btn-primary">
+          <i class="ti ti-plus" id="nm-ext-save-icon"></i>
+          {{ 'Adicionar Ramal'|trans({}, 'newmanagement') }}
+        </button>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  const tab = document.querySelector('.nm-ext-tab');
+  if (!tab) return;
+
+  const actionUrl   = tab.dataset.actionUrl;
+  const ipbxId      = tab.dataset.ipbxId;
+  const companiesId = tab.dataset.companiesId;
+
+  function get(id) {
+    const el = document.getElementById('nm-ext-' + id);
+    return el ? el.value : '';
+  }
+
+  async function nmPost(body) {
+    const fd = new FormData();
+    for (const [k, v] of Object.entries(body)) fd.append(k, v ?? '');
+    const r = await fetch(actionUrl, { method: 'POST', body: fd, signal: AbortSignal.timeout(10000) });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }
+
+  function setIcon(btn, icon, spin) {
+    const i = btn.querySelector('i');
+    if (!i) return;
+    i.className = 'ti ' + icon + (spin ? ' nm-spin' : '');
+    btn.disabled = spin;
+  }
+
+  // --- ADICIONAR ---
+  const saveBtn = document.getElementById('nm-ext-save');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', async () => {
+      const number = get('number');
+      if (!number) { document.getElementById('nm-ext-number').focus(); return; }
+
+      setIcon(saveBtn, 'ti-loader-2', true);
+      try {
+        const data = await nmPost({
+          _glpi_csrf_token : get('csrf'),
+          action           : 'add_extension',
+          ipbx_id          : ipbxId,
+          companies_id     : companiesId,
+          number           : number,
+          password         : get('password'),
+          user_name        : get('user_name'),
+          device_ip        : get('device_ip'),
+          department       : get('department'),
+          records_calls    : get('records_calls'),
+        });
+
+        if (!data.success) throw new Error(data.error || 'Erro');
+
+        // Adiciona linha na tabela
+        const tbody = document.getElementById('nm-ext-rows');
+        const empty = document.getElementById('nm-ext-empty');
+        if (empty) empty.remove();
+        if (data.html) {
+          tbody.insertAdjacentHTML('beforeend', data.html);
+          bindDeleteButtons();
+        }
+
+        // Limpa formulário
+        ['number','password','user_name','device_ip','department'].forEach(f => {
+          const el = document.getElementById('nm-ext-' + f);
+          if (el) el.value = '';
+        });
+        document.getElementById('nm-ext-records_calls').value = '0';
+
+        setIcon(saveBtn, 'ti-check', false);
+        setTimeout(() => setIcon(saveBtn, 'ti-plus', false), 2000);
+
+      } catch (err) {
+        setIcon(saveBtn, 'ti-x', false);
+        setTimeout(() => setIcon(saveBtn, 'ti-plus', false), 3000);
+      }
+    });
+  }
+
+  // --- EXCLUIR ---
+  function bindDeleteButtons() {
+    document.querySelectorAll('.nm-ext-delete').forEach(btn => {
+      if (btn.dataset.bound) return;
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', async () => {
+        if (!confirm('{{ 'Excluir este ramal?'|trans({}, 'newmanagement') }}')) return;
+        btn.disabled = true;
+        try {
+          const data = await nmPost({
+            _glpi_csrf_token : btn.dataset.csrf,
+            action           : 'delete_extension',
+            id               : btn.dataset.id,
+            companies_id     : companiesId,
+          });
+          if (!data.success) throw new Error(data.error || 'Erro');
+          document.getElementById('nm-ext-row-' + btn.dataset.id)?.remove();
+        } catch (err) {
+          btn.disabled = false;
+        }
+      });
+    });
+  }
+  bindDeleteButtons();
+
+  // CSS spin
+  if (!document.getElementById('nm-spin-style')) {
+    const s = document.createElement('style');
+    s.id = 'nm-spin-style';
+    s.textContent = '@keyframes nm-spin{to{transform:rotate(360deg)}}.nm-spin{animation:nm-spin .8s linear infinite}';
+    document.head.appendChild(s);
+  }
+
+}());
+</script>
