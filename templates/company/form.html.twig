@@ -38,7 +38,7 @@
     </div>
     <span id="cnpj-feedback" class="nm-feedback"></span>
   </td>
-  <td>{{ __('Razao Social', 'newmanagement') }}</td>
+  <td>{{ __('Razão Social', 'newmanagement') }}</td>
   <td>
     <input type="text" id="razao_social" name="razao_social"
            value="{{ item.razao_social|default('')|e }}"
@@ -90,14 +90,14 @@
 </tr>
 
 <tr class="tab_bg_1">
-  <td>{{ __('Endereco', 'newmanagement') }}</td>
+  <td>{{ __('Endereço', 'newmanagement') }}</td>
   <td colspan="3">
     <textarea id="address" name="address" class="form-control" rows="2">{{ item.address|default('')|e }}</textarea>
   </td>
 </tr>
 
 <tr class="tab_bg_1">
-  <td>{{ __('Comentario', 'newmanagement') }}</td>
+  <td>{{ __('Comentário', 'newmanagement') }}</td>
   <td colspan="3">
     <textarea id="comment" name="comment" class="form-control" rows="3">{{ item.comment|default('')|e }}</textarea>
   </td>
