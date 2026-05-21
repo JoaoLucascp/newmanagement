@@ -8,11 +8,13 @@
  * @license  MIT
  */
 
-define('PLUGIN_NEWMANAGEMENT_VERSION', '1.0.0');
-
-// Padronizado para GLPI 11
+// -------------------------------------------------------
+// Constantes centralizadas — altere APENAS aqui ao versionar
+// -------------------------------------------------------
+define('PLUGIN_NEWMANAGEMENT_VERSION',         '1.0.0');
 define('PLUGIN_NEWMANAGEMENT_MIN_GLPI_VERSION', '11.0.0');
 define('PLUGIN_NEWMANAGEMENT_MAX_GLPI_VERSION', '11.0.99');
+define('PLUGIN_NEWMANAGEMENT_MIN_PHP_VERSION',  '8.1');
 
 /**
  * Inicialização do plugin - chamado em todas as páginas do GLPI
@@ -106,28 +108,45 @@ function plugin_version_newmanagement()
                 'max' => PLUGIN_NEWMANAGEMENT_MAX_GLPI_VERSION,
             ],
             'php'  => [
-                'min' => '8.1',
+                'min' => PLUGIN_NEWMANAGEMENT_MIN_PHP_VERSION,
             ],
         ],
     ];
 }
 
 /**
- * Verifica pré-requisitos
+ * Verifica pré-requisitos de versão do GLPI e do PHP.
+ * Chamada pelo GLPI antes de ativar o plugin.
  */
 function plugin_newmanagement_check_prerequisites()
 {
+    $ok = true;
+
+    // Verifica versão do GLPI
     if (
         version_compare(GLPI_VERSION, PLUGIN_NEWMANAGEMENT_MIN_GLPI_VERSION, 'lt')
         || version_compare(GLPI_VERSION, PLUGIN_NEWMANAGEMENT_MAX_GLPI_VERSION, 'gt')
     ) {
-        echo 'Este plugin requer GLPI entre '
-            . PLUGIN_NEWMANAGEMENT_MIN_GLPI_VERSION
-            . ' e '
-            . PLUGIN_NEWMANAGEMENT_MAX_GLPI_VERSION;
-        return false;
+        echo sprintf(
+            'Este plugin requer GLPI entre %s e %s. Versão atual: %s.',
+            PLUGIN_NEWMANAGEMENT_MIN_GLPI_VERSION,
+            PLUGIN_NEWMANAGEMENT_MAX_GLPI_VERSION,
+            GLPI_VERSION
+        );
+        $ok = false;
     }
-    return true;
+
+    // Verifica versão do PHP
+    if (version_compare(PHP_VERSION, PLUGIN_NEWMANAGEMENT_MIN_PHP_VERSION, 'lt')) {
+        echo sprintf(
+            'Este plugin requer PHP %s ou superior. Versão atual: %s.',
+            PLUGIN_NEWMANAGEMENT_MIN_PHP_VERSION,
+            PHP_VERSION
+        );
+        $ok = false;
+    }
+
+    return $ok;
 }
 
 /**
