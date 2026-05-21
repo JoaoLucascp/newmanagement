@@ -34,7 +34,6 @@ function plugin_init_newmanagement()
     // Registra as classes PSR-4
     \Plugin::registerClass(\GlpiPlugin\Newmanagement\Company::class);
     \Plugin::registerClass(\GlpiPlugin\Newmanagement\Ipbx::class);
-    \Plugin::registerClass(\GlpiPlugin\Newmanagement\IpbxCloud::class);
     \Plugin::registerClass(\GlpiPlugin\Newmanagement\Chatbot::class);
     \Plugin::registerClass(\GlpiPlugin\Newmanagement\FixedLine::class);
 

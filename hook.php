@@ -90,34 +90,6 @@ function plugin_newmanagement_install() {
     }
 
     // -------------------------------------------------------
-    // Tabela: IPBX Cloud
-    // -------------------------------------------------------
-    if (!$DB->tableExists('glpi_plugin_newmanagement_ipbx_cloud')) {
-        $query = "CREATE TABLE `glpi_plugin_newmanagement_ipbx_cloud` (
-            `id`              int {$default_key_sign} NOT NULL AUTO_INCREMENT,
-            `companies_id`    int {$default_key_sign} NOT NULL DEFAULT 0,
-            `provider`        varchar(255)          DEFAULT NULL,
-            `plan`            varchar(100)          DEFAULT NULL,
-            `url`             varchar(255)          DEFAULT NULL,
-            `login`           varchar(255)          DEFAULT NULL,
-            `password`        text                  DEFAULT NULL COMMENT 'sodiumEncrypt',
-            `api_token`       text                  DEFAULT NULL,
-            `status`          tinyint(1)   NOT NULL DEFAULT 1 COMMENT '1=Ativo,2=Cancelado',
-            `comment`         text                  DEFAULT NULL,
-            `date_creation`   timestamp             DEFAULT NULL,
-            `date_mod`        timestamp             DEFAULT NULL,
-            `is_deleted`      tinyint(1)   NOT NULL DEFAULT 0,
-            PRIMARY KEY (`id`),
-            KEY `companies_id` (`companies_id`)
-        ) ENGINE=InnoDB DEFAULT CHARSET={$default_charset} COLLATE={$default_collation} ROW_FORMAT=DYNAMIC";
-        $DB->doQueryOrDie($query);
-    } else {
-        $cols = $DB->listFields('glpi_plugin_newmanagement_ipbx_cloud');
-        if (isset($cols['password']) && $cols['password']['Type'] === 'varchar(255)')
-            $migration->changeField('glpi_plugin_newmanagement_ipbx_cloud', 'password', 'password', 'text DEFAULT NULL');
-    }
-
-    // -------------------------------------------------------
     // Tabela: Ramais do IPBX
     // -------------------------------------------------------
     if (!$DB->tableExists('glpi_plugin_newmanagement_ipbx_extensions')) {
@@ -467,7 +439,6 @@ function plugin_newmanagement_uninstall() {
     $tables = [
         'glpi_plugin_newmanagement_companies',
         'glpi_plugin_newmanagement_ipbx',
-        'glpi_plugin_newmanagement_ipbx_cloud',
         'glpi_plugin_newmanagement_ipbx_extensions',
         'glpi_plugin_newmanagement_ipbx_devices',
         'glpi_plugin_newmanagement_ipbx_network',
