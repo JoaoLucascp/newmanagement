@@ -40,6 +40,147 @@ class Company extends \CommonDBTM
         ];
     }
 
+    // -------------------------------------------------------
+    // Validação de CNPJ (backend)
+    // -------------------------------------------------------
+
+    /**
+     * Remove caracteres não numéricos do CNPJ.
+     * Retorna apenas os 14 dígitos ou string vazia se inválido.
+     */
+    private static function sanitizeCnpj(string $cnpj): string
+    {
+        return preg_replace('/\D/', '', $cnpj);
+    }
+
+    /**
+     * Valida CNPJ completo: formato + dígitos verificadores.
+     * Implementação do algoritmo oficial da Receita Federal.
+     */
+    public static function isValidCnpj(string $cnpj): bool
+    {
+        $cnpj = self::sanitizeCnpj($cnpj);
+
+        if (strlen($cnpj) !== 14) {
+            return false;
+        }
+
+        // Rejeita sequências com todos dígitos iguais (ex: 00000000000000)
+        if (preg_match('/^(\d)\1{13}$/', $cnpj)) {
+            return false;
+        }
+
+        // Calcula 1º dígito verificador
+        $sum    = 0;
+        $weight = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+        for ($i = 0; $i < 12; $i++) {
+            $sum += (int) $cnpj[$i] * $weight[$i];
+        }
+        $remainder = $sum % 11;
+        $digit1    = $remainder < 2 ? 0 : 11 - $remainder;
+
+        if ((int) $cnpj[12] !== $digit1) {
+            return false;
+        }
+
+        // Calcula 2º dígito verificador
+        $sum    = 0;
+        $weight = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+        for ($i = 0; $i < 13; $i++) {
+            $sum += (int) $cnpj[$i] * $weight[$i];
+        }
+        $remainder = $sum % 11;
+        $digit2    = $remainder < 2 ? 0 : 11 - $remainder;
+
+        return (int) $cnpj[13] === $digit2;
+    }
+
+    /**
+     * Formata CNPJ para armazenamento padronizado: XX.XXX.XXX/XXXX-XX.
+     * Retorna o valor original se não tiver 14 dígitos.
+     */
+    private static function formatCnpj(string $cnpj): string
+    {
+        $digits = self::sanitizeCnpj($cnpj);
+        if (strlen($digits) !== 14) {
+            return $cnpj;
+        }
+        return vsprintf('%s%s.%s%s%s.%s%s%s/%s%s%s%s-%s%s', str_split($digits));
+    }
+
+    /**
+     * Validação e sanitização chamada antes de INSERT.
+     * [FIX] CNPJ agora é validado no backend — não depende só do JS.
+     */
+    public function prepareInputForAdd($input)
+    {
+        return $this->prepareInput($input);
+    }
+
+    /**
+     * Validação e sanitização chamada antes de UPDATE.
+     * [FIX] CNPJ agora é validado no backend — não depende só do JS.
+     */
+    public function prepareInputForUpdate($input)
+    {
+        return $this->prepareInput($input);
+    }
+
+    /**
+     * Lógica comum de validação para add e update.
+     * Retorna false (com mensagem de erro) se o CNPJ for inválido.
+     * Retorna o array de input sanitizado se tudo estiver ok.
+     */
+    private function prepareInput(array $input)
+    {
+        // name é obrigatório
+        if (isset($input['name']) && trim($input['name']) === '') {
+            \Session::addMessageAfterRedirect(
+                __('O campo Nome é obrigatório.', 'newmanagement'),
+                true,
+                ERROR
+            );
+            return false;
+        }
+
+        // Valida CNPJ somente se foi enviado e não está em branco
+        if (!empty($input['cnpj'])) {
+            $cnpj = trim($input['cnpj']);
+
+            if (!self::isValidCnpj($cnpj)) {
+                \Session::addMessageAfterRedirect(
+                    __('CNPJ inválido. Verifique os dígitos e tente novamente.', 'newmanagement'),
+                    true,
+                    ERROR
+                );
+                return false;
+            }
+
+            // Armazena sempre no formato padronizado XX.XXX.XXX/XXXX-XX
+            $input['cnpj'] = self::formatCnpj($cnpj);
+        }
+
+        // Sanitiza e-mail se enviado
+        if (!empty($input['email'])) {
+            $email = filter_var(trim($input['email']), FILTER_VALIDATE_EMAIL);
+            if ($email === false) {
+                \Session::addMessageAfterRedirect(
+                    __('E-mail inválido.', 'newmanagement'),
+                    true,
+                    ERROR
+                );
+                return false;
+            }
+            $input['email'] = $email;
+        }
+
+        return $input;
+    }
+
+    // -------------------------------------------------------
+    // Search options, menu, tabs, formulário
+    // -------------------------------------------------------
+
     public function rawSearchOptions(): array
     {
         $tab = [];
@@ -182,11 +323,6 @@ class Company extends \CommonDBTM
         return $menu;
     }
 
-    /**
-     * Abas da ficha de Empresa.
-     * Ordem: Empresa → IPBX → Linha Fixa → Chatbot
-     *        → Documentos → Links → Notas → Histórico
-     */
     public function defineTabs($options = []): array
     {
         $ong = [];
@@ -204,21 +340,6 @@ class Company extends \CommonDBTM
         return $ong;
     }
 
-    /**
-     * Renderiza o formulário da ficha de Empresa via Twig.
-     *
-     * [FIX E3] Html::requireJs('newmanagement_company_form') removido.
-     * O alias nunca foi registrado em $CFG_GLPI['javascript'], causando:
-     *   "JS lib newmanagement_company_form is not known"
-     * No GLPI 11 o caminho correto é incluir o JS diretamente no
-     * template Twig com <script src="..."> ou via asset() do Twig,
-     * não através de Html::requireJs().
-     *
-     * [FIX E3-B] Path corrigido de 'generic_show_form.html.twig'
-     * para '@newmanagement/company/form.html.twig'.
-     * O template genérico do core não conhece os campos específicos
-     * do plugin (cnpj, razao_social, contract_status etc.).
-     */
     public function showForm($ID, array $options = []): bool
     {
         $this->initForm($ID, $options);
