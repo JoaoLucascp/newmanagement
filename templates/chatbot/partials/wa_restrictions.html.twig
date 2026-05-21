@@ -6,10 +6,10 @@
 <table class="tab_cadre_fixehov" id="nm-wa-table">
   <thead>
     <tr class="headerRow noHover">
-      <th>{{ 'Número WhatsApp'|trans({}, 'newmanagement') }}</th>
-      <th>{{ 'Data Início'|trans({}, 'newmanagement') }}</th>
-      <th>{{ 'Tempo de Restrição'|trans({}, 'newmanagement') }}</th>
-      <th>{{ 'Data Fim'|trans({}, 'newmanagement') }}</th>
+      <th>{{ __('Número WhatsApp', 'newmanagement') }}</th>
+      <th>{{ __('Data Início', 'newmanagement') }}</th>
+      <th>{{ __('Tempo de Restrição', 'newmanagement') }}</th>
+      <th>{{ __('Data Fim', 'newmanagement') }}</th>
       <th style="text-align:right">
         {% if can_write %}
           <button type="button" id="nm-wa-add-btn"
@@ -19,7 +19,7 @@
                   data-companies-id="{{ companies_id }}"
                   data-url="{{ action_url|e('html_attr') }}"
                   data-csrf="{{ csrf|e('html_attr') }}">
-            <i class="ti ti-plus"></i> {{ 'Adicionar'|trans({}, 'newmanagement') }}
+            <i class="ti ti-plus"></i> {{ __('Adicionar', 'newmanagement') }}
           </button>
         {% endif %}
       </th>
@@ -43,7 +43,7 @@
                     data-companies-id="{{ companies_id }}"
                     data-url="{{ action_url|e('html_attr') }}"
                     data-csrf="{{ csrf|e('html_attr') }}"
-                    data-confirm="{{ 'Remover?'|trans({}, 'newmanagement') }}">
+                    data-confirm="{{ __('Remover?', 'newmanagement') }}">
               <i class="ti ti-trash"></i>
             </button>
           {% endif %}

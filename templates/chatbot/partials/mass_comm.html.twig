@@ -6,13 +6,13 @@
 <table class="tab_cadre_fixehov" id="nm-mc-table">
   <thead>
     <tr class="headerRow noHover">
-      <th>{{ 'Nome do Sistema'|trans({}, 'newmanagement') }}</th>
-      <th>{{ 'Data Ativação'|trans({}, 'newmanagement') }}</th>
-      <th>{{ 'Número Autenticado'|trans({}, 'newmanagement') }}</th>
-      <th>{{ 'Tipo Homologação'|trans({}, 'newmanagement') }}</th>
-      <th>{{ 'Link de Acesso'|trans({}, 'newmanagement') }}</th>
-      <th>{{ 'Login'|trans({}, 'newmanagement') }}</th>
-      <th>{{ 'Senha'|trans({}, 'newmanagement') }}</th>
+      <th>{{ __('Nome do Sistema', 'newmanagement') }}</th>
+      <th>{{ __('Data Ativação', 'newmanagement') }}</th>
+      <th>{{ __('Número Autenticado', 'newmanagement') }}</th>
+      <th>{{ __('Tipo Homologação', 'newmanagement') }}</th>
+      <th>{{ __('Link de Acesso', 'newmanagement') }}</th>
+      <th>{{ __('Login', 'newmanagement') }}</th>
+      <th>{{ __('Senha', 'newmanagement') }}</th>
       <th style="text-align:right">
         {% if can_write %}
           <button type="button" id="nm-mc-add-btn"
@@ -22,7 +22,7 @@
                   data-companies-id="{{ companies_id }}"
                   data-url="{{ action_url|e('html_attr') }}"
                   data-csrf="{{ csrf|e('html_attr') }}">
-            <i class="ti ti-plus"></i> {{ 'Adicionar'|trans({}, 'newmanagement') }}
+            <i class="ti ti-plus"></i> {{ __('Adicionar', 'newmanagement') }}
           </button>
         {% endif %}
       </th>
@@ -56,7 +56,7 @@
                     data-companies-id="{{ companies_id }}"
                     data-url="{{ action_url|e('html_attr') }}"
                     data-csrf="{{ csrf|e('html_attr') }}"
-                    data-confirm="{{ 'Remover?'|trans({}, 'newmanagement') }}">
+                    data-confirm="{{ __('Remover?', 'newmanagement') }}">
               <i class="ti ti-trash"></i>
             </button>
           {% endif %}
@@ -69,7 +69,7 @@
         <td><input type="text"     id="nm-mc-system_name_0"
              name="chatbot_mass_comm[system_name][]"
              class="form-control form-control-sm"
-             placeholder="{{ 'Nome'|trans({}, 'newmanagement') }}"></td>
+             placeholder="{{ __('Nome', 'newmanagement') }}"></td>
         <td><input type="date"     id="nm-mc-activation_date_0"
              name="chatbot_mass_comm[activation_date][]"
              class="form-control form-control-sm"></td>
@@ -91,7 +91,7 @@
         <td><input type="password" id="nm-mc-password_0"
              name="chatbot_mass_comm[password][]"
              class="form-control form-control-sm"
-             placeholder="{{ 'Senha'|trans({}, 'newmanagement') }}"
+             placeholder="{{ __('Senha', 'newmanagement') }}"
              autocomplete="new-password"></td>
         <td></td>
       </tr>

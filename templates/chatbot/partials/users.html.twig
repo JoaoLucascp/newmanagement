@@ -6,11 +6,11 @@
 <table class="tab_cadre_fixehov" id="nm-cu-table">
   <thead>
     <tr class="headerRow noHover">
-      <th>{{ 'Nome'|trans({}, 'newmanagement') }}</th>
-      <th>{{ 'Login'|trans({}, 'newmanagement') }}</th>
-      <th>{{ 'Senha'|trans({}, 'newmanagement') }}</th>
-      <th>{{ 'E-mail'|trans({}, 'newmanagement') }}</th>
-      <th>{{ 'Tipo'|trans({}, 'newmanagement') }}</th>
+      <th>{{ __('Nome', 'newmanagement') }}</th>
+      <th>{{ __('Login', 'newmanagement') }}</th>
+      <th>{{ __('Senha', 'newmanagement') }}</th>
+      <th>{{ __('E-mail', 'newmanagement') }}</th>
+      <th>{{ __('Tipo', 'newmanagement') }}</th>
       <th style="text-align:right">
         {% if can_write %}
           <button type="button" id="nm-cu-add-btn"
@@ -20,7 +20,7 @@
                   data-companies-id="{{ companies_id }}"
                   data-url="{{ action_url|e('html_attr') }}"
                   data-csrf="{{ csrf|e('html_attr') }}">
-            <i class="ti ti-plus"></i> {{ 'Adicionar'|trans({}, 'newmanagement') }}
+            <i class="ti ti-plus"></i> {{ __('Adicionar', 'newmanagement') }}
           </button>
         {% endif %}
       </th>
@@ -45,7 +45,7 @@
                     data-companies-id="{{ companies_id }}"
                     data-url="{{ action_url|e('html_attr') }}"
                     data-csrf="{{ csrf|e('html_attr') }}"
-                    data-confirm="{{ 'Remover usuário?'|trans({}, 'newmanagement') }}">
+                    data-confirm="{{ __('Remover usuário?', 'newmanagement') }}">
               <i class="ti ti-trash"></i>
             </button>
           {% endif %}
@@ -58,15 +58,15 @@
         <td><input type="text"     id="nm-cu-user_name_0"
              name="chatbot_users[user_name][]"
              class="form-control form-control-sm"
-             placeholder="{{ 'Nome'|trans({}, 'newmanagement') }}"></td>
+             placeholder="{{ __('Nome', 'newmanagement') }}"></td>
         <td><input type="text"     id="nm-cu-login_0"
              name="chatbot_users[login][]"
              class="form-control form-control-sm"
-             placeholder="{{ 'Login'|trans({}, 'newmanagement') }}"></td>
+             placeholder="{{ __('Login', 'newmanagement') }}"></td>
         <td><input type="password" id="nm-cu-password_0"
              name="chatbot_users[password][]"
              class="form-control form-control-sm"
-             placeholder="{{ 'Senha'|trans({}, 'newmanagement') }}"
+             placeholder="{{ __('Senha', 'newmanagement') }}"
              autocomplete="new-password"></td>
         <td><input type="email"    id="nm-cu-email_0"
              name="chatbot_users[email][]"
@@ -76,9 +76,9 @@
           <select id="nm-cu-user_type_0"
                   name="chatbot_users[user_type][]"
                   class="form-select form-select-sm">
-            <option value="usuario">{{ 'Usuário'|trans({}, 'newmanagement') }}</option>
-            <option value="supervisor">{{ 'Supervisor'|trans({}, 'newmanagement') }}</option>
-            <option value="administrador">{{ 'Administrador'|trans({}, 'newmanagement') }}</option>
+            <option value="usuario">{{ __('Usuário', 'newmanagement') }}</option>
+            <option value="supervisor">{{ __('Supervisor', 'newmanagement') }}</option>
+            <option value="administrador">{{ __('Administrador', 'newmanagement') }}</option>
           </select>
         </td>
         <td></td>
