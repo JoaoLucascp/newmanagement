@@ -32,54 +32,59 @@ class Task extends \CommonDBTM
         return $ong;
     }
 
+    /**
+     * Retorna os labels de status disponíveis.
+     */
+    public static function getStatusLabels(): array
+    {
+        return [
+            0 => __('Aberta', 'newmanagement'),
+            1 => __('Em andamento', 'newmanagement'),
+            2 => __('Concluída', 'newmanagement'),
+        ];
+    }
+
+    /**
+     * Renderiza o formulário via Twig (padrão do plugin).
+     */
     public function showForm($ID, array $options = []): bool
     {
+        global $DB, $CFG_GLPI;
+
         $this->initForm($ID, $options);
-        $this->showFormHeader($options);
 
-        // Sanitização de todos os campos — previne XSS e erros com valores null
-        $name          = htmlspecialchars($this->fields['name']          ?? '', ENT_QUOTES);
-        $date_due      = htmlspecialchars($this->fields['date_due']      ?? '', ENT_QUOTES);
-        $km_calculated = htmlspecialchars($this->fields['km_calculated'] ?? '', ENT_QUOTES);
-        $latitude      = htmlspecialchars($this->fields['latitude']      ?? '', ENT_QUOTES);
-        $longitude     = htmlspecialchars($this->fields['longitude']     ?? '', ENT_QUOTES);
-        $comment       = htmlspecialchars($this->fields['comment']       ?? '', ENT_QUOTES);
-        $status        = (int) ($this->fields['status'] ?? 0);
+        $can_create = Session::haveRight(self::$rightname, CREATE);
+        $can_update = Session::haveRight(self::$rightname, UPDATE);
+        $can_delete = Session::haveRight(self::$rightname, DELETE);
 
-        echo '<tr class="tab_bg_1">';
-        echo '<td>' . __('Título', 'newmanagement') . '</td>';
-        echo '<td><input type="text" name="name" value="' . $name . '" class="form-control" required></td>';
-        echo '<td>' . __('Status', 'newmanagement') . '</td>';
-        echo '<td>';
-        $statuses = [0 => __('Aberta'), 1 => __('Em andamento'), 2 => __('Concluída')];
-        echo '<select name="status" class="form-select">';
-        foreach ($statuses as $val => $label) {
-            $selected = ($status === $val) ? 'selected' : '';
-            echo '<option value="' . $val . '" ' . $selected . '>' . htmlspecialchars($label, ENT_QUOTES) . '</option>';
+        // Empresas para o select
+        $companies = [];
+        $result = $DB->request(['SELECT' => ['id', 'name'], 'FROM' => 'glpi_plugin_newmanagement_companies', 'WHERE' => ['is_deleted' => 0], 'ORDER' => 'name ASC']);
+        foreach ($result as $row) {
+            $companies[] = $row;
         }
-        echo '</select></td>';
-        echo '</tr>';
 
-        echo '<tr class="tab_bg_1">';
-        echo '<td>' . __('Data Prevista', 'newmanagement') . '</td>';
-        echo '<td><input type="datetime-local" name="date_due" value="' . $date_due . '" class="form-control"></td>';
-        echo '<td>' . __('KM Calculado', 'newmanagement') . '</td>';
-        echo '<td><input type="number" step="0.01" name="km_calculated" value="' . $km_calculated . '" class="form-control"></td>';
-        echo '</tr>';
+        // Usuários para o select de responsável
+        $users = [];
+        $result = $DB->request(['SELECT' => ['id', 'name'], 'FROM' => 'glpi_users', 'WHERE' => ['is_deleted' => 0, 'is_active' => 1], 'ORDER' => 'name ASC']);
+        foreach ($result as $row) {
+            $users[] = $row;
+        }
 
-        echo '<tr class="tab_bg_1">';
-        echo '<td>' . __('Latitude', 'newmanagement') . '</td>';
-        echo '<td><input type="text" name="latitude" value="' . $latitude . '" class="form-control"></td>';
-        echo '<td>' . __('Longitude', 'newmanagement') . '</td>';
-        echo '<td><input type="text" name="longitude" value="' . $longitude . '" class="form-control"></td>';
-        echo '</tr>';
+        $twig = plugin_newmanagement_getTwig();
+        echo $twig->render('task/form.html.twig', [
+            'item'        => $this->fields + ['id' => $this->fields['id'] ?? 0],
+            'companies'   => $companies,
+            'users'       => $users,
+            'statuses'    => self::getStatusLabels(),
+            'can_create'  => $can_create,
+            'can_update'  => $can_update,
+            'can_delete'  => $can_delete,
+            'csrf_token'  => Session::getNewCSRFToken(),
+            'form_url'    => self::getFormURL(),
+            'search_url'  => self::getSearchURL(),
+        ]);
 
-        echo '<tr class="tab_bg_1">';
-        echo '<td>' . __('Comentário', 'newmanagement') . '</td>';
-        echo '<td colspan="3"><textarea name="comment" class="form-control" rows="3">' . $comment . '</textarea></td>';
-        echo '</tr>';
-
-        $this->showFormButtons($options);
         return true;
     }
 }
