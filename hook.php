@@ -234,6 +234,7 @@ function plugin_newmanagement_install() {
     // -------------------------------------------------------
     // Tabela: Tasks
     // [FIX A4] KEY `name` adicionada (campo de busca principal)
+    // [FIX E2] date_due: DATETIME → TIMESTAMP (GLPI 11 depreca DATETIME)
     // -------------------------------------------------------
     if (!$DB->tableExists('glpi_plugin_newmanagement_tasks')) {
         $query = "CREATE TABLE `glpi_plugin_newmanagement_tasks` (
@@ -241,7 +242,7 @@ function plugin_newmanagement_install() {
             `name`          varchar(255) NOT NULL DEFAULT '',
             `companies_id`  int {$default_key_sign} NOT NULL DEFAULT 0,
             `status`        tinyint(1)   NOT NULL DEFAULT 0 COMMENT '0=Pendente,1=Em andamento,2=Concluida',
-            `date_due`      datetime              DEFAULT NULL,
+            `date_due`      timestamp             DEFAULT NULL,
             `km_calculated` decimal(10,2)         DEFAULT NULL,
             `latitude`      decimal(10,6)         DEFAULT NULL,
             `longitude`     decimal(10,6)         DEFAULT NULL,
@@ -258,6 +259,10 @@ function plugin_newmanagement_install() {
         $cols = $DB->listFields('glpi_plugin_newmanagement_tasks');
         // [FIX A4] Adiciona índice name em bancos já existentes
         $migration->addKey('glpi_plugin_newmanagement_tasks', 'name');
+        // [FIX E2] Migra date_due de DATETIME para TIMESTAMP em instalações existentes
+        if (isset($cols['date_due']) && strtolower($cols['date_due']['Type']) === 'datetime') {
+            $migration->changeField('glpi_plugin_newmanagement_tasks', 'date_due', 'date_due', 'timestamp DEFAULT NULL');
+        }
     }
 
     // -------------------------------------------------------
