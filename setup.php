@@ -31,6 +31,23 @@ function plugin_init_newmanagement()
     // Página de configuração
     $PLUGIN_HOOKS['config_page']['newmanagement'] = 'front/config.php';
 
+    // -------------------------------------------------------
+    // [FIX E3] Registra o namespace Twig @newmanagement
+    // O TemplateRenderer do GLPI 11 usa FilesystemLoader com namespaces.
+    // Sem este hook, qualquer display('@newmanagement/...') lança:
+    //   LoaderError: "There are no registered paths for namespace GlpiPlugin"
+    // O hook post_init garante que o TemplateRenderer já foi instanciado.
+    // -------------------------------------------------------
+    $PLUGIN_HOOKS['post_init']['newmanagement'] = function () {
+        $tpl_dir = Plugin::getPhpDir('newmanagement') . '/templates';
+        if (is_dir($tpl_dir)) {
+            \Glpi\Application\View\TemplateRenderer::getInstance()
+                ->getEnvironment()
+                ->getLoader()
+                ->addPath($tpl_dir, 'newmanagement');
+        }
+    };
+
     // Registra as classes PSR-4
     \Plugin::registerClass(\GlpiPlugin\Newmanagement\Company::class);
     \Plugin::registerClass(\GlpiPlugin\Newmanagement\Ipbx::class);
