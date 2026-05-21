@@ -92,7 +92,6 @@ function nmGetCsrfToken() {
     if (meta) return meta.getAttribute('content');
     const hidden = document.querySelector('input[name="_glpi_csrf_token"]');
     if (hidden) return hidden.value;
-    // Fallback: alguns módulos expõem apenas um elemento com id específico
     const nmHidden = document.getElementById('nm-chatbot-csrf');
     if (nmHidden && nmHidden.value) return nmHidden.value;
     return '';
@@ -115,12 +114,9 @@ function nmGetCsrfToken() {
 // ---------------------------------------------------------------------------
 
 async function nmPost(url, data) {
-    // Token capturado aqui — último momento antes do fetch, sempre fresco.
-    // Nunca usar token vindo do chamador: pode ser stale em tokens single-use.
     const csrf = nmGetCsrfToken();
     const body = new FormData();
 
-    // Injeta o token fresco primeiro; ignora qualquer _glpi_csrf_token do data.
     body.append('_glpi_csrf_token', csrf);
 
     Object.entries(data).forEach(([k, v]) => {
@@ -134,19 +130,13 @@ async function nmPost(url, data) {
 
     const res = await fetch(url, {
         method: 'POST',
-        // Header mantido para compatibilidade com a REST API oficial do GLPI
         headers: { 'X-Glpi-Csrf-Token': csrf },
         body,
     });
 
-    // Tratamento especial para 403: token CSRF inválido/expirado
     if (res.status === 403) {
         let msg = '';
-        try {
-            msg = await res.text();
-        } catch (e) {
-            msg = '';
-        }
+        try { msg = await res.text(); } catch (e) { msg = ''; }
         throw new Error('HTTP 403 (CSRF inválido ou expirado) ' + (msg ? ': ' + msg : ''));
     }
 
@@ -197,8 +187,7 @@ function nmClear(ids) {
 }
 
 // ---------------------------------------------------------------------------
-// HTML do botão excluir — padrão GLPI (btn-icon, sem fundo colorido)
-// Centralizado aqui para manter consistência entre PHP (renderRow) e JS (innerHTML)
+// HTML do botão excluir — padrão GLPI
 // ---------------------------------------------------------------------------
 
 function nmDelBtn(action, id, rowId, companiesId, url, confirmMsg, title) {
@@ -217,16 +206,6 @@ function nmDelBtn(action, id, rowId, companiesId, url, confirmMsg, title) {
 
 // ---------------------------------------------------------------------------
 // Paginação AJAX — sub-tabelas de Ramais e Dispositivos
-//
-// Intercepta cliques em .nm-page-btn via delegação no document.
-// Registrado UMA única vez via window._nmPaginationDelegated.
-//
-// Fluxo:
-//   1. Lê data-section-id do botão → encontra o container pai
-//   2. Lê data-page atual do container
-//   3. Calcula próxima página (prev = page - 1, next = page + 1)
-//   4. GET ipbx_paginate.php?section=...&page=...&ipbx_id=...&companies_id=...
-//   5. Substitui tbody, atualiza contador "Mostrando X–Y de Z" e estado dos botões
 // ---------------------------------------------------------------------------
 
 function nmInitPagination() {
@@ -246,16 +225,15 @@ function nmInitPagination() {
         const total       = parseInt(section.dataset.total   || '0', 10);
         const ipbxId      = section.dataset.ipbxId;
         const companiesId = section.dataset.companiesId;
-        const sectionName = section.dataset.section;           // 'extensions' | 'devices'
+        const sectionName = section.dataset.section;
         const paginateUrl = section.dataset.paginateUrl;
 
         const totalPages = Math.max(1, Math.ceil(total / pageSize));
-        const dir        = btn.dataset.dir;                    // 'prev' | 'next'
+        const dir        = btn.dataset.dir;
         const targetPage = dir === 'prev' ? currentPage - 1 : currentPage + 1;
 
         if (targetPage < 1 || targetPage > totalPages) return;
 
-        // Estado de carregamento
         btn.disabled = true;
         const spinner = document.createElement('span');
         spinner.className = 'nm-spinner';
@@ -278,44 +256,34 @@ function nmInitPagination() {
             const data = await res.json();
             if (!data.success) throw new Error(data.error || 'Erro ao paginar');
 
-            // --- Determina IDs dos elementos a atualizar pelo sectionName ---
-            const tbodyId     = sectionName === 'extensions' ? 'nm-ext-tbody'      : 'nm-dev-tbody';
-            const paginId     = sectionName === 'extensions' ? 'nm-ext-pagination' : 'nm-dev-pagination';
+            const tbodyId = sectionName === 'extensions' ? 'nm-ext-tbody'      : 'nm-dev-tbody';
+            const paginId = sectionName === 'extensions' ? 'nm-ext-pagination' : 'nm-dev-pagination';
 
-            // Atualiza tbody
             const tbody = document.getElementById(tbodyId);
             if (tbody) tbody.innerHTML = data.html;
 
-            // Atualiza metadados no container
             section.dataset.page = data.page;
 
-            // Atualiza contador "Mostrando X–Y de Z"
             const paginDiv = document.getElementById(paginId);
             if (paginDiv) {
                 const from  = (data.page - 1) * data.page_size + 1;
                 const to    = Math.min(data.page * data.page_size, data.total);
                 const label = sectionName === 'extensions' ? 'ramais' : 'dispositivos';
                 const counter = paginDiv.querySelector('span.text-muted');
-                if (counter) {
-                    counter.textContent = `Mostrando ${from}–${to} de ${data.total} ${label}`;
-                }
+                if (counter) counter.textContent = `Mostrando ${from}–${to} de ${data.total} ${label}`;
 
-                // Mostra/oculta controles conforme total de páginas
                 const newTotalPages = Math.ceil(data.total / data.page_size);
                 paginDiv.style.display = newTotalPages <= 1 ? 'none' : '';
 
-                // Atualiza estado dos botões prev/next
                 paginDiv.querySelectorAll('.nm-page-btn').forEach(b => {
                     if (b.dataset.dir === 'prev') b.disabled = data.page <= 1;
                     if (b.dataset.dir === 'next') b.disabled = data.page >= newTotalPages;
                 });
 
-                // Atualiza "página X / Y"
                 const pageLabel = paginDiv.querySelector('.btn.disabled');
                 if (pageLabel) pageLabel.textContent = `${data.page} / ${newTotalPages}`;
             }
 
-            // Atualiza CSRF do container para os novos botões de delete renderizados
             if (data.csrf) {
                 section.querySelectorAll('[data-csrf]').forEach(el => {
                     el.dataset.csrf = data.csrf;
@@ -327,17 +295,27 @@ function nmInitPagination() {
             alert('Erro ao carregar página: ' + err.message);
         } finally {
             spinner.remove();
-            // Reabilita DEPOIS de atualizar o estado dos botões para evitar flash
         }
     });
 }
 
 // ---------------------------------------------------------------------------
 // Botões Adicionar / Remover — IPBX
+//
+// [FIX] Botão Salvar IPBX (#nm-save-all) migrado para delegação no document.
+//
+// PROBLEMA ANTERIOR: o listener era registrado diretamente no elemento via
+// _nmBound. Quando o GLPI recarregava a aba via AJAX (common.tabs.php),
+// o botão era destruído e recriado no DOM — o listener sumia junto.
+// A flag nmDelegatedListenersRegistered ficava true → o bloco de delegados
+// não rodava novamente → botão Salvar não respondia ao clique.
+//
+// SOLUÇÃO: usar window._nmIpbxSaveDelegated (separado dos outros delegados)
+// e registrar o handler do Salvar no document via event delegation,
+// igual ao padrão já adotado pelo Chatbot. O handler usa e.target.closest()
+// para localizar #nm-save-all a cada clique — funciona mesmo após AJAX.
 // ---------------------------------------------------------------------------
 
-// Flag que garante registro único dos listeners delegados no document.
-// Resetada a null quando o DOM é destruído (navegação entre abas do GLPI).
 let nmDelegatedListenersRegistered = false;
 
 function nmInitIpbxButtons() {
@@ -354,44 +332,58 @@ function nmInitIpbxButtons() {
         return true;
     }
 
-    // --- Salvar IPBX ---
-    const btnSaveAll = document.getElementById('nm-save-all');
-    if (btnSaveAll && !btnSaveAll._nmBound) {
-        btnSaveAll._nmBound = true;
-        btnSaveAll.addEventListener('click', async (event) => {
-            event.preventDefault();
+    // --- [FIX] Salvar IPBX via delegação — registrado UMA vez no document ---
+    if (!window._nmIpbxSaveDelegated) {
+        window._nmIpbxSaveDelegated = true;
 
+        document.addEventListener('click', async (e) => {
+            const btnSaveAll = e.target.closest('#nm-save-all');
+            if (!btnSaveAll) return;
+
+            // Lê actionUrl do próprio botão (preenchido pelo Twig via data-action-url)
             const actionUrl = btnSaveAll.dataset.actionUrl || nmGetIpbxActionUrl();
 
             const ipbxData = {
-                action:           nmVal('nm-ipbx-action')       || 'add_ipbx',
-                id:               nmVal('nm-ipbx-id')           || '0',
-                companies_id:     nmVal('nm-ipbx-companies-id') || nmGetIpbxCompaniesId(),
-                model:            nmVal('nm-ipbx-model'),
-                server_version:   nmVal('nm-ipbx-server_version'),
-                ip_local:         nmVal('nm-ipbx-ip_local'),
-                ip_external:      nmVal('nm-ipbx-ip_external'),
-                web_port:         nmVal('nm-ipbx-web_port'),
-                web_password:     nmVal('nm-web-password'),
-                ssh_port:         nmVal('nm-ipbx-ssh_port'),
-                ssh_password:     nmVal('nm-ssh-password'),
-                comment:          nmVal('nm-ipbx-comment'),
+                action:         nmVal('nm-ipbx-action')       || 'add_ipbx',
+                id:             nmVal('nm-ipbx-id')           || '0',
+                companies_id:   nmVal('nm-ipbx-companies-id') || nmGetIpbxCompaniesId(),
+                model:          nmVal('nm-ipbx-model'),
+                server_version: nmVal('nm-ipbx-server_version'),
+                ip_local:       nmVal('nm-ipbx-ip_local'),
+                ip_external:    nmVal('nm-ipbx-ip_external'),
+                web_port:       nmVal('nm-ipbx-web_port'),
+                web_password:   nmVal('nm-web-password'),
+                ssh_port:       nmVal('nm-ipbx-ssh_port'),
+                ssh_password:   nmVal('nm-ssh-password'),
+                comment:        nmVal('nm-ipbx-comment'),
             };
 
+            // Feedback visual imediato: desabilita o botão durante o request
+            btnSaveAll.disabled = true;
+            const originalHtml = btnSaveAll.innerHTML;
+            btnSaveAll.innerHTML = '<span class="nm-spinner"></span> Salvando...';
+
             try {
-                const ipbxResult = await nmPost(actionUrl, ipbxData);
-                if (ipbxResult && ipbxResult.id) {
-                    nmUpdateIpbxId(ipbxResult.id);
+                const result = await nmPost(actionUrl, ipbxData);
+
+                // add_ipbx retorna { success: true, id: N }
+                // update_ipbx retorna { success: true } (sem id)
+                if (result && result.id) {
+                    nmUpdateIpbxId(result.id);
                 }
 
-                btnSaveAll.classList.add('btn-success');
-                btnSaveAll.classList.remove('btn-primary');
+                btnSaveAll.innerHTML = '<i class="ti ti-check"></i> Salvo!';
+                btnSaveAll.classList.replace('btn-primary', 'btn-success');
                 setTimeout(() => {
-                    btnSaveAll.classList.remove('btn-success');
-                    btnSaveAll.classList.add('btn-primary');
+                    btnSaveAll.innerHTML = originalHtml;
+                    btnSaveAll.classList.replace('btn-success', 'btn-primary');
+                    btnSaveAll.disabled = false;
                 }, 2000);
             } catch (error) {
+                console.error('[NM] Erro ao salvar IPBX:', error.message);
                 alert('Erro ao salvar IPBX: ' + error.message);
+                btnSaveAll.innerHTML = originalHtml;
+                btnSaveAll.disabled = false;
             }
         });
     }
@@ -429,7 +421,6 @@ function nmInitIpbxButtons() {
                         <td>${parseInt(data.records_calls, 10) ? 'Sim' : 'Não'}</td>
                         <td>${data.department}</td>
                         <td>${nmDelBtn('delete_extension', result.id, 'nm-ext-row-' + result.id, getCompaniesId(btnExt), getBtnUrl(btnExt), 'Remover ramal?')}</td>`;
-                    // Insere ANTES da linha de adição, mantendo-a sempre por último
                     addRow.parentNode.insertBefore(tr, addRow);
                 }
                 nmClear(['nm-ext-number', 'nm-ext-password', 'nm-ext-device_ip', 'nm-ext-user_name', 'nm-ext-department']);
@@ -521,13 +512,9 @@ function nmInitIpbxButtons() {
     }
 
     // --- Listeners delegados no document (delete + eye + toggle) ---
-    // Registrados UMA única vez via flag nmDelegatedListenersRegistered.
-    // Usar o document como alvo garante que botões inseridos dinamicamente
-    // também sejam capturados sem precisar re-registrar.
     if (!nmDelegatedListenersRegistered) {
         nmDelegatedListenersRegistered = true;
 
-        // Handler: toggle recolher/expandir seções
         document.addEventListener('click', function(e) {
             const btn = e.target.closest('.nm-toggle-section');
             if (!btn) return;
@@ -539,9 +526,7 @@ function nmInitIpbxButtons() {
             btn.setAttribute('aria-expanded', String(!isExpanded));
             const icon = btn.querySelector('i');
             if (icon) {
-                icon.className = isExpanded
-                    ? 'ti ti-chevron-down'
-                    : 'ti ti-chevron-up';
+                icon.className = isExpanded ? 'ti ti-chevron-down' : 'ti ti-chevron-up';
             }
         });
 
@@ -579,16 +564,12 @@ function nmInitIpbxButtons() {
 
 // ---------------------------------------------------------------------------
 // Chatbot — todos os handlers via delegação no document
-// Registrados UMA única vez via window._nmChatbotDelegated.
-// Isso garante funcionamento mesmo quando a aba é carregada via AJAX do GLPI
-// após o DOMContentLoaded (nmInit já teria rodado sem o DOM da aba presente).
 // ---------------------------------------------------------------------------
 
 function nmInitChatbotButtons() {
     if (!window._nmChatbotDelegated) {
         window._nmChatbotDelegated = true;
 
-        // --- Salvar Chatbot (delegado) ---
         document.addEventListener('click', async (e) => {
             const btnSave = e.target.closest('#nm-chatbot-save');
             if (!btnSave) return;
@@ -618,7 +599,6 @@ function nmInitChatbotButtons() {
                 comment:                 nmVal('nm-chatbot-comment'),
             };
 
-            // --- Coleta de usuários (bulk) montados via linhas clonadas ---
             const collect = (selector) => Array.from(document.querySelectorAll(selector)).map(i => i.value || '');
             const user_name_arr = collect('input[name="chatbot_users[user_name][]"]');
             if (user_name_arr.length) {
@@ -628,7 +608,6 @@ function nmInitChatbotButtons() {
                 data['chatbot_users[email][]']     = collect('input[name="chatbot_users[email][]"]');
                 data['chatbot_users[user_type][]'] = collect('select[name="chatbot_users[user_type][]"]');
             }
-            // Coleta Comunicação em Massa (bulk)
             const mc_names = collect('input[name="chatbot_mass_comm[system_name][]"]');
             if (mc_names.length) {
                 data['chatbot_mass_comm[system_name][]'] = mc_names;
@@ -639,7 +618,6 @@ function nmInitChatbotButtons() {
                 data['chatbot_mass_comm[login][]'] = collect('input[name="chatbot_mass_comm[login][]"]');
                 data['chatbot_mass_comm[password][]'] = collect('input[name="chatbot_mass_comm[password][]"]');
             }
-            // Coleta WA restrictions (bulk)
             const wa_nums = collect('input[name="chatbot_wa_restrictions[whatsapp_number][]"]');
             if (wa_nums.length) {
                 data['chatbot_wa_restrictions[whatsapp_number][]'] = wa_nums;
@@ -657,7 +635,6 @@ function nmInitChatbotButtons() {
                 if (actionEl) actionEl.value = 'update_chatbot';
                 if (idEl && result.id) {
                     idEl.value = result.id;
-                    // Propagar chatbot_id recém-salvo para os três botões add
                     ['nm-mc-add-btn', 'nm-wa-add-btn', 'nm-cu-add-btn'].forEach(btnId => {
                         const b = document.getElementById(btnId);
                         if (b) b.dataset.chatbotId = result.id;
@@ -671,7 +648,6 @@ function nmInitChatbotButtons() {
             }
         });
 
-        // --- Eye toggle + Delete delegados ---
         document.addEventListener('click', async (e) => {
             const eyeBtn = e.target.closest('.nm-btn-eye');
             if (eyeBtn) {
@@ -702,7 +678,6 @@ function nmInitChatbotButtons() {
             }
         });
 
-        // --- Adicionar Comunicação em Massa: CLONA a linha de template para bulk ---
         document.addEventListener('click', (e) => {
             const btn = e.target.closest('#nm-mc-add-btn');
             if (!btn) return;
@@ -716,7 +691,6 @@ function nmInitChatbotButtons() {
             template.parentNode.insertBefore(clone, template);
         });
 
-        // --- Adicionar Restrição WA: CLONA a linha de template para bulk ---
         document.addEventListener('click', (e) => {
             const btn = e.target.closest('#nm-wa-add-btn');
             if (!btn) return;
@@ -730,26 +704,19 @@ function nmInitChatbotButtons() {
             template.parentNode.insertBefore(clone, template);
         });
 
-        // --- Adicionar Usuário Chatbot (delegado) ---
-        // Clique em + Adicionar: CLONA a linha de template para permitir múltiplas entradas
         document.addEventListener('click', (e) => {
             const btn = e.target.closest('#nm-cu-add-btn');
             if (!btn) return;
             const tbody = document.getElementById('nm-cu-tbody');
             const template = document.getElementById('nm-cu-add-row');
             if (!tbody || !template) return;
-            // Clonar template
             const clone = template.cloneNode(true);
-            // Remover id da linha clonada para evitar duplicidade
             clone.id = '';
             clone.classList.remove('nm-add-row');
-            // Gerar sufixo único
             const idx = Date.now();
             clone.querySelectorAll('input, select').forEach((el) => {
-                // Ajustar id (se existir) para ficar único
                 if (el.id) el.id = el.id.replace(/_0$/, '_' + idx);
             });
-            // Inserir antes do template (mantendo template como última linha)
             template.parentNode.insertBefore(clone, template);
         });
     }
