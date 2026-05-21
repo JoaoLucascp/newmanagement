@@ -11,38 +11,42 @@
     action_url   — string (URL do endpoint AJAX)
     form_action  — 'add_line' | 'update_line'
     can_write    — bool
+    can_delete   — bool
     status_opts  — array {1: 'Ativo', 2: 'Cancelado'}
 #}
-<form id="nm-lines-form" autocomplete="off" onsubmit="return false;">
+<div class="nm-fixedline-tab"
+     data-action-url="{{ action_url|e('html_attr') }}"
+     data-companies-id="{{ companies_id }}">
 
-  <input type="hidden" name="_glpi_csrf_token" value="{{ csrf }}">
-  <input type="hidden" name="action"           value="{{ form_action }}">
-  <input type="hidden" name="id"               value="{{ line_id }}">
-  <input type="hidden" name="ipbx_id"          value="{{ ipbx_id }}">
-  <input type="hidden" name="companies_id"     value="{{ companies_id }}">
+  {# Campos ocultos de controle #}
+  <input type="hidden" id="nm-line-csrf"        value="{{ csrf|e('html_attr') }}">
+  <input type="hidden" id="nm-line-action"      value="{{ form_action }}">
+  <input type="hidden" id="nm-line-id"          value="{{ line_id }}">
+  <input type="hidden" id="nm-line-ipbx-id"     value="{{ ipbx_id }}">
+  <input type="hidden" id="nm-line-companies-id" value="{{ companies_id }}">
 
   <table class="tab_cadre_fixe">
 
     <tr class="tab_bg_1">
       <td>{{ 'Número Piloto'|trans({}, 'newmanagement') }}</td>
       <td>
-        <input type="text" name="pilot_number" autocomplete="off"
-               value="{{ f.pilot_number|e('html_attr') }}"
+        <input type="text" id="nm-line-pilot_number" autocomplete="off"
+               value="{{ f.pilot_number|default('')|e('html_attr') }}"
                class="form-control"
                placeholder="Ex: 1131000000"
-               {{ not can_write ? 'readonly disabled' }}>
+               {{ not can_write ? 'readonly' }}>
       </td>
       <td>{{ 'Quantidade de DDR'|trans({}, 'newmanagement') }}</td>
       <td>
-        <input type="number" name="ddr_count" autocomplete="off"
-               value="{{ f.ddr_count|e('html_attr') }}"
+        <input type="number" id="nm-line-ddr_count" autocomplete="off"
+               value="{{ f.ddr_count|default(0)|e('html_attr') }}"
                class="form-control" min="0" placeholder="0"
-               {{ not can_write ? 'readonly disabled' }}>
+               {{ not can_write ? 'readonly' }}>
       </td>
       <td>{{ 'Status'|trans({}, 'newmanagement') }}</td>
       <td>
-        <select name="status" class="form-select"
-                {{ not can_write ? 'readonly disabled' }}>
+        <select id="nm-line-status" class="form-select"
+                {{ not can_write ? 'disabled' }}>
           {% for val, lbl in status_opts %}
             <option value="{{ val }}"
                     {{ f.status|default(1)|number_format == val ? 'selected' }}>
@@ -56,71 +60,71 @@
     <tr class="tab_bg_1">
       <td>{{ 'Operadora'|trans({}, 'newmanagement') }}</td>
       <td>
-        <input type="text" name="operator" autocomplete="off"
-               value="{{ f.operator|e('html_attr') }}"
+        <input type="text" id="nm-line-operator" autocomplete="off"
+               value="{{ f.operator|default('')|e('html_attr') }}"
                class="form-control"
                placeholder="Ex: Vivo"
-               {{ not can_write ? 'readonly disabled' }}>
+               {{ not can_write ? 'readonly' }}>
       </td>
       <td>{{ 'Quantidade de Canais'|trans({}, 'newmanagement') }}</td>
       <td>
-        <input type="number" name="channels" autocomplete="off"
-               value="{{ f.channels|e('html_attr') }}"
+        <input type="number" id="nm-line-channels" autocomplete="off"
+               value="{{ f.channels|default(0)|e('html_attr') }}"
                class="form-control" min="0" placeholder="0"
-               {{ not can_write ? 'readonly disabled' }}>
+               {{ not can_write ? 'readonly' }}>
       </td>
       <td>{{ 'IP Proxy'|trans({}, 'newmanagement') }}</td>
       <td>
-        <input type="text" name="proxy_ip" autocomplete="off"
-               value="{{ f.proxy_ip|e('html_attr') }}"
+        <input type="text" id="nm-line-proxy_ip" autocomplete="off"
+               value="{{ f.proxy_ip|default('')|e('html_attr') }}"
                class="form-control"
                placeholder="Ex: 200.x.x.x"
-               {{ not can_write ? 'readonly disabled' }}>
+               {{ not can_write ? 'readonly' }}>
       </td>
     </tr>
 
     <tr class="tab_bg_1">
       <td>{{ 'Tipo'|trans({}, 'newmanagement') }}</td>
       <td>
-        <input type="text" name="line_type" autocomplete="off"
-               value="{{ f.line_type|e('html_attr') }}"
+        <input type="text" id="nm-line-line_type" autocomplete="off"
+               value="{{ f.line_type|default('')|e('html_attr') }}"
                class="form-control"
                placeholder="Ex: SIP, E1"
-               {{ not can_write ? 'readonly disabled' }}>
+               {{ not can_write ? 'readonly' }}>
       </td>
       <td>{{ 'IP Tráfego Áudio'|trans({}, 'newmanagement') }}</td>
       <td>
-        <input type="text" name="audio_ip" autocomplete="off"
-               value="{{ f.audio_ip|e('html_attr') }}"
+        <input type="text" id="nm-line-audio_ip" autocomplete="off"
+               value="{{ f.audio_ip|default('')|e('html_attr') }}"
                class="form-control"
                placeholder="Ex: 200.x.x.x"
-               {{ not can_write ? 'readonly disabled' }}>
+               {{ not can_write ? 'readonly' }}>
       </td>
       <td>{{ 'Porta Proxy'|trans({}, 'newmanagement') }}</td>
       <td>
-        <input type="text" name="proxy_port" autocomplete="off"
-               value="{{ f.proxy_port|e('html_attr') }}"
+        <input type="text" id="nm-line-proxy_port" autocomplete="off"
+               value="{{ f.proxy_port|default('')|e('html_attr') }}"
                class="form-control"
                placeholder="Ex: 5060"
-               {{ not can_write ? 'readonly disabled' }}>
+               {{ not can_write ? 'readonly' }}>
       </td>
     </tr>
 
     <tr class="tab_bg_1">
       <td>{{ 'Data Portabilidade'|trans({}, 'newmanagement') }}</td>
       <td>
-        <input type="date" name="portability_date" autocomplete="off"
-               value="{{ f.portability_date|e('html_attr') }}"
+        <input type="date" id="nm-line-portability_date" autocomplete="off"
+               value="{{ f.portability_date|default('')|e('html_attr') }}"
                class="form-control"
-               {{ not can_write ? 'readonly disabled' }}>
+               {{ not can_write ? 'readonly' }}>
       </td>
       <td>{{ 'Operadora Anterior'|trans({}, 'newmanagement') }}</td>
       <td>
-        <input type="text" name="previous_operator" autocomplete="off"
-               value="{{ f.previous_operator|e('html_attr') }}"
+        <input type="text" id="nm-line-previous_operator" autocomplete="off"
+               value="{{ f.previous_operator|default('')|e('html_attr') }}"
                class="form-control"
                placeholder="Ex: Claro"
-               {{ not can_write ? 'readonly disabled' }}>
+               {{ not can_write ? 'readonly' }}>
       </td>
       <td colspan="2"></td>
     </tr>
@@ -128,17 +132,17 @@
     <tr class="tab_bg_1">
       <td>{{ 'Data de Ativação'|trans({}, 'newmanagement') }}</td>
       <td>
-        <input type="date" name="activation_date" autocomplete="off"
-               value="{{ f.activation_date|e('html_attr') }}"
+        <input type="date" id="nm-line-activation_date" autocomplete="off"
+               value="{{ f.activation_date|default('')|e('html_attr') }}"
                class="form-control"
-               {{ not can_write ? 'readonly disabled' }}>
+               {{ not can_write ? 'readonly' }}>
       </td>
       <td>{{ 'Data de Vencimento'|trans({}, 'newmanagement') }}</td>
       <td>
-        <input type="date" name="expiration_date" autocomplete="off"
-               value="{{ f.expiration_date|e('html_attr') }}"
+        <input type="date" id="nm-line-expiration_date" autocomplete="off"
+               value="{{ f.expiration_date|default('')|e('html_attr') }}"
                class="form-control"
-               {{ not can_write ? 'readonly disabled' }}>
+               {{ not can_write ? 'readonly' }}>
       </td>
       <td colspan="2"></td>
     </tr>
@@ -146,21 +150,182 @@
     <tr class="tab_bg_1">
       <td>{{ 'Comentário'|trans({}, 'newmanagement') }}</td>
       <td colspan="5">
-        <textarea name="comment" class="form-control" rows="2"
-                  {{ not can_write ? 'readonly disabled' }}
-        >{{ f.comment|e }}</textarea>
+        <textarea id="nm-line-comment" class="form-control" rows="2"
+                  {{ not can_write ? 'readonly' }}
+        >{{ f.comment|default('')|e }}</textarea>
       </td>
     </tr>
 
   </table>
 
-  {% if can_write %}
-    <div style="text-align:right;padding:var(--space-4,1rem) 0">
-      <button type="submit" form="nm-lines-form" class="btn btn-primary">
-        <i class="ti ti-device-floppy"></i>
-        {{ 'Salvar Linha'|trans({}, 'newmanagement') }}
-      </button>
-    </div>
+  {# === Botões de ação === #}
+  {% if can_write or can_delete %}
+  <div class="d-flex justify-content-end gap-2 mt-3 mb-3">
+
+    {% if can_delete and line_id > 0 %}
+    <button type="button" id="nm-line-delete"
+            class="btn btn-danger">
+      <i class="ti ti-trash"></i>
+      {{ 'Excluir Linha'|trans({}, 'newmanagement') }}
+    </button>
+    {% endif %}
+
+    {% if can_write %}
+    <button type="button" id="nm-line-save"
+            class="btn btn-primary">
+      <i class="ti ti-device-floppy"></i>
+      {{ 'Salvar Linha'|trans({}, 'newmanagement') }}
+    </button>
+    {% endif %}
+
+  </div>
   {% endif %}
 
-</form>
+</div>{# /.nm-fixedline-tab #}
+
+{# === JavaScript === #}
+<script>
+(function () {
+  'use strict';
+
+  const tab        = document.querySelector('.nm-fixedline-tab');
+  if (!tab) return;
+
+  const actionUrl  = tab.dataset.actionUrl;
+
+  /** Coleta todos os campos pelo prefixo nm-line- **/
+  function getField(name) {
+    const el = document.getElementById('nm-line-' + name);
+    return el ? el.value : '';
+  }
+
+  /** Envia um FormData via fetch e retorna a Promise com o JSON **/
+  async function nmPost(body) {
+    const fd = new FormData();
+    for (const [k, v] of Object.entries(body)) {
+      fd.append(k, v ?? '');
+    }
+    const resp = await fetch(actionUrl, { method: 'POST', body: fd });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    return resp.json();
+  }
+
+  /** Feedback visual no botão **/
+  function setBtnState(btn, state) {
+    const icons = { idle: 'ti-device-floppy', loading: 'ti-loader-2 spin', ok: 'ti-check', error: 'ti-x' };
+    const icon  = btn.querySelector('i');
+    btn.disabled = state === 'loading';
+    if (icon) {
+      icon.className = 'ti ' + (icons[state] || icons.idle);
+    }
+  }
+
+  // ---------------------------------------------------------------
+  // SALVAR
+  // ---------------------------------------------------------------
+  const saveBtn = document.getElementById('nm-line-save');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', async () => {
+      setBtnState(saveBtn, 'loading');
+      try {
+        const data = await nmPost({
+          _glpi_csrf_token  : getField('csrf'),
+          action            : getField('action'),
+          id                : getField('id'),
+          ipbx_id           : getField('ipbx-id'),
+          companies_id      : getField('companies-id'),
+          pilot_number      : getField('pilot_number'),
+          line_type         : getField('line_type'),
+          operator          : getField('operator'),
+          channels          : getField('channels'),
+          ddr_count         : getField('ddr_count'),
+          proxy_ip          : getField('proxy_ip'),
+          proxy_port        : getField('proxy_port'),
+          audio_ip          : getField('audio_ip'),
+          portability_date  : getField('portability_date'),
+          previous_operator : getField('previous_operator'),
+          activation_date   : getField('activation_date'),
+          expiration_date   : getField('expiration_date'),
+          status            : getField('status'),
+          comment           : getField('comment'),
+        });
+
+        if (!data.success) throw new Error(data.error || 'Erro desconhecido');
+
+        // Se era novo registro, muda para modo edição
+        const actionInput = document.getElementById('nm-line-action');
+        const idInput     = document.getElementById('nm-line-id');
+        if (actionInput && actionInput.value === 'add_line' && data.id) {
+          actionInput.value = 'update_line';
+          idInput.value     = data.id;
+          // Exibe o botão Excluir se ele existia oculto
+          const delBtn = document.getElementById('nm-line-delete');
+          if (delBtn) delBtn.style.display = '';
+        }
+
+        setBtnState(saveBtn, 'ok');
+        setTimeout(() => setBtnState(saveBtn, 'idle'), 2000);
+
+      } catch (err) {
+        setBtnState(saveBtn, 'error');
+        setTimeout(() => setBtnState(saveBtn, 'idle'), 3000);
+        console.error('[NM FixedLine] Erro ao salvar:', err.message);
+      }
+    });
+  }
+
+  // ---------------------------------------------------------------
+  // EXCLUIR
+  // ---------------------------------------------------------------
+  const delBtn = document.getElementById('nm-line-delete');
+  if (delBtn) {
+    delBtn.addEventListener('click', async () => {
+      if (!confirm('{{ 'Deseja realmente excluir esta linha fixa?'|trans({}, 'newmanagement') }}')) return;
+
+      delBtn.disabled = true;
+      try {
+        const data = await nmPost({
+          _glpi_csrf_token : getField('csrf'),
+          action           : 'delete_line',
+          id               : getField('id'),
+          companies_id     : getField('companies-id'),
+        });
+
+        if (!data.success) throw new Error(data.error || 'Erro ao excluir');
+
+        // Limpa o formulário e volta para modo "novo"
+        const fields = [
+          'pilot_number','ddr_count','operator','channels','proxy_ip',
+          'line_type','audio_ip','proxy_port','portability_date',
+          'previous_operator','activation_date','expiration_date','comment'
+        ];
+        fields.forEach(f => {
+          const el = document.getElementById('nm-line-' + f);
+          if (el) el.value = '';
+        });
+        const statusEl = document.getElementById('nm-line-status');
+        if (statusEl) statusEl.value = '1';
+
+        document.getElementById('nm-line-action').value = 'add_line';
+        document.getElementById('nm-line-id').value     = '0';
+        delBtn.style.display = 'none';
+
+      } catch (err) {
+        delBtn.disabled = false;
+        console.error('[NM FixedLine] Erro ao excluir:', err.message);
+      }
+    });
+  }
+
+  // ---------------------------------------------------------------
+  // CSS inline para ícone de loading girar
+  // ---------------------------------------------------------------
+  if (!document.getElementById('nm-spin-style')) {
+    const style = document.createElement('style');
+    style.id = 'nm-spin-style';
+    style.textContent = '@keyframes nm-spin{to{transform:rotate(360deg)}}.spin{animation:nm-spin .8s linear infinite}';
+    document.head.appendChild(style);
+  }
+
+}());
+</script>
