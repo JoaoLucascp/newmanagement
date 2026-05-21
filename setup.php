@@ -37,7 +37,12 @@ function plugin_init_newmanagement()
     \Plugin::registerClass(\GlpiPlugin\Newmanagement\IpbxCloud::class);
     \Plugin::registerClass(\GlpiPlugin\Newmanagement\Chatbot::class);
     \Plugin::registerClass(\GlpiPlugin\Newmanagement\FixedLine::class);
-    \Plugin::registerClass(\GlpiPlugin\Newmanagement\Task::class);
+
+    // Task — entidade standalone + aba na ficha de Empresa
+    \Plugin::registerClass(
+        \GlpiPlugin\Newmanagement\Task::class,
+        ['addtabon' => [\GlpiPlugin\Newmanagement\Company::class]]
+    );
 
     // Classes filhas do IPBX On-Premise — exibidas como abas na ficha do IPBX
     \Plugin::registerClass(
