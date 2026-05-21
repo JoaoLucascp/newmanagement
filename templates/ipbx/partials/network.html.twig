@@ -15,8 +15,9 @@
     can_delete     — bool
 #}
 
-{% set net_pages = net_page_size > 0 ? ((net_total / net_page_size)|round(0, 'ceil'))|int : 1 %}
-{% set net_pages = net_pages < 1 ? 1 : net_pages %}
+{# CORRIGIDO: |int não existe no Twig do GLPI.
+   |round(0,'ceil') já retorna número; [1, x]|max garante mínimo 1. #}
+{% set net_pages = net_page_size > 0 ? [1, (net_total / net_page_size)|round(0, 'ceil')]|max : 1 %}
 
 <div id="nm-net-section"
      data-section="network"
@@ -31,12 +32,12 @@
   <table class="tab_cadre_fixe">
     <thead>
       <tr>
-        <th>{{ 'IP Rede'|__('newmanagement') }}</th>
-        <th>{{ 'Máscara'|__('newmanagement') }}</th>
-        <th>{{ 'Gateway'|__('newmanagement') }}</th>
-        <th>{{ 'DNS Primário'|__('newmanagement') }}</th>
-        <th>{{ 'DNS Secundário'|__('newmanagement') }}</th>
-        <th>{{ 'Fornecedor'|__('newmanagement') }}</th>
+        <th>{{ __('IP Rede', 'newmanagement') }}</th>
+        <th>{{ __('Máscara', 'newmanagement') }}</th>
+        <th>{{ __('Gateway', 'newmanagement') }}</th>
+        <th>{{ __('DNS Primário', 'newmanagement') }}</th>
+        <th>{{ __('DNS Secundário', 'newmanagement') }}</th>
+        <th>{{ __('Fornecedor', 'newmanagement') }}</th>
         <th></th>
       </tr>
     </thead>
@@ -59,8 +60,8 @@
                     data-companies-id="{{ companies_id }}"
                     data-csrf="{{ csrf|e('html_attr') }}"
                     data-url="{{ action_url|e('html_attr') }}"
-                    data-confirm="{{ 'Remover rede?'|__('newmanagement') }}"
-                    title="{{ 'Remover'|__('newmanagement') }}">
+                    data-confirm="{{ __('Remover rede?', 'newmanagement') }}"
+                    title="{{ __('Remover', 'newmanagement') }}">
               <i class="ti ti-trash text-danger"></i>
             </button>
             {% endif %}
@@ -69,7 +70,7 @@
       {% else %}
         <tr id="nm-net-empty">
           <td colspan="7" class="text-center text-muted py-3">
-            {{ 'Nenhuma rede cadastrada.'|__('newmanagement') }}
+            {{ __('Nenhuma rede cadastrada.', 'newmanagement') }}
           </td>
         </tr>
       {% endfor %}
@@ -82,10 +83,10 @@
        {% if net_pages <= 1 %}style="display:none!important"{% endif %}>
 
     <span class="text-muted" style="font-size:0.8rem">
-      {{ 'Mostrando'|__('newmanagement') }}
+      {{ __('Mostrando', 'newmanagement') }}
       {{ ((net_page - 1) * net_page_size) + 1 }}–{{ [net_page * net_page_size, net_total]|min }}
-      {{ 'de'|__('newmanagement') }} {{ net_total }}
-      {{ 'redes'|__('newmanagement') }}
+      {{ __('de', 'newmanagement') }} {{ net_total }}
+      {{ __('redes', 'newmanagement') }}
     </span>
 
     <div class="d-flex gap-1">
@@ -94,7 +95,7 @@
               data-section-id="nm-net-section"
               data-dir="prev"
               {% if net_page <= 1 %}disabled{% endif %}
-              title="{{ 'Página anterior'|__('newmanagement') }}">
+              title="{{ __('Página anterior', 'newmanagement') }}">
         <i class="ti ti-chevron-left"></i>
       </button>
 
@@ -107,7 +108,7 @@
               data-section-id="nm-net-section"
               data-dir="next"
               {% if net_page >= net_pages %}disabled{% endif %}
-              title="{{ 'Próxima página'|__('newmanagement') }}">
+              title="{{ __('Próxima página', 'newmanagement') }}">
         <i class="ti ti-chevron-right"></i>
       </button>
     </div>
@@ -123,12 +124,12 @@
         <td><input type="text" class="form-control form-control-sm" id="nm-net-gateway"       autocomplete="off" placeholder="192.168.1.1"></td>
         <td><input type="text" class="form-control form-control-sm" id="nm-net-dns_primary"   autocomplete="off" placeholder="8.8.8.8"></td>
         <td><input type="text" class="form-control form-control-sm" id="nm-net-dns_secondary" autocomplete="off" placeholder="8.8.4.4"></td>
-        <td><input type="text" class="form-control form-control-sm" id="nm-net-supplier"      autocomplete="off" placeholder="{{ 'Fornecedor'|__('newmanagement') }}"></td>
+        <td><input type="text" class="form-control form-control-sm" id="nm-net-supplier"      autocomplete="off" placeholder="{{ __('Fornecedor', 'newmanagement') }}"></td>
         <td>
           <button type="button" class="btn btn-sm btn-success nm-add-net-btn"
                   data-ipbx-id="{{ ipbx_id }}"
                   data-companies-id="{{ companies_id }}"
-                  title="{{ 'Adicionar rede'|__('newmanagement') }}">
+                  title="{{ __('Adicionar rede', 'newmanagement') }}">
             <i class="ti ti-plus"></i>
           </button>
         </td>

@@ -15,8 +15,9 @@
     can_delete     — bool
 #}
 
-{% set dev_pages = dev_page_size > 0 ? ((dev_total / dev_page_size)|round(0, 'ceil'))|int : 1 %}
-{% set dev_pages = dev_pages < 1 ? 1 : dev_pages %}
+{# CORRIGIDO: |int não existe no Twig do GLPI.
+   |round(0,'ceil') já retorna número; [1, x]|max garante mínimo 1. #}
+{% set dev_pages = dev_page_size > 0 ? [1, (dev_total / dev_page_size)|round(0, 'ceil')]|max : 1 %}
 
 <div id="nm-dev-section"
      data-section="devices"
@@ -31,10 +32,10 @@
   <table class="tab_cadre_fixe">
     <thead>
       <tr>
-        <th>{{ 'Tipo'|__('newmanagement') }}</th>
-        <th>{{ 'IP'|__('newmanagement') }}</th>
-        <th>{{ 'Login'|__('newmanagement') }}</th>
-        <th>{{ 'Senha'|__('newmanagement') }}</th>
+        <th>{{ __('Tipo', 'newmanagement') }}</th>
+        <th>{{ __('IP', 'newmanagement') }}</th>
+        <th>{{ __('Login', 'newmanagement') }}</th>
+        <th>{{ __('Senha', 'newmanagement') }}</th>
         <th></th>
       </tr>
     </thead>
@@ -55,8 +56,8 @@
                     data-companies-id="{{ companies_id }}"
                     data-csrf="{{ csrf|e('html_attr') }}"
                     data-url="{{ action_url|e('html_attr') }}"
-                    data-confirm="{{ 'Remover dispositivo?'|__('newmanagement') }}"
-                    title="{{ 'Remover'|__('newmanagement') }}">
+                    data-confirm="{{ __('Remover dispositivo?', 'newmanagement') }}"
+                    title="{{ __('Remover', 'newmanagement') }}">
               <i class="ti ti-trash text-danger"></i>
             </button>
             {% endif %}
@@ -65,7 +66,7 @@
       {% else %}
         <tr id="nm-dev-empty">
           <td colspan="5" class="text-center text-muted py-3">
-            {{ 'Nenhum dispositivo cadastrado.'|__('newmanagement') }}
+            {{ __('Nenhum dispositivo cadastrado.', 'newmanagement') }}
           </td>
         </tr>
       {% endfor %}
@@ -78,10 +79,10 @@
        {% if dev_pages <= 1 %}style="display:none!important"{% endif %}>
 
     <span class="text-muted" style="font-size:0.8rem">
-      {{ 'Mostrando'|__('newmanagement') }}
+      {{ __('Mostrando', 'newmanagement') }}
       {{ ((dev_page - 1) * dev_page_size) + 1 }}–{{ [dev_page * dev_page_size, dev_total]|min }}
-      {{ 'de'|__('newmanagement') }} {{ dev_total }}
-      {{ 'dispositivos'|__('newmanagement') }}
+      {{ __('de', 'newmanagement') }} {{ dev_total }}
+      {{ __('dispositivos', 'newmanagement') }}
     </span>
 
     <div class="d-flex gap-1">
@@ -90,7 +91,7 @@
               data-section-id="nm-dev-section"
               data-dir="prev"
               {% if dev_page <= 1 %}disabled{% endif %}
-              title="{{ 'Página anterior'|__('newmanagement') }}">
+              title="{{ __('Página anterior', 'newmanagement') }}">
         <i class="ti ti-chevron-left"></i>
       </button>
 
@@ -103,7 +104,7 @@
               data-section-id="nm-dev-section"
               data-dir="next"
               {% if dev_page >= dev_pages %}disabled{% endif %}
-              title="{{ 'Próxima página'|__('newmanagement') }}">
+              title="{{ __('Próxima página', 'newmanagement') }}">
         <i class="ti ti-chevron-right"></i>
       </button>
     </div>
@@ -114,15 +115,15 @@
   <div class="nm-add-form mt-3" id="nm-dev-add-form">
     <table class="tab_cadre_fixe">
       <tr class="tab_bg_2">
-        <td><input type="text"     class="form-control" id="nm-dev-device_type" placeholder="{{ 'Tipo'|__('newmanagement') }}"></td>
-        <td><input type="text"     class="form-control" id="nm-dev-ip_address"  placeholder="{{ 'IP'|__('newmanagement') }}"></td>
-        <td><input type="text"     class="form-control" id="nm-dev-login"       placeholder="{{ 'Login'|__('newmanagement') }}"></td>
-        <td><input type="password" class="form-control" id="nm-dev-password"    placeholder="{{ 'Senha'|__('newmanagement') }}" autocomplete="new-password"></td>
+        <td><input type="text"     class="form-control" id="nm-dev-device_type" placeholder="{{ __('Tipo', 'newmanagement') }}"></td>
+        <td><input type="text"     class="form-control" id="nm-dev-ip_address"  placeholder="{{ __('IP', 'newmanagement') }}"></td>
+        <td><input type="text"     class="form-control" id="nm-dev-login"       placeholder="{{ __('Login', 'newmanagement') }}"></td>
+        <td><input type="password" class="form-control" id="nm-dev-password"    placeholder="{{ __('Senha', 'newmanagement') }}" autocomplete="new-password"></td>
         <td>
           <button type="button" class="btn btn-sm btn-success nm-add-dev-btn"
                   data-ipbx-id="{{ ipbx_id }}"
                   data-companies-id="{{ companies_id }}"
-                  title="{{ 'Adicionar dispositivo'|__('newmanagement') }}">
+                  title="{{ __('Adicionar dispositivo', 'newmanagement') }}">
             <i class="ti ti-plus"></i>
           </button>
         </td>
