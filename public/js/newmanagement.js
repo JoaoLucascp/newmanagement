@@ -216,6 +216,123 @@ function nmDelBtn(action, id, rowId, companiesId, url, confirmMsg, title) {
 }
 
 // ---------------------------------------------------------------------------
+// Paginação AJAX — sub-tabelas de Ramais e Dispositivos
+//
+// Intercepta cliques em .nm-page-btn via delegação no document.
+// Registrado UMA única vez via window._nmPaginationDelegated.
+//
+// Fluxo:
+//   1. Lê data-section-id do botão → encontra o container pai
+//   2. Lê data-page atual do container
+//   3. Calcula próxima página (prev = page - 1, next = page + 1)
+//   4. GET ipbx_paginate.php?section=...&page=...&ipbx_id=...&companies_id=...
+//   5. Substitui tbody, atualiza contador "Mostrando X–Y de Z" e estado dos botões
+// ---------------------------------------------------------------------------
+
+function nmInitPagination() {
+    if (window._nmPaginationDelegated) return;
+    window._nmPaginationDelegated = true;
+
+    document.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.nm-page-btn');
+        if (!btn || btn.disabled) return;
+
+        const sectionId = btn.dataset.sectionId;
+        const section   = document.getElementById(sectionId);
+        if (!section) return;
+
+        const currentPage = parseInt(section.dataset.page  || '1', 10);
+        const pageSize    = parseInt(section.dataset.pageSize || '20', 10);
+        const total       = parseInt(section.dataset.total   || '0', 10);
+        const ipbxId      = section.dataset.ipbxId;
+        const companiesId = section.dataset.companiesId;
+        const sectionName = section.dataset.section;           // 'extensions' | 'devices'
+        const paginateUrl = section.dataset.paginateUrl;
+
+        const totalPages = Math.max(1, Math.ceil(total / pageSize));
+        const dir        = btn.dataset.dir;                    // 'prev' | 'next'
+        const targetPage = dir === 'prev' ? currentPage - 1 : currentPage + 1;
+
+        if (targetPage < 1 || targetPage > totalPages) return;
+
+        // Estado de carregamento
+        btn.disabled = true;
+        const spinner = document.createElement('span');
+        spinner.className = 'nm-spinner';
+        btn.prepend(spinner);
+
+        try {
+            const params = new URLSearchParams({
+                section:      sectionName,
+                ipbx_id:      ipbxId,
+                companies_id: companiesId,
+                page:         targetPage,
+            });
+
+            const res = await fetch(`${paginateUrl}?${params.toString()}`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            });
+
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error || 'Erro ao paginar');
+
+            // --- Determina IDs dos elementos a atualizar pelo sectionName ---
+            const tbodyId     = sectionName === 'extensions' ? 'nm-ext-tbody'      : 'nm-dev-tbody';
+            const paginId     = sectionName === 'extensions' ? 'nm-ext-pagination' : 'nm-dev-pagination';
+
+            // Atualiza tbody
+            const tbody = document.getElementById(tbodyId);
+            if (tbody) tbody.innerHTML = data.html;
+
+            // Atualiza metadados no container
+            section.dataset.page = data.page;
+
+            // Atualiza contador "Mostrando X–Y de Z"
+            const paginDiv = document.getElementById(paginId);
+            if (paginDiv) {
+                const from  = (data.page - 1) * data.page_size + 1;
+                const to    = Math.min(data.page * data.page_size, data.total);
+                const label = sectionName === 'extensions' ? 'ramais' : 'dispositivos';
+                const counter = paginDiv.querySelector('span.text-muted');
+                if (counter) {
+                    counter.textContent = `Mostrando ${from}–${to} de ${data.total} ${label}`;
+                }
+
+                // Mostra/oculta controles conforme total de páginas
+                const newTotalPages = Math.ceil(data.total / data.page_size);
+                paginDiv.style.display = newTotalPages <= 1 ? 'none' : '';
+
+                // Atualiza estado dos botões prev/next
+                paginDiv.querySelectorAll('.nm-page-btn').forEach(b => {
+                    if (b.dataset.dir === 'prev') b.disabled = data.page <= 1;
+                    if (b.dataset.dir === 'next') b.disabled = data.page >= newTotalPages;
+                });
+
+                // Atualiza "página X / Y"
+                const pageLabel = paginDiv.querySelector('.btn.disabled');
+                if (pageLabel) pageLabel.textContent = `${data.page} / ${newTotalPages}`;
+            }
+
+            // Atualiza CSRF do container para os novos botões de delete renderizados
+            if (data.csrf) {
+                section.querySelectorAll('[data-csrf]').forEach(el => {
+                    el.dataset.csrf = data.csrf;
+                });
+            }
+
+        } catch (err) {
+            console.error('[NM] Erro na paginação:', err.message);
+            alert('Erro ao carregar página: ' + err.message);
+        } finally {
+            spinner.remove();
+            // Reabilita DEPOIS de atualizar o estado dos botões para evitar flash
+        }
+    });
+}
+
+// ---------------------------------------------------------------------------
 // Botões Adicionar / Remover — IPBX
 // ---------------------------------------------------------------------------
 
@@ -774,6 +891,7 @@ function nmInit() {
 
     nmInitIpbxButtons();
     nmInitChatbotButtons();
+    nmInitPagination();
 }
 
 if (document.readyState === 'loading') {

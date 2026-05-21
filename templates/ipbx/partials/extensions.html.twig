@@ -1,83 +1,145 @@
 {#
-  Partial: tabela de Ramais
-  Variáveis herdadas do contexto pai (tab.html.twig):
-    extensions, ipbx_id, companies_id, csrf, action_url, can_write, can_delete
+  Partial: Tabela de Ramais com paginação server-side.
+
+  Variáveis esperadas (herdadas de tab.html.twig):
+    extensions     — array de rows da página atual
+    ext_page       — int: página atual (base 1)
+    ext_total      — int: total de registros
+    ext_page_size  — int: itens por página (PAGE_SIZE)
+    ipbx_id        — int
+    companies_id   — int
+    csrf           — string
+    action_url     — string
+    paginate_url   — string
+    can_write      — bool
+    can_delete     — bool
 #}
-<table class="tab_cadre_fixehov" id="nm-ext-table">
-  <thead>
-    <tr class="headerRow noHover">
-      <th>{{ 'Número'|__('newmanagement') }}</th>
-      <th>{{ 'Senha'|__('newmanagement') }}</th>
-      <th>{{ 'IP Aparelho'|__('newmanagement') }}</th>
-      <th>{{ 'Usuário'|__('newmanagement') }}</th>
-      <th>{{ 'Grava?'|__('newmanagement') }}</th>
-      <th>{{ 'Departamento'|__('newmanagement') }}</th>
-      <th style="text-align:right">
-        {% if can_write %}
-          {% set ext_disabled = '' %}
-          {% if not can_write %}
-            {% set ext_disabled = 'disabled title="' ~ 'Sem permissão de escrita'|__('newmanagement') ~ '"' %}
-          {% elseif ipbx_id == 0 %}
-            {% set ext_disabled = 'disabled title="' ~ 'Salve o IPBX antes de adicionar ramais'|__('newmanagement') ~ '"' %}
-          {% endif %}
-          <button type="button"
-                  id="nm-ext-add-btn"
-                  class="btn btn-sm btn-outline-secondary"
-                  data-action="add_extension"
+
+{% set ext_pages = ext_page_size > 0 ? ((ext_total / ext_page_size)|round(0, 'ceil'))|int : 1 %}
+{% set ext_pages = ext_pages < 1 ? 1 : ext_pages %}
+
+<div id="nm-ext-section"
+     data-section="extensions"
+     data-ipbx-id="{{ ipbx_id }}"
+     data-companies-id="{{ companies_id }}"
+     data-paginate-url="{{ paginate_url|e('html_attr') }}"
+     data-action-url="{{ action_url|e('html_attr') }}"
+     data-page="{{ ext_page }}"
+     data-page-size="{{ ext_page_size }}"
+     data-total="{{ ext_total }}">
+
+  <table class="tab_cadre_fixe">
+    <thead>
+      <tr>
+        <th>{{ 'Ramal'|__('newmanagement') }}</th>
+        <th>{{ 'Senha'|__('newmanagement') }}</th>
+        <th>{{ 'IP Dispositivo'|__('newmanagement') }}</th>
+        <th>{{ 'Usuário'|__('newmanagement') }}</th>
+        <th>{{ 'Grava'|__('newmanagement') }}</th>
+        <th>{{ 'Departamento'|__('newmanagement') }}</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="nm-ext-tbody">
+      {% for row in extensions %}
+        <tr class="tab_bg_1" id="nm-ext-row-{{ row.id }}">
+          <td>{{ row.number }}</td>
+          <td>••••••</td>
+          <td>{{ row.device_ip }}</td>
+          <td>{{ row.user_name }}</td>
+          <td>{{ row.records_calls ? 'Sim'|__('newmanagement') : 'Não'|__('newmanagement') }}</td>
+          <td>{{ row.department }}</td>
+          <td>
+            {% if can_delete %}
+            <button type="button"
+                    class="btn btn-sm btn-icon nm-del-btn"
+                    data-action="delete_extension"
+                    data-id="{{ row.id }}"
+                    data-row="nm-ext-row-{{ row.id }}"
+                    data-companies-id="{{ companies_id }}"
+                    data-csrf="{{ csrf|e('html_attr') }}"
+                    data-url="{{ action_url|e('html_attr') }}"
+                    data-confirm="{{ 'Remover ramal?'|__('newmanagement') }}"
+                    title="{{ 'Remover'|__('newmanagement') }}">
+              <i class="ti ti-trash text-danger"></i>
+            </button>
+            {% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr id="nm-ext-empty">
+          <td colspan="7" class="text-center text-muted py-3">
+            {{ 'Nenhum ramal cadastrado.'|__('newmanagement') }}
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {# Controles de paginação — só aparece quando há mais de uma página #}
+  <div id="nm-ext-pagination"
+       class="d-flex align-items-center justify-content-between mt-2"
+       {% if ext_pages <= 1 %}style="display:none!important"{% endif %}>
+
+    <span class="text-muted" style="font-size:0.8rem">
+      {{ 'Mostrando'|__('newmanagement') }}
+      {{ ((ext_page - 1) * ext_page_size) + 1 }}–{{ [ext_page * ext_page_size, ext_total]|min }}
+      {{ 'de'|__('newmanagement') }} {{ ext_total }}
+      {{ 'ramais'|__('newmanagement') }}
+    </span>
+
+    <div class="d-flex gap-1">
+      <button type="button"
+              class="btn btn-sm btn-outline-secondary nm-page-btn"
+              data-section-id="nm-ext-section"
+              data-dir="prev"
+              {% if ext_page <= 1 %}disabled{% endif %}
+              title="{{ 'Página anterior'|__('newmanagement') }}">
+        <i class="ti ti-chevron-left"></i>
+      </button>
+
+      <span class="btn btn-sm disabled px-3" style="min-width:90px;text-align:center">
+        {{ ext_page }} / {{ ext_pages }}
+      </span>
+
+      <button type="button"
+              class="btn btn-sm btn-outline-secondary nm-page-btn"
+              data-section-id="nm-ext-section"
+              data-dir="next"
+              {% if ext_page >= ext_pages %}disabled{% endif %}
+              title="{{ 'Próxima página'|__('newmanagement') }}">
+        <i class="ti ti-chevron-right"></i>
+      </button>
+    </div>
+  </div>
+
+  {# Formulário de adição de ramal — só visível com permissão de escrita #}
+  {% if can_write and ipbx_id > 0 %}
+  <div class="nm-add-form mt-3" id="nm-ext-add-form">
+    <table class="tab_cadre_fixe">
+      <tr class="tab_bg_2">
+        <td><input type="text"     class="form-control" id="nm-ext-number"       placeholder="{{ 'Ramal'|__('newmanagement') }}"></td>
+        <td><input type="password" class="form-control" id="nm-ext-password"     placeholder="{{ 'Senha'|__('newmanagement') }}" autocomplete="new-password"></td>
+        <td><input type="text"     class="form-control" id="nm-ext-device_ip"    placeholder="{{ 'IP Dispositivo'|__('newmanagement') }}"></td>
+        <td><input type="text"     class="form-control" id="nm-ext-user_name"    placeholder="{{ 'Usuário'|__('newmanagement') }}"></td>
+        <td>
+          <select class="form-select" id="nm-ext-records_calls">
+            <option value="0">{{ 'Não grava'|__('newmanagement') }}</option>
+            <option value="1">{{ 'Grava'|__('newmanagement') }}</option>
+          </select>
+        </td>
+        <td><input type="text"     class="form-control" id="nm-ext-department"   placeholder="{{ 'Departamento'|__('newmanagement') }}"></td>
+        <td>
+          <button type="button" class="btn btn-sm btn-success nm-add-ext-btn"
                   data-ipbx-id="{{ ipbx_id }}"
                   data-companies-id="{{ companies_id }}"
-                  data-csrf="{{ csrf|e('html_attr') }}"
-                  data-url="{{ action_url|e('html_attr') }}"
-                  {{ ipbx_id == 0 ? 'disabled' }}>
-            <i class="ti ti-plus"></i> {{ 'Adicionar Ramal'|__('newmanagement') }}
+                  title="{{ 'Adicionar ramal'|__('newmanagement') }}">
+            <i class="ti ti-plus"></i>
           </button>
-        {% endif %}
-      </th>
-    </tr>
-  </thead>
-  <tbody id="nm-ext-tbody">
-    {% for row in extensions %}
-    <tr class="tab_bg_1" id="nm-ext-row-{{ row.id }}">
-      <td>{{ row.number|e }}</td>
-      <td>••••••</td>
-      <td>{{ row.device_ip|e }}</td>
-      <td>{{ row.user_name|e }}</td>
-      <td>{{ row.records_calls ? 'Sim'|__('newmanagement') : 'Não'|__('newmanagement') }}</td>
-      <td>{{ row.department|e }}</td>
-      <td>
-        {% if can_delete %}
-        <button type="button"
-                class="btn btn-sm btn-icon nm-del-btn"
-                data-action="delete_extension"
-                data-id="{{ row.id }}"
-                data-row="nm-ext-row-{{ row.id }}"
-                data-companies-id="{{ companies_id }}"
-                data-csrf="{{ csrf|e('html_attr') }}"
-                data-url="{{ action_url|e('html_attr') }}"
-                data-confirm="{{ 'Remover ramal?'|__('newmanagement') }}"
-                title="{{ 'Remover'|__('newmanagement') }}">
-          <i class="ti ti-trash text-danger"></i>
-        </button>
-        {% endif %}
-      </td>
-    </tr>
-    {% endfor %}
+        </td>
+      </tr>
+    </table>
+  </div>
+  {% endif %}
 
-    {% if can_write %}
-    <tr class="tab_bg_2" id="nm-ext-add-row">
-      <td><input type="text" id="nm-ext-number" autocomplete="off" class="form-control form-control-sm" placeholder="{{ 'Número'|__('newmanagement') }}"></td>
-      <td><input type="password" id="nm-ext-password" class="form-control form-control-sm" placeholder="{{ 'Senha'|__('newmanagement') }}" autocomplete="new-password"></td>
-      <td><input type="text" id="nm-ext-device_ip" autocomplete="off" class="form-control form-control-sm" placeholder="IP"></td>
-      <td><input type="text" id="nm-ext-user_name" autocomplete="off" class="form-control form-control-sm" placeholder="{{ 'Usuário'|__('newmanagement') }}"></td>
-      <td>
-        <select id="nm-ext-records_calls" class="form-select form-select-sm">
-          <option value="0">{{ 'Não'|__('newmanagement') }}</option>
-          <option value="1">{{ 'Sim'|__('newmanagement') }}</option>
-        </select>
-      </td>
-      <td><input type="text" id="nm-ext-department" autocomplete="off" class="form-control form-control-sm" placeholder="{{ 'Departamento'|__('newmanagement') }}"></td>
-      <td></td>
-    </tr>
-    {% endif %}
-  </tbody>
-</table>
+</div>{# /#nm-ext-section #}
