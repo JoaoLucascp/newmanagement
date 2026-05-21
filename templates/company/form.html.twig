@@ -10,13 +10,13 @@
     action_url         — string: URL do form action
 #}
 <tr class="tab_bg_1">
-  <td>{{ 'Nome'|__('newmanagement') }} <span class="required">*</span></td>
+  <td>{{ __('Nome', 'newmanagement') }} <span class="required">*</span></td>
   <td>
     <input type="text" id="name" name="name"
            value="{{ item.name|default('')|e }}"
            class="form-control" required>
   </td>
-  <td>{{ 'ID'|__('newmanagement') }}</td>
+  <td>{{ __('ID', 'newmanagement') }}</td>
   <td>
     <input type="text" class="form-control"
            value="{{ id_label|e }}" disabled>
@@ -24,7 +24,7 @@
 </tr>
 
 <tr class="tab_bg_1">
-  <td>{{ 'CNPJ'|__('newmanagement') }}</td>
+  <td>{{ __('CNPJ', 'newmanagement') }}</td>
   <td>
     <div class="input-group">
       <input type="text" id="cnpj" name="cnpj"
@@ -32,13 +32,13 @@
              class="form-control" placeholder="00.000.000/0000-00" maxlength="18">
       <button type="button" class="btn btn-outline-secondary btn-sm"
               id="btn-buscar-cnpj"
-              title="{{ 'Buscar CNPJ na BrasilAPI'|__('newmanagement') }}">
-        <i class="ti ti-search"></i> {{ 'Buscar'|__('newmanagement') }}
+              title="{{ __('Buscar CNPJ na BrasilAPI', 'newmanagement') }}">
+        <i class="ti ti-search"></i> {{ __('Buscar', 'newmanagement') }}
       </button>
     </div>
     <span id="cnpj-feedback" class="nm-feedback"></span>
   </td>
-  <td>{{ 'Razao Social'|__('newmanagement') }}</td>
+  <td>{{ __('Razao Social', 'newmanagement') }}</td>
   <td>
     <input type="text" id="razao_social" name="razao_social"
            value="{{ item.razao_social|default('')|e }}"
@@ -47,13 +47,13 @@
 </tr>
 
 <tr class="tab_bg_1">
-  <td>{{ 'E-mail'|__('newmanagement') }}</td>
+  <td>{{ __('E-mail', 'newmanagement') }}</td>
   <td>
     <input type="email" id="email" name="email"
            value="{{ item.email|default('')|e }}"
            class="form-control">
   </td>
-  <td>{{ 'Telefone'|__('newmanagement') }}</td>
+  <td>{{ __('Telefone', 'newmanagement') }}</td>
   <td>
     <input type="text" id="phone" name="phone"
            value="{{ item.phone|default('')|e }}"
@@ -62,7 +62,7 @@
 </tr>
 
 <tr class="tab_bg_1">
-  <td>{{ 'CEP'|__('newmanagement') }}</td>
+  <td>{{ __('CEP', 'newmanagement') }}</td>
   <td>
     <div class="input-group">
       <input type="text" id="cep" name="cep"
@@ -70,13 +70,13 @@
              class="form-control" placeholder="00000-000" maxlength="9">
       <button type="button" class="btn btn-outline-secondary btn-sm"
               id="btn-buscar-cep"
-              title="{{ 'Buscar CEP na BrasilAPI'|__('newmanagement') }}">
-        <i class="ti ti-search"></i> {{ 'Buscar'|__('newmanagement') }}
+              title="{{ __('Buscar CEP na BrasilAPI', 'newmanagement') }}">
+        <i class="ti ti-search"></i> {{ __('Buscar', 'newmanagement') }}
       </button>
     </div>
     <span id="cep-feedback" class="nm-feedback"></span>
   </td>
-  <td>{{ 'Status do Contrato'|__('newmanagement') }}</td>
+  <td>{{ __('Status do Contrato', 'newmanagement') }}</td>
   <td>
     <select name="contract_status" class="form-select">
       {% for value, label in contract_options %}
@@ -90,14 +90,14 @@
 </tr>
 
 <tr class="tab_bg_1">
-  <td>{{ 'Endereco'|__('newmanagement') }}</td>
+  <td>{{ __('Endereco', 'newmanagement') }}</td>
   <td colspan="3">
     <textarea id="address" name="address" class="form-control" rows="2">{{ item.address|default('')|e }}</textarea>
   </td>
 </tr>
 
 <tr class="tab_bg_1">
-  <td>{{ 'Comentario'|__('newmanagement') }}</td>
+  <td>{{ __('Comentario', 'newmanagement') }}</td>
   <td colspan="3">
     <textarea id="comment" name="comment" class="form-control" rows="3">{{ item.comment|default('')|e }}</textarea>
   </td>

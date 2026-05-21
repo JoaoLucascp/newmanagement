@@ -29,7 +29,7 @@
     <table class="tab_cadre_fixe">
 
       <tr class="tab_bg_1">
-        <td>{{ 'Modelo'|__('newmanagement') }}</td>
+        <td>{{ __('Modelo', 'newmanagement') }}</td>
         <td>
           <input type="text" id="nm-ipbx-model" autocomplete="off"
                  value="{{ fields.model|default('')|e }}"
@@ -37,7 +37,7 @@
                  {{ not can_write ? 'readonly' }}
           >
         </td>
-        <td>{{ 'Versão'|__('newmanagement') }}</td>
+        <td>{{ __('Versão', 'newmanagement') }}</td>
         <td>
           <input type="text" id="nm-ipbx-server_version" autocomplete="off"
                  value="{{ fields.server_version|default('')|e }}"
@@ -48,7 +48,7 @@
       </tr>
 
       <tr class="tab_bg_1">
-        <td>{{ 'IP Local'|__('newmanagement') }}</td>
+        <td>{{ __('IP Local', 'newmanagement') }}</td>
         <td>
           <input type="text" id="nm-ipbx-ip_local" autocomplete="off"
                  value="{{ fields.ip_local|default('')|e }}"
@@ -56,7 +56,7 @@
                  {{ not can_write ? 'readonly' }}
           >
         </td>
-        <td>{{ 'IP Externo'|__('newmanagement') }}</td>
+        <td>{{ __('IP Externo', 'newmanagement') }}</td>
         <td>
           <input type="text" id="nm-ipbx-ip_external" autocomplete="off"
                  value="{{ fields.ip_external|default('')|e }}"
@@ -67,7 +67,7 @@
       </tr>
 
       <tr class="tab_bg_1">
-        <td>{{ 'Porta Web'|__('newmanagement') }}</td>
+        <td>{{ __('Porta Web', 'newmanagement') }}</td>
         <td>
           <input type="text" id="nm-ipbx-web_port" autocomplete="off"
                  value="{{ fields.web_port|default('')|e }}"
@@ -75,7 +75,7 @@
                  {{ not can_write ? 'readonly' }}
           >
         </td>
-        <td>{{ 'Senha Web'|__('newmanagement') }}</td>
+        <td>{{ __('Senha Web', 'newmanagement') }}</td>
         <td>
           <div class="input-group">
             <input type="password" id="nm-web-password"
@@ -93,7 +93,7 @@
       </tr>
 
       <tr class="tab_bg_1">
-        <td>{{ 'Porta SSH'|__('newmanagement') }}</td>
+        <td>{{ __('Porta SSH', 'newmanagement') }}</td>
         <td>
           <input type="text" id="nm-ipbx-ssh_port" autocomplete="off"
                  value="{{ fields.ssh_port|default('')|e }}"
@@ -101,7 +101,7 @@
                  {{ not can_write ? 'readonly' }}
           >
         </td>
-        <td>{{ 'Senha SSH'|__('newmanagement') }}</td>
+        <td>{{ __('Senha SSH', 'newmanagement') }}</td>
         <td>
           <div class="input-group">
             <input type="password" id="nm-ssh-password"
@@ -119,7 +119,7 @@
       </tr>
 
       <tr class="tab_bg_1">
-        <td>{{ 'Comentário'|__('newmanagement') }}</td>
+        <td>{{ __('Comentário', 'newmanagement') }}</td>
         <td colspan="3">
           <textarea id="nm-ipbx-comment" class="form-control" rows="2"
                     {{ not can_write ? 'readonly' }}
@@ -135,7 +135,7 @@
     <div class="d-flex align-items-center mb-2">
       <i class="ti ti-phone-call me-2 fs-5 text-muted"></i>
       <span class="fw-bold text-muted text-uppercase" style="font-size:0.75rem;letter-spacing:.05em">
-        {{ 'Ramais'|__('newmanagement') }}
+        {{ __('Ramais', 'newmanagement') }}
       </span>
       <button type="button"
               class="btn btn-sm btn-icon ms-auto nm-toggle-section"
@@ -145,7 +145,7 @@
         <i class="ti ti-chevron-up"></i>
       </button>
     </div>
-    {% include '@GlpiPlugin/Newmanagement/ipbx/partials/extensions.html.twig' %}
+    {% include '@newmanagement/ipbx/partials/extensions.html.twig' %}
   </div>
 
   {# === Dispositivos === #}
@@ -153,7 +153,7 @@
     <div class="d-flex align-items-center mb-2">
       <i class="ti ti-device-desktop me-2 fs-5 text-muted"></i>
       <span class="fw-bold text-muted text-uppercase" style="font-size:0.75rem;letter-spacing:.05em">
-        {{ 'Dispositivos'|__('newmanagement') }}
+        {{ __('Dispositivos', 'newmanagement') }}
       </span>
       <button type="button"
               class="btn btn-sm btn-icon ms-auto nm-toggle-section"
@@ -163,7 +163,7 @@
         <i class="ti ti-chevron-up"></i>
       </button>
     </div>
-    {% include '@GlpiPlugin/Newmanagement/ipbx/partials/devices.html.twig' %}
+    {% include '@newmanagement/ipbx/partials/devices.html.twig' %}
   </div>
 
   {# === Rede da Empresa === #}
@@ -171,7 +171,7 @@
     <div class="d-flex align-items-center mb-2">
       <i class="ti ti-network me-2 fs-5 text-muted"></i>
       <span class="fw-bold text-muted text-uppercase" style="font-size:0.75rem;letter-spacing:.05em">
-        {{ 'Rede da Empresa'|__('newmanagement') }}
+        {{ __('Rede da Empresa', 'newmanagement') }}
       </span>
       <button type="button"
               class="btn btn-sm btn-icon ms-auto nm-toggle-section"
@@ -181,7 +181,7 @@
         <i class="ti ti-chevron-up"></i>
       </button>
     </div>
-    {% include '@GlpiPlugin/Newmanagement/ipbx/partials/network.html.twig' %}
+    {% include '@newmanagement/ipbx/partials/network.html.twig' %}
   </div>
 
   {# === Botão Salvar === #}
@@ -191,7 +191,7 @@
             class="btn btn-primary"
             data-action-url="{{ action_url|e('html_attr') }}">
       <i class="ti ti-device-floppy"></i>
-      {{ 'Salvar'|__('newmanagement') }}
+      {{ __('Salvar', 'newmanagement') }}
     </button>
   </div>
   {% endif %}
