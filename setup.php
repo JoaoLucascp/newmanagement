@@ -39,6 +39,20 @@ function plugin_init_newmanagement()
     \Plugin::registerClass(\GlpiPlugin\Newmanagement\FixedLine::class);
     \Plugin::registerClass(\GlpiPlugin\Newmanagement\Task::class);
 
+    // Classes filhas do IPBX On-Premise — exibidas como abas na ficha do IPBX
+    \Plugin::registerClass(
+        \GlpiPlugin\Newmanagement\IpbxExtension::class,
+        ['addtabon' => [\GlpiPlugin\Newmanagement\Ipbx::class]]
+    );
+    \Plugin::registerClass(
+        \GlpiPlugin\Newmanagement\IpbxDevice::class,
+        ['addtabon' => [\GlpiPlugin\Newmanagement\Ipbx::class]]
+    );
+    \Plugin::registerClass(
+        \GlpiPlugin\Newmanagement\IpbxNetwork::class,
+        ['addtabon' => [\GlpiPlugin\Newmanagement\Ipbx::class]]
+    );
+
     // GLPI 11 — registra o menu lateral via MENU_TOADD.
     // A chave 'plugins' faz o menu aparecer na seção Plug-ins do topo.
     // Company::getMenuContent() define os sub-itens (Empresas, IPBX, Chatbots…).
