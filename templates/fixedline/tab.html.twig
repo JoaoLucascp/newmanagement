@@ -28,7 +28,7 @@
   <table class="tab_cadre_fixe">
 
     <tr class="tab_bg_1">
-      <td>{{ 'Número Piloto'|trans({}, 'newmanagement') }}</td>
+      <td>{{ __('Número Piloto', 'newmanagement') }}</td>
       <td>
         <input type="text" id="nm-line-pilot_number" autocomplete="off"
                value="{{ f.pilot_number|default('')|e('html_attr') }}"
@@ -36,14 +36,14 @@
                placeholder="Ex: 1131000000"
                {{ not can_write ? 'readonly' }}>
       </td>
-      <td>{{ 'Quantidade de DDR'|trans({}, 'newmanagement') }}</td>
+      <td>{{ __('Quantidade de DDR', 'newmanagement') }}</td>
       <td>
         <input type="number" id="nm-line-ddr_count" autocomplete="off"
                value="{{ f.ddr_count|default(0)|e('html_attr') }}"
                class="form-control" min="0" placeholder="0"
                {{ not can_write ? 'readonly' }}>
       </td>
-      <td>{{ 'Status'|trans({}, 'newmanagement') }}</td>
+      <td>{{ __('Status', 'newmanagement') }}</td>
       <td>
         <select id="nm-line-status" class="form-select"
                 {{ not can_write ? 'disabled' }}>
@@ -58,7 +58,7 @@
     </tr>
 
     <tr class="tab_bg_1">
-      <td>{{ 'Operadora'|trans({}, 'newmanagement') }}</td>
+      <td>{{ __('Operadora', 'newmanagement') }}</td>
       <td>
         <input type="text" id="nm-line-operator" autocomplete="off"
                value="{{ f.operator|default('')|e('html_attr') }}"
@@ -66,14 +66,14 @@
                placeholder="Ex: Vivo"
                {{ not can_write ? 'readonly' }}>
       </td>
-      <td>{{ 'Quantidade de Canais'|trans({}, 'newmanagement') }}</td>
+      <td>{{ __('Quantidade de Canais', 'newmanagement') }}</td>
       <td>
         <input type="number" id="nm-line-channels" autocomplete="off"
                value="{{ f.channels|default(0)|e('html_attr') }}"
                class="form-control" min="0" placeholder="0"
                {{ not can_write ? 'readonly' }}>
       </td>
-      <td>{{ 'IP Proxy'|trans({}, 'newmanagement') }}</td>
+      <td>{{ __('IP Proxy', 'newmanagement') }}</td>
       <td>
         <input type="text" id="nm-line-proxy_ip" autocomplete="off"
                value="{{ f.proxy_ip|default('')|e('html_attr') }}"
@@ -84,7 +84,7 @@
     </tr>
 
     <tr class="tab_bg_1">
-      <td>{{ 'Tipo'|trans({}, 'newmanagement') }}</td>
+      <td>{{ __('Tipo', 'newmanagement') }}</td>
       <td>
         <input type="text" id="nm-line-line_type" autocomplete="off"
                value="{{ f.line_type|default('')|e('html_attr') }}"
@@ -92,7 +92,7 @@
                placeholder="Ex: SIP, E1"
                {{ not can_write ? 'readonly' }}>
       </td>
-      <td>{{ 'IP Tráfego Áudio'|trans({}, 'newmanagement') }}</td>
+      <td>{{ __('IP Tráfego Áudio', 'newmanagement') }}</td>
       <td>
         <input type="text" id="nm-line-audio_ip" autocomplete="off"
                value="{{ f.audio_ip|default('')|e('html_attr') }}"
@@ -100,7 +100,7 @@
                placeholder="Ex: 200.x.x.x"
                {{ not can_write ? 'readonly' }}>
       </td>
-      <td>{{ 'Porta Proxy'|trans({}, 'newmanagement') }}</td>
+      <td>{{ __('Porta Proxy', 'newmanagement') }}</td>
       <td>
         <input type="text" id="nm-line-proxy_port" autocomplete="off"
                value="{{ f.proxy_port|default('')|e('html_attr') }}"
@@ -111,14 +111,14 @@
     </tr>
 
     <tr class="tab_bg_1">
-      <td>{{ 'Data Portabilidade'|trans({}, 'newmanagement') }}</td>
+      <td>{{ __('Data Portabilidade', 'newmanagement') }}</td>
       <td>
         <input type="date" id="nm-line-portability_date" autocomplete="off"
                value="{{ f.portability_date|default('')|e('html_attr') }}"
                class="form-control"
                {{ not can_write ? 'readonly' }}>
       </td>
-      <td>{{ 'Operadora Anterior'|trans({}, 'newmanagement') }}</td>
+      <td>{{ __('Operadora Anterior', 'newmanagement') }}</td>
       <td>
         <input type="text" id="nm-line-previous_operator" autocomplete="off"
                value="{{ f.previous_operator|default('')|e('html_attr') }}"
@@ -130,14 +130,14 @@
     </tr>
 
     <tr class="tab_bg_1">
-      <td>{{ 'Data de Ativação'|trans({}, 'newmanagement') }}</td>
+      <td>{{ __('Data de Ativação', 'newmanagement') }}</td>
       <td>
         <input type="date" id="nm-line-activation_date" autocomplete="off"
                value="{{ f.activation_date|default('')|e('html_attr') }}"
                class="form-control"
                {{ not can_write ? 'readonly' }}>
       </td>
-      <td>{{ 'Data de Vencimento'|trans({}, 'newmanagement') }}</td>
+      <td>{{ __('Data de Vencimento', 'newmanagement') }}</td>
       <td>
         <input type="date" id="nm-line-expiration_date" autocomplete="off"
                value="{{ f.expiration_date|default('')|e('html_attr') }}"
@@ -148,7 +148,7 @@
     </tr>
 
     <tr class="tab_bg_1">
-      <td>{{ 'Comentário'|trans({}, 'newmanagement') }}</td>
+      <td>{{ __('Comentário', 'newmanagement') }}</td>
       <td colspan="5">
         <textarea id="nm-line-comment" class="form-control" rows="2"
                   {{ not can_write ? 'readonly' }}
@@ -166,7 +166,7 @@
     <button type="button" id="nm-line-delete"
             class="btn btn-danger">
       <i class="ti ti-trash"></i>
-      {{ 'Excluir Linha'|trans({}, 'newmanagement') }}
+      {{ __('Excluir Linha', 'newmanagement') }}
     </button>
     {% endif %}
 
@@ -174,7 +174,7 @@
     <button type="button" id="nm-line-save"
             class="btn btn-primary">
       <i class="ti ti-device-floppy"></i>
-      {{ 'Salvar Linha'|trans({}, 'newmanagement') }}
+      {{ __('Salvar Linha', 'newmanagement') }}
     </button>
     {% endif %}
 
@@ -252,13 +252,11 @@
 
         if (!data.success) throw new Error(data.error || 'Erro desconhecido');
 
-        // Se era novo registro, muda para modo edição
         const actionInput = document.getElementById('nm-line-action');
         const idInput     = document.getElementById('nm-line-id');
         if (actionInput && actionInput.value === 'add_line' && data.id) {
           actionInput.value = 'update_line';
           idInput.value     = data.id;
-          // Exibe o botão Excluir se ele existia oculto
           const delBtn = document.getElementById('nm-line-delete');
           if (delBtn) delBtn.style.display = '';
         }
@@ -280,7 +278,7 @@
   const delBtn = document.getElementById('nm-line-delete');
   if (delBtn) {
     delBtn.addEventListener('click', async () => {
-      if (!confirm('{{ 'Deseja realmente excluir esta linha fixa?'|trans({}, 'newmanagement') }}')) return;
+      if (!confirm('{{ __('Deseja realmente excluir esta linha fixa?', 'newmanagement') }}')) return;
 
       delBtn.disabled = true;
       try {
@@ -293,7 +291,6 @@
 
         if (!data.success) throw new Error(data.error || 'Erro ao excluir');
 
-        // Limpa o formulário e volta para modo "novo"
         const fields = [
           'pilot_number','ddr_count','operator','channels','proxy_ip',
           'line_type','audio_ip','proxy_port','portability_date',
