@@ -180,8 +180,9 @@ class Ipbx extends \CommonDBTM
         );
 
         // --- Renderiza via Twig ---
+        // CORRIGIDO: namespace @newmanagement (não @GlpiPlugin/Newmanagement)
         \Glpi\Application\View\TemplateRenderer::getInstance()->display(
-            '@GlpiPlugin/Newmanagement/ipbx/tab.html.twig',
+            '@newmanagement/ipbx/tab.html.twig',
             [
                 'action_url'       => \Plugin::getWebDir('newmanagement') . '/ajax/ipbx_sub.php',
                 'paginate_url'     => \Plugin::getWebDir('newmanagement') . '/ajax/ipbx_paginate.php',
