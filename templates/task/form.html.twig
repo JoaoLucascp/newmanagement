@@ -1,38 +1,72 @@
 {#
   Newmanagement - Formulário de Tarefa
+  Padrão: Twig com fetch() para save/delete sem reload de página
 #}
 {% extends 'layout/page.html.twig' %}
 
 {% block content %}
 <div class="container-fluid">
 
-  <h2>
-    {% if item.id %}
-      {{ 'Editar Tarefa'|__('newmanagement') }} — {{ item.name }}
-    {% else %}
-      {{ 'Nova Tarefa'|__('newmanagement') }}
-    {% endif %}
-  </h2>
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>
+      {% if item.id %}
+        {{ 'Editar Tarefa'|__('newmanagement') }} — {{ item.name }}
+      {% else %}
+        {{ 'Nova Tarefa'|__('newmanagement') }}
+      {% endif %}
+    </h2>
 
-  <div class="card mt-3">
+    {% if item.id and can_delete %}
+    <button type="button" id="btn-delete-task" class="btn btn-danger">
+      <i class="ti ti-trash"></i>
+      {{ 'Excluir Tarefa'|__('newmanagement') }}
+    </button>
+    {% endif %}
+  </div>
+
+  {# Badge de status no topo quando editando #}
+  {% if item.id %}
+  <div class="mb-3">
+    {% if item.status == 0 %}
+      <span class="badge bg-secondary fs-6">{{ 'Aberta'|__('newmanagement') }}</span>
+    {% elseif item.status == 1 %}
+      <span class="badge bg-primary fs-6">{{ 'Em andamento'|__('newmanagement') }}</span>
+    {% else %}
+      <span class="badge bg-success fs-6">{{ 'Concluída'|__('newmanagement') }}</span>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <div class="card mt-1">
     <div class="card-body">
-      <form method="POST" action="">
-        <input type="hidden" name="id" value="{{ item.id|default('') }}">
-        <input type="hidden" name="_glpi_csrf_token" value="{{ csrf_token() }}">
+      <form id="task-form">
+        <input type="hidden" id="task-id" value="{{ item.id|default('') }}">
+        <input type="hidden" id="task-csrf" value="{{ csrf_token }}">
 
         <div class="row g-3">
 
           <div class="col-md-6">
             <label class="form-label" for="name">
-              {{ 'Nome'|__('newmanagement') }} <span class="text-danger">*</span>
+              {{ 'Título'|__('newmanagement') }} <span class="text-danger">*</span>
             </label>
-            <input type="text" id="name" name="name" class="form-control"
+            <input type="text" id="name" class="form-control"
                    value="{{ item.name|default('') }}" required>
           </div>
 
           <div class="col-md-6">
+            <label class="form-label" for="status">{{ 'Status'|__('newmanagement') }}</label>
+            <select id="status" class="form-select">
+              {% for val, label in statuses %}
+              <option value="{{ val }}" {% if item.status == val %}selected{% endif %}>
+                {{ label }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="col-md-6">
             <label class="form-label" for="companies_id">{{ 'Empresa'|__('newmanagement') }}</label>
-            <select id="companies_id" name="companies_id" class="form-select">
+            <select id="companies_id" class="form-select">
               <option value="">— {{ 'Selecione'|__('newmanagement') }} —</option>
               {% for company in companies %}
               <option value="{{ company.id }}"
@@ -45,7 +79,7 @@
 
           <div class="col-md-6">
             <label class="form-label" for="assigned_user_id">{{ 'Responsável'|__('newmanagement') }}</label>
-            <select id="assigned_user_id" name="assigned_user_id" class="form-select">
+            <select id="assigned_user_id" class="form-select">
               <option value="">— {{ 'Selecione'|__('newmanagement') }} —</option>
               {% for user in users %}
               <option value="{{ user.id }}"
@@ -57,62 +91,49 @@
           </div>
 
           <div class="col-md-6">
-            <label class="form-label" for="status">{{ 'Status'|__('newmanagement') }}</label>
-            <select id="status" name="status" class="form-select">
-              <option value="0" {% if item.status == 0 %}selected{% endif %}>
-                {{ 'Aberta'|__('newmanagement') }}
-              </option>
-              <option value="1" {% if item.status == 1 %}selected{% endif %}>
-                {{ 'Em andamento'|__('newmanagement') }}
-              </option>
-              <option value="2" {% if item.status == 2 %}selected{% endif %}>
-                {{ 'Concluída'|__('newmanagement') }}
-              </option>
-            </select>
-          </div>
-
-          <div class="col-md-6">
             <label class="form-label" for="date_due">{{ 'Prazo'|__('newmanagement') }}</label>
-            <input type="datetime-local" id="date_due" name="date_due" class="form-control"
+            <input type="datetime-local" id="date_due" class="form-control"
                    value="{{ item.date_due|default('') }}">
           </div>
 
           <div class="col-md-6">
             <label class="form-label" for="km_calculated">{{ 'KM Calculado'|__('newmanagement') }}</label>
-            <input type="number" step="0.01" id="km_calculated" name="km_calculated" class="form-control"
+            <input type="number" step="0.01" id="km_calculated" class="form-control"
                    value="{{ item.km_calculated|default('') }}">
           </div>
 
           <div class="col-md-6">
             <label class="form-label" for="latitude">{{ 'Latitude'|__('newmanagement') }}</label>
-            <input type="number" step="0.0000001" id="latitude" name="latitude" class="form-control"
+            <input type="number" step="0.0000001" id="latitude" class="form-control"
                    value="{{ item.latitude|default('') }}">
           </div>
 
           <div class="col-md-6">
             <label class="form-label" for="longitude">{{ 'Longitude'|__('newmanagement') }}</label>
-            <input type="number" step="0.0000001" id="longitude" name="longitude" class="form-control"
+            <input type="number" step="0.0000001" id="longitude" class="form-control"
                    value="{{ item.longitude|default('') }}">
           </div>
 
           <div class="col-12">
             <label class="form-label" for="digital_signature">{{ 'Assinatura Digital'|__('newmanagement') }}</label>
-            <textarea id="digital_signature" name="digital_signature" class="form-control" rows="2">{{ item.digital_signature|default('') }}</textarea>
+            <textarea id="digital_signature" class="form-control" rows="2">{{ item.digital_signature|default('') }}</textarea>
           </div>
 
           <div class="col-12">
             <label class="form-label" for="comment">{{ 'Observações'|__('newmanagement') }}</label>
-            <textarea id="comment" name="comment" class="form-control" rows="3">{{ item.comment|default('') }}</textarea>
+            <textarea id="comment" class="form-control" rows="3">{{ item.comment|default('') }}</textarea>
           </div>
 
-        </div>
+        </div>{# /row #}
 
         <div class="mt-4 d-flex gap-2">
-          <button type="submit" name="update" class="btn btn-primary">
-            <i class="ti ti-device-floppy"></i>
-            {{ 'Salvar'|__('newmanagement') }}
+          {% if can_update or can_create %}
+          <button type="button" id="btn-save-task" class="btn btn-primary">
+            <i class="ti ti-device-floppy" id="btn-save-icon"></i>
+            <span id="btn-save-label">{{ 'Salvar'|__('newmanagement') }}</span>
           </button>
-          <a href="{{ path('GlpiPlugin\\Newmanagement\\Task') }}" class="btn btn-secondary">
+          {% endif %}
+          <a href="{{ search_url }}" class="btn btn-secondary">
             {{ 'Cancelar'|__('newmanagement') }}
           </a>
         </div>
@@ -122,4 +143,134 @@
   </div>
 
 </div>
+
+<style>
+  @keyframes nm-spin { to { transform: rotate(360deg); } }
+  .nm-spinning { animation: nm-spin 0.7s linear infinite; display: inline-block; }
+</style>
+
+<script>
+(function () {
+  'use strict';
+
+  const AJAX_URL = '{{ path("ajax/task_action.php") }}';
+  let taskId     = parseInt(document.getElementById('task-id').value) || 0;
+  let csrfToken  = document.getElementById('task-csrf').value;
+
+  // --- helpers ---
+  function getField(id) {
+    const el = document.getElementById(id);
+    return el ? el.value.trim() : '';
+  }
+
+  function buildPayload(action) {
+    return {
+      action,
+      _glpi_csrf_token: csrfToken,
+      id:               taskId || undefined,
+      name:             getField('name'),
+      status:           getField('status'),
+      companies_id:     getField('companies_id'),
+      assigned_user_id: getField('assigned_user_id'),
+      date_due:         getField('date_due'),
+      km_calculated:    getField('km_calculated'),
+      latitude:         getField('latitude'),
+      longitude:        getField('longitude'),
+      digital_signature: getField('digital_signature'),
+      comment:          getField('comment'),
+    };
+  }
+
+  function setButtonLoading(loading) {
+    const btn   = document.getElementById('btn-save-task');
+    const icon  = document.getElementById('btn-save-icon');
+    const label = document.getElementById('btn-save-label');
+    if (!btn) return;
+    btn.disabled = loading;
+    if (loading) {
+      icon.classList.add('nm-spinning');
+      icon.className = icon.className.replace('ti-device-floppy', 'ti-loader-2');
+      label.textContent = '{{ "Salvando..."|__('newmanagement') }}';
+    } else {
+      icon.classList.remove('nm-spinning');
+      icon.className = icon.className.replace('ti-loader-2', 'ti-check');
+      label.textContent = '{{ "Salvo!"|__('newmanagement') }}';
+      setTimeout(() => {
+        icon.className = icon.className.replace('ti-check', 'ti-device-floppy');
+        label.textContent = '{{ "Salvar"|__('newmanagement') }}';
+      }, 2000);
+    }
+  }
+
+  // --- SALVAR ---
+  const btnSave = document.getElementById('btn-save-task');
+  if (btnSave) {
+    btnSave.addEventListener('click', async () => {
+      const nameVal = getField('name');
+      if (!nameVal) {
+        document.getElementById('name').focus();
+        return;
+      }
+
+      const action = taskId > 0 ? 'update_task' : 'add_task';
+      setButtonLoading(true);
+
+      try {
+        const res  = await fetch(AJAX_URL, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify(buildPayload(action)),
+          signal:  AbortSignal.timeout(10000),
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          if (action === 'add_task' && data.id) {
+            taskId = data.id;
+            document.getElementById('task-id').value = taskId;
+            // Atualiza a URL sem reload
+            history.replaceState(null, '', '{{ form_url }}?id=' + taskId);
+          }
+          csrfToken = data.csrf_token ?? csrfToken;
+        } else {
+          alert(data.message ?? '{{ "Erro ao salvar."|__('newmanagement') }}');
+        }
+      } catch (err) {
+        alert('{{ "Erro de conexão."|__('newmanagement') }}');
+      } finally {
+        setButtonLoading(false);
+      }
+    });
+  }
+
+  // --- EXCLUIR ---
+  const btnDelete = document.getElementById('btn-delete-task');
+  if (btnDelete) {
+    btnDelete.addEventListener('click', async () => {
+      if (!confirm('{{ "Excluir esta tarefa?"|__('newmanagement') }}')) return;
+
+      btnDelete.disabled = true;
+      try {
+        const res  = await fetch(AJAX_URL, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ action: 'delete_task', _glpi_csrf_token: csrfToken, id: taskId }),
+          signal:  AbortSignal.timeout(10000),
+        });
+        const data = await res.json();
+        if (data.success) {
+          window.location.href = '{{ search_url }}';
+        } else {
+          alert(data.message ?? '{{ "Erro ao excluir."|__('newmanagement') }}');
+          btnDelete.disabled = false;
+        }
+      } catch (err) {
+        alert('{{ "Erro de conexão."|__('newmanagement') }}');
+        btnDelete.disabled = false;
+      }
+    });
+  }
+
+})();
+</script>
 {% endblock %}
