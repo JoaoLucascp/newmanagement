@@ -32,21 +32,28 @@ function plugin_init_newmanagement()
     $PLUGIN_HOOKS['config_page']['newmanagement'] = 'front/config.php';
 
     // -------------------------------------------------------
-    // [FIX E3] Registra o namespace Twig @newmanagement
-    // O TemplateRenderer do GLPI 11 usa FilesystemLoader com namespaces.
-    // Sem este hook, qualquer display('@newmanagement/...') lança:
-    //   LoaderError: "There are no registered paths for namespace GlpiPlugin"
-    // O hook post_init garante que o TemplateRenderer já foi instanciado.
+    // [FIX E1/E4] Registra o namespace Twig @newmanagement
+    //
+    // PROBLEMA ANTERIOR: o registro estava dentro de post_init,
+    // que é executado APÓS o TemplateRenderer singleton já ter
+    // sido criado. Em requisições AJAX (ajax/common.tabs.php),
+    // o display() era chamado antes do post_init rodar, causando:
+    //   - LoaderError: "no registered paths for namespace GlpiPlugin"
+    //   - SyntaxError: "Unknown trans filter" (erro encadeado)
+    //
+    // SOLUÇÃO: registrar o namespace diretamente no plugin_init,
+    // garantindo que @newmanagement existe antes de qualquer
+    // chamada a TemplateRenderer::display().
+    // O TemplateRenderer é lazy — getEnvironment() só instancia
+    // o Twig se ainda não foi criado, então chamá-lo aqui é seguro.
     // -------------------------------------------------------
-    $PLUGIN_HOOKS['post_init']['newmanagement'] = function () {
-        $tpl_dir = Plugin::getPhpDir('newmanagement') . '/templates';
-        if (is_dir($tpl_dir)) {
-            \Glpi\Application\View\TemplateRenderer::getInstance()
-                ->getEnvironment()
-                ->getLoader()
-                ->addPath($tpl_dir, 'newmanagement');
-        }
-    };
+    $tpl_dir = Plugin::getPhpDir('newmanagement') . '/templates';
+    if (is_dir($tpl_dir)) {
+        \Glpi\Application\View\TemplateRenderer::getInstance()
+            ->getEnvironment()
+            ->getLoader()
+            ->addPath($tpl_dir, 'newmanagement');
+    }
 
     // Registra as classes PSR-4
     \Plugin::registerClass(\GlpiPlugin\Newmanagement\Company::class);
