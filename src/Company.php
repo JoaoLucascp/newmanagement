@@ -209,18 +209,17 @@ class Company extends \CommonDBTM
      * Agora: toda apresentação fica em templates/company/form.html.twig;
      * o método PHP prepara apenas os dados e delega ao TemplateRenderer.
      *
-     * Vantagens:
-     *  - Twig escapa automaticamente via |e (XSS eliminado por design)
-     *  - Template editável sem tocar em PHP
-     *  - Testes unitários podem verificar os dados sem parsear HTML
+     * [FIX E4] Html::requireJs('newmanagement_company_form') removido.
+     * O alias nunca foi registrado em $CFG_GLPI['javascript'], causando:
+     *   "JS lib newmanagement_company_form is not known"
+     * JS específico do formulário deve ser incluído via <script> no
+     * template Twig (templates/company/form.html.twig), padrão já
+     * usado pelas demais abas do plugin.
      */
     public function showForm($ID, array $options = []): bool
     {
         $this->initForm($ID, $options);
         $this->showFormHeader($options);
-
-        // [FIX A3] Carrega JS externo via helper nativo (sem <script> inline)
-        \Html::requireJs('newmanagement_company_form');
 
         // --- Preparação dos dados para o template ----------------------------
         $contract_status = (int) ($this->fields['contract_status'] ?? self::CONTRACT_NO_CONTRACT);
@@ -232,10 +231,8 @@ class Company extends \CommonDBTM
 
         // --- Renderiza via Twig ----------------------------------------------
         \Glpi\Application\View\TemplateRenderer::getInstance()->display(
-            'generic_show_form.html.twig',  // layout pai que insere as <tr> no <table> do GLPI
+            'generic_show_form.html.twig',
             [
-                // Passa o objeto $this; o Twig acessa item.name, item.cnpj, etc.
-                // via __get() do CommonDBTM (campos do banco).
                 'item'              => $this,
                 'id'                => $ID,
                 'id_label'          => $id_label,
