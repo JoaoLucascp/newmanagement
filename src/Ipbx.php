@@ -108,6 +108,7 @@ class Ipbx extends \CommonDBTM
      * Paginação server-side:
      *   - ext_page (GET, int ≥ 1): página atual dos ramais
      *   - dev_page (GET, int ≥ 1): página atual dos dispositivos
+     *   - net_page (GET, int ≥ 1): página atual das redes
      *   Cada página carrega PAGE_SIZE registros via LIMIT/OFFSET.
      *   A navegação (prev/next) faz fetch AJAX ao endpoint ipbx_paginate.php
      *   e substitui apenas o tbody + controles — sem reload da aba inteira.
@@ -155,6 +156,7 @@ class Ipbx extends \CommonDBTM
         // --- Sub-tabelas paginadas ---
         $ext_page = max(1, (int) ($_GET['ext_page'] ?? 1));
         $dev_page = max(1, (int) ($_GET['dev_page'] ?? 1));
+        $net_page = max(1, (int) ($_GET['net_page'] ?? 1));
 
         [$extensions, $ext_total] = self::fetchPage(
             self::TABLE_EXTENSIONS,
@@ -170,9 +172,12 @@ class Ipbx extends \CommonDBTM
             $dev_page
         );
 
-        $network = ($ipbx_id > 0)
-            ? iterator_to_array($DB->request(['FROM' => self::TABLE_NETWORK, 'WHERE' => ['ipbx_id' => $ipbx_id]]))
-            : [];
+        [$network, $net_total] = self::fetchPage(
+            self::TABLE_NETWORK,
+            ['ipbx_id' => $ipbx_id],
+            'ip_network ASC',
+            $net_page
+        );
 
         // --- Renderiza via Twig ---
         \Glpi\Application\View\TemplateRenderer::getInstance()->display(
@@ -193,15 +198,21 @@ class Ipbx extends \CommonDBTM
                 'ssh_placeholder'  => $has_ssh_password
                     ? __('(senha salva — deixe em branco para manter)', 'newmanagement')
                     : __('Senha SSH', 'newmanagement'),
+                // Ramais
                 'extensions'       => $extensions,
                 'ext_page'         => $ext_page,
                 'ext_total'        => $ext_total,
                 'ext_page_size'    => self::PAGE_SIZE,
+                // Dispositivos
                 'devices'          => $devices,
                 'dev_page'         => $dev_page,
                 'dev_total'        => $dev_total,
                 'dev_page_size'    => self::PAGE_SIZE,
+                // Rede
                 'network'          => $network,
+                'net_page'         => $net_page,
+                'net_total'        => $net_total,
+                'net_page_size'    => self::PAGE_SIZE,
             ]
         );
     }
