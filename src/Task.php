@@ -44,29 +44,90 @@ class Task extends \CommonDBTM
         ];
     }
 
+    // ------------------------------------------------------------------
+    // Aba dentro da ficha de Empresa
+    // ------------------------------------------------------------------
+    public function getTabNameForItem(\CommonGLPI $item, $withtemplate = 0): string|array
+    {
+        if ($item instanceof Company) {
+            $count = countElementsInTable(
+                self::getTable(),
+                ['companies_id' => $item->getID(), 'is_deleted' => 0]
+            );
+            return self::createTabEntry(self::getTypeName(2), $count);
+        }
+        return '';
+    }
+
+    public static function displayTabContentForItem(\CommonGLPI $item, $tabnum = 1, $withtemplate = 0): bool
+    {
+        if ($item instanceof Company) {
+            self::showForCompany($item);
+        }
+        return true;
+    }
+
+    public static function showForCompany(Company $company): void
+    {
+        global $DB;
+
+        $companies_id = $company->getID();
+        $can_write    = \Session::haveRight(self::$rightname, CREATE);
+        $can_delete   = \Session::haveRight(self::$rightname, DELETE);
+        $csrf         = \Session::getNewCSRFToken();
+        $action_url   = \Plugin::getWebDir('newmanagement') . '/ajax/task_action.php';
+
+        $rows = iterator_to_array($DB->request([
+            'FROM'  => self::getTable(),
+            'WHERE' => ['companies_id' => $companies_id, 'is_deleted' => 0],
+            'ORDER' => 'date_due ASC',
+        ]));
+
+        $twig = plugin_newmanagement_getTwig();
+        echo $twig->render('task/tab.html.twig', [
+            'rows'         => $rows,
+            'companies_id' => $companies_id,
+            'statuses'     => self::getStatusLabels(),
+            'can_write'    => $can_write,
+            'can_delete'   => $can_delete,
+            'csrf'         => $csrf,
+            'action_url'   => $action_url,
+        ]);
+    }
+
     /**
-     * Renderiza o formulário via Twig (padrão do plugin).
+     * Renderiza o formulário via Twig (página própria da Task).
      */
     public function showForm($ID, array $options = []): bool
     {
-        global $DB, $CFG_GLPI;
+        global $DB;
 
         $this->initForm($ID, $options);
 
-        $can_create = Session::haveRight(self::$rightname, CREATE);
-        $can_update = Session::haveRight(self::$rightname, UPDATE);
-        $can_delete = Session::haveRight(self::$rightname, DELETE);
+        $can_create = \Session::haveRight(self::$rightname, CREATE);
+        $can_update = \Session::haveRight(self::$rightname, UPDATE);
+        $can_delete = \Session::haveRight(self::$rightname, DELETE);
 
         // Empresas para o select
         $companies = [];
-        $result = $DB->request(['SELECT' => ['id', 'name'], 'FROM' => 'glpi_plugin_newmanagement_companies', 'WHERE' => ['is_deleted' => 0], 'ORDER' => 'name ASC']);
+        $result = $DB->request([
+            'SELECT' => ['id', 'name'],
+            'FROM'   => 'glpi_plugin_newmanagement_companies',
+            'WHERE'  => ['is_deleted' => 0],
+            'ORDER'  => 'name ASC',
+        ]);
         foreach ($result as $row) {
             $companies[] = $row;
         }
 
         // Usuários para o select de responsável
         $users = [];
-        $result = $DB->request(['SELECT' => ['id', 'name'], 'FROM' => 'glpi_users', 'WHERE' => ['is_deleted' => 0, 'is_active' => 1], 'ORDER' => 'name ASC']);
+        $result = $DB->request([
+            'SELECT' => ['id', 'name'],
+            'FROM'   => 'glpi_users',
+            'WHERE'  => ['is_deleted' => 0, 'is_active' => 1],
+            'ORDER'  => 'name ASC',
+        ]);
         foreach ($result as $row) {
             $users[] = $row;
         }
@@ -80,7 +141,7 @@ class Task extends \CommonDBTM
             'can_create'  => $can_create,
             'can_update'  => $can_update,
             'can_delete'  => $can_delete,
-            'csrf_token'  => Session::getNewCSRFToken(),
+            'csrf_token'  => \Session::getNewCSRFToken(),
             'form_url'    => self::getFormURL(),
             'search_url'  => self::getSearchURL(),
         ]);
