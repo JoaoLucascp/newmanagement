@@ -1,23 +1,9 @@
 {#
   Partial: Tabela de Dispositivos com paginação server-side.
-
-  Variáveis esperadas (herdadas de tab.html.twig):
-    devices        — array de rows da página atual
-    dev_page       — int: página atual (base 1)
-    dev_total      — int: total de registros
-    dev_page_size  — int: itens por página
-    ipbx_id        — int
-    companies_id   — int
-    csrf           — string
-    action_url     — string
-    paginate_url   — string
-    can_write      — bool
-    can_delete     — bool
 #}
 
-{# CORRIGIDO: |int não existe no Twig do GLPI.
-   |round(0,'ceil') já retorna número; [1, x]|max garante mínimo 1. #}
-{% set dev_pages = dev_page_size > 0 ? [1, (dev_total / dev_page_size)|round(0, 'ceil')]|max : 1 %}
+{# CORRIGIDO: max(a,b) é função nativa do Twig #}
+{% set dev_pages = dev_page_size > 0 ? max(1, (dev_total / dev_page_size)|round(0, 'ceil')) : 1 %}
 
 <div id="nm-dev-section"
      data-section="devices"
@@ -73,14 +59,13 @@
     </tbody>
   </table>
 
-  {# Controles de paginação #}
   <div id="nm-dev-pagination"
        class="d-flex align-items-center justify-content-between mt-2"
        {% if dev_pages <= 1 %}style="display:none!important"{% endif %}>
 
     <span class="text-muted" style="font-size:0.8rem">
       {{ __('Mostrando', 'newmanagement') }}
-      {{ ((dev_page - 1) * dev_page_size) + 1 }}–{{ [dev_page * dev_page_size, dev_total]|min }}
+      {{ ((dev_page - 1) * dev_page_size) + 1 }}–{{ min(dev_page * dev_page_size, dev_total) }}
       {{ __('de', 'newmanagement') }} {{ dev_total }}
       {{ __('dispositivos', 'newmanagement') }}
     </span>
@@ -110,7 +95,6 @@
     </div>
   </div>
 
-  {# Formulário de adição de dispositivo #}
   {% if can_write and ipbx_id > 0 %}
   <div class="nm-add-form mt-3" id="nm-dev-add-form">
     <table class="tab_cadre_fixe">
@@ -132,4 +116,4 @@
   </div>
   {% endif %}
 
-</div>{# /#nm-dev-section #}
+</div>

@@ -1,23 +1,9 @@
 {#
   Partial: Tabela de Ramais com paginação server-side.
-
-  Variáveis esperadas (herdadas de tab.html.twig):
-    extensions     — array de rows da página atual
-    ext_page       — int: página atual (base 1)
-    ext_total      — int: total de registros
-    ext_page_size  — int: itens por página (PAGE_SIZE)
-    ipbx_id        — int
-    companies_id   — int
-    csrf           — string
-    action_url     — string
-    paginate_url   — string
-    can_write      — bool
-    can_delete     — bool
 #}
 
-{# CORRIGIDO: |int não existe no Twig do GLPI.
-   |round(0,'ceil') já retorna número; [1, x]|max garante mínimo 1. #}
-{% set ext_pages = ext_page_size > 0 ? [1, (ext_total / ext_page_size)|round(0, 'ceil')]|max : 1 %}
+{# CORRIGIDO: max(a,b) é função nativa do Twig — não depende de filtro #}
+{% set ext_pages = ext_page_size > 0 ? max(1, (ext_total / ext_page_size)|round(0, 'ceil')) : 1 %}
 
 <div id="nm-ext-section"
      data-section="extensions"
@@ -77,14 +63,13 @@
     </tbody>
   </table>
 
-  {# Controles de paginação — só aparece quando há mais de uma página #}
   <div id="nm-ext-pagination"
        class="d-flex align-items-center justify-content-between mt-2"
        {% if ext_pages <= 1 %}style="display:none!important"{% endif %}>
 
     <span class="text-muted" style="font-size:0.8rem">
       {{ __('Mostrando', 'newmanagement') }}
-      {{ ((ext_page - 1) * ext_page_size) + 1 }}–{{ [ext_page * ext_page_size, ext_total]|min }}
+      {{ ((ext_page - 1) * ext_page_size) + 1 }}–{{ min(ext_page * ext_page_size, ext_total) }}
       {{ __('de', 'newmanagement') }} {{ ext_total }}
       {{ __('ramais', 'newmanagement') }}
     </span>
@@ -114,22 +99,21 @@
     </div>
   </div>
 
-  {# Formulário de adição de ramal — só visível com permissão de escrita #}
   {% if can_write and ipbx_id > 0 %}
   <div class="nm-add-form mt-3" id="nm-ext-add-form">
     <table class="tab_cadre_fixe">
       <tr class="tab_bg_2">
-        <td><input type="text"     class="form-control" id="nm-ext-number"       placeholder="{{ __('Ramal', 'newmanagement') }}"></td>
-        <td><input type="password" class="form-control" id="nm-ext-password"     placeholder="{{ __('Senha', 'newmanagement') }}" autocomplete="new-password"></td>
-        <td><input type="text"     class="form-control" id="nm-ext-device_ip"    placeholder="{{ __('IP Dispositivo', 'newmanagement') }}"></td>
-        <td><input type="text"     class="form-control" id="nm-ext-user_name"    placeholder="{{ __('Usuário', 'newmanagement') }}"></td>
+        <td><input type="text"     class="form-control" id="nm-ext-number"      placeholder="{{ __('Ramal', 'newmanagement') }}"></td>
+        <td><input type="password" class="form-control" id="nm-ext-password"    placeholder="{{ __('Senha', 'newmanagement') }}" autocomplete="new-password"></td>
+        <td><input type="text"     class="form-control" id="nm-ext-device_ip"   placeholder="{{ __('IP Dispositivo', 'newmanagement') }}"></td>
+        <td><input type="text"     class="form-control" id="nm-ext-user_name"   placeholder="{{ __('Usuário', 'newmanagement') }}"></td>
         <td>
           <select class="form-select" id="nm-ext-records_calls">
             <option value="0">{{ __('Não grava', 'newmanagement') }}</option>
             <option value="1">{{ __('Grava', 'newmanagement') }}</option>
           </select>
         </td>
-        <td><input type="text"     class="form-control" id="nm-ext-department"   placeholder="{{ __('Departamento', 'newmanagement') }}"></td>
+        <td><input type="text"     class="form-control" id="nm-ext-department"  placeholder="{{ __('Departamento', 'newmanagement') }}"></td>
         <td>
           <button type="button" class="btn btn-sm btn-success nm-add-ext-btn"
                   data-ipbx-id="{{ ipbx_id }}"
@@ -143,4 +127,4 @@
   </div>
   {% endif %}
 
-</div>{# /#nm-ext-section #}
+</div>
