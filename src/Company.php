@@ -11,6 +11,8 @@ if (!defined('GLPI_ROOT')) {
     die('Sorry. You can\'t access this file directly');
 }
 
+use Glpi\Application\View\TemplateRenderer;
+
 class Company extends \CommonDBTM
 {
     public static $rightname = 'plugin_newmanagement_company';
@@ -205,33 +207,31 @@ class Company extends \CommonDBTM
     /**
      * Renderiza o formulário da ficha de Empresa via Twig.
      *
-     * [FIX A1] Antes: ~60 linhas de echo HTML misturadas com PHP.
-     * Agora: toda apresentação fica em templates/company/form.html.twig;
-     * o método PHP prepara apenas os dados e delega ao TemplateRenderer.
-     *
-     * [FIX E4] Html::requireJs('newmanagement_company_form') removido.
+     * [FIX E3] Html::requireJs('newmanagement_company_form') removido.
      * O alias nunca foi registrado em $CFG_GLPI['javascript'], causando:
      *   "JS lib newmanagement_company_form is not known"
-     * JS específico do formulário deve ser incluído via <script> no
-     * template Twig (templates/company/form.html.twig), padrão já
-     * usado pelas demais abas do plugin.
+     * No GLPI 11 o caminho correto é incluir o JS diretamente no
+     * template Twig com <script src="..."> ou via asset() do Twig,
+     * não através de Html::requireJs().
+     *
+     * [FIX E3-B] Path corrigido de 'generic_show_form.html.twig'
+     * para '@newmanagement/company/form.html.twig'.
+     * O template genérico do core não conhece os campos específicos
+     * do plugin (cnpj, razao_social, contract_status etc.).
      */
     public function showForm($ID, array $options = []): bool
     {
         $this->initForm($ID, $options);
         $this->showFormHeader($options);
 
-        // --- Preparação dos dados para o template ----------------------------
         $contract_status = (int) ($this->fields['contract_status'] ?? self::CONTRACT_NO_CONTRACT);
 
-        // Label do campo ID: número real ou texto para registro novo
         $id_label = $ID > 0
             ? (string) $ID
             : __('Gerado automaticamente', 'newmanagement');
 
-        // --- Renderiza via Twig ----------------------------------------------
-        \Glpi\Application\View\TemplateRenderer::getInstance()->display(
-            'generic_show_form.html.twig',
+        TemplateRenderer::getInstance()->display(
+            '@newmanagement/company/form.html.twig',
             [
                 'item'              => $this,
                 'id'                => $ID,
