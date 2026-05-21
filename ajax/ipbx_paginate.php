@@ -1,16 +1,16 @@
 <?php
 
 /**
- * Newmanagement — Paginação AJAX das sub-tabelas de Ramais e Dispositivos.
+ * Newmanagement — Paginação AJAX das sub-tabelas de Ramais, Dispositivos e Rede.
  *
  * Recebe via GET:
- *   section      — 'extensions' | 'devices'
+ *   section      — 'extensions' | 'devices' | 'network'
  *   ipbx_id      — int
  *   companies_id — int
  *   page         — int (base 1)
  *
  * Responde com JSON:
- *   { success: true, html: string, page: int, total: int, page_size: int }
+ *   { success: true, html: string, page: int, total: int, page_size: int, csrf: string }
  */
 
 include('../../../inc/includes.php');
@@ -29,10 +29,10 @@ function pgJson(bool $ok, array $extra = []): void
     exit;
 }
 
-$section     = $_GET['section']      ?? '';
-$ipbx_id     = (int) ($_GET['ipbx_id']     ?? 0);
-$companies_id = (int) ($_GET['companies_id'] ?? 0);
-$page        = max(1, (int) ($_GET['page']  ?? 1));
+$section      = $_GET['section']       ?? '';
+$ipbx_id      = (int) ($_GET['ipbx_id']      ?? 0);
+$companies_id = (int) ($_GET['companies_id']  ?? 0);
+$page         = max(1, (int) ($_GET['page']   ?? 1));
 
 if ($ipbx_id <= 0 || $companies_id <= 0) {
     pgJson(false, ['error' => 'Parâmetros inválidos']);
@@ -87,6 +87,32 @@ try {
             if (empty($rows)) {
                 $html = '<tr><td colspan="5" class="text-center text-muted py-3">'
                     . __('Nenhum dispositivo encontrado.', 'newmanagement')
+                    . '</td></tr>';
+            }
+            pgJson(true, [
+                'html'      => $html,
+                'page'      => $page,
+                'total'     => $total,
+                'page_size' => Ipbx::PAGE_SIZE,
+                'csrf'      => $csrf,
+            ]);
+
+        case 'network':
+            [$rows, $total] = Ipbx::fetchPage(
+                Ipbx::TABLE_NETWORK,
+                ['ipbx_id' => $ipbx_id],
+                'ip_network ASC',
+                $page
+            );
+            $html = '';
+            foreach ($rows as $row) {
+                $html .= Ipbx::renderNetworkRow(
+                    (int) $row['id'], $row, $companies_id, $csrf, $action_url, $can_delete
+                );
+            }
+            if (empty($rows)) {
+                $html = '<tr><td colspan="7" class="text-center text-muted py-3">'
+                    . __('Nenhuma rede encontrada.', 'newmanagement')
                     . '</td></tr>';
             }
             pgJson(true, [
