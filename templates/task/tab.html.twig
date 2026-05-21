@@ -1,0 +1,204 @@
+{#
+  templates/task/tab.html.twig
+  Aba de Tarefas dentro da ficha de Empresa.
+
+  Variáveis recebidas de Task::showForCompany():
+    rows         — array de tarefas existentes
+    companies_id — int
+    statuses     — array {0: 'Aberta', 1: 'Em andamento', 2: 'Concluída'}
+    can_write    — bool
+    can_delete   — bool
+    csrf         — string
+    action_url   — string
+#}
+<div class="nm-task-tab"
+     data-action-url="{{ action_url|e('html_attr') }}"
+     data-companies-id="{{ companies_id }}">
+
+  {# === Lista de tarefas === #}
+  <table class="tab_cadre_fixe">
+    <thead>
+      <tr class="tab_bg_2">
+        <th>{{ 'Título'|trans({}, 'newmanagement') }}</th>
+        <th>{{ 'Status'|trans({}, 'newmanagement') }}</th>
+        <th>{{ 'Vencimento'|trans({}, 'newmanagement') }}</th>
+        <th>{{ 'Km'|trans({}, 'newmanagement') }}</th>
+        {% if can_delete %}<th></th>{% endif %}
+      </tr>
+    </thead>
+    <tbody id="nm-task-rows">
+      {% for row in rows %}
+      <tr id="nm-task-row-{{ row.id }}">
+        <td>
+          <a href="{{ path('plugins/newmanagement/front/task.php') }}?id={{ row.id }}">
+            {{ row.name|e }}
+          </a>
+        </td>
+        <td>
+          {% set status_map = {0: 'Aberta', 1: 'Em andamento', 2: 'Concluída'} %}
+          {% set badge_map  = {0: 'bg-warning', 1: 'bg-primary', 2: 'bg-success'} %}
+          <span class="badge {{ badge_map[row.status]|default('bg-secondary') }}">
+            {{ statuses[row.status]|default('-') }}
+          </span>
+        </td>
+        <td>{{ row.date_due|default('-')|e }}</td>
+        <td>{{ row.km_calculated is not null ? row.km_calculated ~ ' km' : '-' }}</td>
+        {% if can_delete %}
+        <td>
+          <button type="button" class="btn btn-sm btn-danger nm-task-delete"
+                  data-id="{{ row.id }}"
+                  data-csrf="{{ csrf|e('html_attr') }}">
+            <i class="ti ti-trash"></i>
+          </button>
+        </td>
+        {% endif %}
+      </tr>
+      {% else %}
+      <tr id="nm-task-empty">
+        <td colspan="{{ can_delete ? 5 : 4 }}" class="text-center text-muted py-3">
+          {{ 'Nenhuma tarefa cadastrada.'|trans({}, 'newmanagement') }}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {# === Formulário rápido de adição === #}
+  {% if can_write %}
+  <div class="card mt-3">
+    <div class="card-header">
+      <strong>{{ 'Nova Tarefa'|trans({}, 'newmanagement') }}</strong>
+    </div>
+    <div class="card-body">
+      <input type="hidden" id="nm-task-csrf"         value="{{ csrf|e('html_attr') }}">
+      <input type="hidden" id="nm-task-companies-id" value="{{ companies_id }}">
+
+      <table class="tab_cadre_fixe">
+        <tr class="tab_bg_1">
+          <td>{{ 'Título'|trans({}, 'newmanagement') }} <span class="text-danger">*</span></td>
+          <td colspan="3">
+            <input type="text" id="nm-task-name" class="form-control"
+                   placeholder="{{ 'Descreva a tarefa'|trans({}, 'newmanagement') }}">
+          </td>
+        </tr>
+        <tr class="tab_bg_1">
+          <td>{{ 'Status'|trans({}, 'newmanagement') }}</td>
+          <td>
+            <select id="nm-task-status" class="form-select">
+              {% for val, lbl in statuses %}
+                <option value="{{ val }}">{{ lbl }}</option>
+              {% endfor %}
+            </select>
+          </td>
+          <td>{{ 'Vencimento'|trans({}, 'newmanagement') }}</td>
+          <td><input type="date" id="nm-task-date_due" class="form-control"></td>
+        </tr>
+        <tr class="tab_bg_1">
+          <td>{{ 'Comentário'|trans({}, 'newmanagement') }}</td>
+          <td colspan="3">
+            <textarea id="nm-task-comment" class="form-control" rows="2"></textarea>
+          </td>
+        </tr>
+      </table>
+
+      <div class="d-flex justify-content-end mt-3">
+        <button type="button" id="nm-task-save" class="btn btn-primary">
+          <i class="ti ti-plus"></i>
+          {{ 'Adicionar Tarefa'|trans({}, 'newmanagement') }}
+        </button>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  const tab = document.querySelector('.nm-task-tab');
+  if (!tab) return;
+
+  const actionUrl   = tab.dataset.actionUrl;
+  const companiesId = tab.dataset.companiesId;
+
+  function get(id) {
+    const el = document.getElementById('nm-task-' + id);
+    return el ? el.value : '';
+  }
+
+  async function nmPost(body) {
+    const r = await fetch(actionUrl, {
+      method  : 'POST',
+      headers : { 'Content-Type': 'application/json' },
+      body    : JSON.stringify(body),
+      signal  : AbortSignal.timeout(10000),
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }
+
+  function setBtn(btn, icon, spin) {
+    const i = btn.querySelector('i');
+    if (i) i.className = 'ti ' + icon + (spin ? ' nm-spin' : '');
+    btn.disabled = spin;
+  }
+
+  // --- ADICIONAR ---
+  const saveBtn = document.getElementById('nm-task-save');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', async () => {
+      const name = get('name');
+      if (!name) { document.getElementById('nm-task-name').focus(); return; }
+
+      setBtn(saveBtn, 'ti-loader-2', true);
+      try {
+        const data = await nmPost({
+          _glpi_csrf_token : get('csrf'),
+          action           : 'add_task',
+          companies_id     : companiesId,
+          name             : name,
+          status           : get('status'),
+          date_due         : get('date_due') || null,
+          comment          : get('comment'),
+        });
+
+        if (!data.success) throw new Error(data.message || 'Erro');
+
+        // Recarrega a aba para exibir a nova linha
+        window.location.reload();
+
+      } catch (err) {
+        setBtn(saveBtn, 'ti-x', false);
+        setTimeout(() => setBtn(saveBtn, 'ti-plus', false), 3000);
+      }
+    });
+  }
+
+  // --- EXCLUIR ---
+  document.querySelectorAll('.nm-task-delete').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('{{ 'Excluir esta tarefa?'|trans({}, 'newmanagement') }}')) return;
+      btn.disabled = true;
+      try {
+        const data = await nmPost({
+          _glpi_csrf_token : btn.dataset.csrf,
+          action           : 'delete_task',
+          id               : btn.dataset.id,
+        });
+        if (!data.success) throw new Error(data.message || 'Erro');
+        document.getElementById('nm-task-row-' + btn.dataset.id)?.remove();
+      } catch (err) { btn.disabled = false; }
+    });
+  });
+
+  if (!document.getElementById('nm-spin-style')) {
+    const s = document.createElement('style');
+    s.id = 'nm-spin-style';
+    s.textContent = '@keyframes nm-spin{to{transform:rotate(360deg)}}.nm-spin{animation:nm-spin .8s linear infinite}';
+    document.head.appendChild(s);
+  }
+
+}());
+</script>
