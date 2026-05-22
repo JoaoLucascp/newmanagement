@@ -20,15 +20,12 @@
  *
  * COMPATIBILIDADE GLPI 10:
  *   Session::checkCSRF($_POST) é chamado quando GLPI_VERSION < 11.0.0.
- *
- * Fix [M3]: detecção de versão via version_compare(GLPI_VERSION, '11.0.0', '<')
- *   em vez de verificar presença do header HTTP — eliminando falso-positivo
- *   em ambientes com proxies que removem headers customizados.
  */
 
 include('../../../inc/includes.php');
 
 use GlpiPlugin\Newmanagement\Ipbx;
+use Glpi\Toolbox\Encryption;
 
 Html::header_nocache();
 header('Content-Type: application/json; charset=utf-8');
@@ -37,9 +34,7 @@ header('Content-Type: application/json; charset=utf-8');
 Session::checkLoginUser();
 
 // Camada 2 — CSRF
-// Fix [M3]: version_compare é determinístico; não depende de header HTTP.
 if (version_compare(GLPI_VERSION, '11.0.0', '<')) {
-    // GLPI 10: token vem no body — valida pelo método nativo
     Session::checkCSRF($_POST);
 }
 // GLPI 11+: CheckCsrfListener do Symfony já validou antes deste arquivo rodar.
@@ -58,10 +53,22 @@ function nmJson(bool $ok, array $extra = []): void
     exit;
 }
 
-/** Criptografa senha; retorna null para valor vazio */
+/**
+ * Criptografa senha usando a API correta conforme versão do GLPI.
+ * - GLPI 11+: Glpi\Toolbox\Encryption::encrypt()
+ * - GLPI 10:  Toolbox::sodiumEncrypt()
+ * Retorna null para valor vazio (sem senha definida).
+ */
 function nmEncryptPassword(string $value): ?string
 {
-    return $value !== '' ? \Toolbox::sodiumEncrypt($value) : null;
+    if ($value === '') {
+        return null;
+    }
+    if (class_exists('Glpi\\Toolbox\\Encryption')) {
+        return Encryption::encrypt($value);
+    }
+    // Fallback GLPI 10
+    return \Toolbox::sodiumEncrypt($value);
 }
 
 $action       = $_POST['action']       ?? '';
@@ -118,10 +125,10 @@ try {
                 'comment'        => $_POST['comment']        ?? '',
             ];
             if (($_POST['web_password'] ?? '') !== '') {
-                $data['web_password'] = \Toolbox::sodiumEncrypt($_POST['web_password']);
+                $data['web_password'] = nmEncryptPassword($_POST['web_password']);
             }
             if (($_POST['ssh_password'] ?? '') !== '') {
-                $data['ssh_password'] = \Toolbox::sodiumEncrypt($_POST['ssh_password']);
+                $data['ssh_password'] = nmEncryptPassword($_POST['ssh_password']);
             }
             $ipbx = new Ipbx();
             $ipbx->update($data);
@@ -320,11 +327,6 @@ try {
             nmJson(false, ['error' => 'Ação desconhecida: ' . htmlspecialchars($action)]);
     }
 } catch (\Throwable $e) {
-    // Fix [M2]: detalhe do erro vai apenas para o log do servidor.
-    // O cliente recebe mensagem genérica — não vaza nomes de tabelas,
-    // queries SQL nem stack traces (OWASP A05 — Security Misconfiguration).
-    // Fix [GLPI11]: Toolbox::logError() foi removido no GLPI 11.
-    //               O método correto é Toolbox::logInFile().
     \Toolbox::logInFile(
         'php-errors',
         '[Newmanagement] ipbx_sub.php error: ' . $e->getMessage()
