@@ -1,21 +1,6 @@
 {#
-  Partial: Tabela de Rede da Empresa com paginação server-side.
-
-  Variáveis esperadas:
-    network        — array de rows da página atual
-    net_page       — int: página atual (base 1)
-    net_total      — int: total de registros
-    net_page_size  — int: itens por página
-    ipbx_id        — int
-    companies_id   — int
-    csrf           — string
-    action_url     — string
-    paginate_url   — string
-    can_write      — bool
-    can_delete     — bool
+  Partial: Tabela de Rede da Empresa — padrão visual idêntico ao Chatbot.
 #}
-
-{# CORRIGIDO: max(a,b) é função nativa do Twig #}
 {% set net_pages = net_page_size > 0 ? max(1, (net_total / net_page_size)|round(0, 'ceil')) : 1 %}
 
 <div id="nm-net-section"
@@ -28,18 +13,31 @@
      data-page-size="{{ net_page_size }}"
      data-total="{{ net_total }}">
 
-  <table class="tab_cadre_fixe">
+  <table class="tab_cadre_fixehov" id="nm-net-table">
     <thead>
-      <tr>
+      <tr class="headerRow noHover">
         <th>{{ __('IP Rede', 'newmanagement') }}</th>
         <th>{{ __('Máscara', 'newmanagement') }}</th>
         <th>{{ __('Gateway', 'newmanagement') }}</th>
         <th>{{ __('DNS Primário', 'newmanagement') }}</th>
         <th>{{ __('DNS Secundário', 'newmanagement') }}</th>
         <th>{{ __('Fornecedor', 'newmanagement') }}</th>
-        <th></th>
+        <th style="text-align:right">
+          {% if can_write and ipbx_id > 0 %}
+            <button type="button" id="nm-net-add-btn"
+                    class="btn btn-sm btn-outline-secondary"
+                    data-action="add_network"
+                    data-ipbx-id="{{ ipbx_id }}"
+                    data-companies-id="{{ companies_id }}"
+                    data-url="{{ action_url|e('html_attr') }}"
+                    data-csrf="{{ csrf|e('html_attr') }}">
+              <i class="ti ti-plus"></i> {{ __('Adicionar', 'newmanagement') }}
+            </button>
+          {% endif %}
+        </th>
       </tr>
     </thead>
+
     <tbody id="nm-net-tbody">
       {% for row in network %}
         <tr class="tab_bg_1" id="nm-net-row-{{ row.id }}">
@@ -73,51 +71,9 @@
           </td>
         </tr>
       {% endfor %}
-    </tbody>
-  </table>
 
-  {# Paginação #}
-  <div id="nm-net-pagination"
-       class="d-flex align-items-center justify-content-between mt-2"
-       {% if net_pages <= 1 %}style="display:none!important"{% endif %}>
-
-    <span class="text-muted" style="font-size:0.8rem">
-      {{ __('Mostrando', 'newmanagement') }}
-      {{ ((net_page - 1) * net_page_size) + 1 }}–{{ min(net_page * net_page_size, net_total) }}
-      {{ __('de', 'newmanagement') }} {{ net_total }}
-      {{ __('redes', 'newmanagement') }}
-    </span>
-
-    <div class="d-flex gap-1">
-      <button type="button"
-              class="btn btn-sm btn-outline-secondary nm-page-btn"
-              data-section-id="nm-net-section"
-              data-dir="prev"
-              {% if net_page <= 1 %}disabled{% endif %}
-              title="{{ __('Página anterior', 'newmanagement') }}">
-        <i class="ti ti-chevron-left"></i>
-      </button>
-
-      <span class="btn btn-sm disabled px-3" style="min-width:90px;text-align:center">
-        {{ net_page }} / {{ net_pages }}
-      </span>
-
-      <button type="button"
-              class="btn btn-sm btn-outline-secondary nm-page-btn"
-              data-section-id="nm-net-section"
-              data-dir="next"
-              {% if net_page >= net_pages %}disabled{% endif %}
-              title="{{ __('Próxima página', 'newmanagement') }}">
-        <i class="ti ti-chevron-right"></i>
-      </button>
-    </div>
-  </div>
-
-  {# Formulário de adição #}
-  {% if can_write and ipbx_id > 0 %}
-  <div class="nm-add-form mt-3" id="nm-net-add-form">
-    <table class="tab_cadre_fixe">
-      <tr class="tab_bg_2">
+      {% if can_write and ipbx_id > 0 %}
+      <tr class="tab_bg_2 nm-add-row" id="nm-net-add-row">
         <td><input type="text" class="form-control form-control-sm" id="nm-net-ip_network"    autocomplete="off" placeholder="192.168.1.0"></td>
         <td><input type="text" class="form-control form-control-sm" id="nm-net-netmask"       autocomplete="off" placeholder="255.255.255.0"></td>
         <td><input type="text" class="form-control form-control-sm" id="nm-net-gateway"       autocomplete="off" placeholder="192.168.1.1"></td>
@@ -133,8 +89,36 @@
           </button>
         </td>
       </tr>
-    </table>
+      {% endif %}
+    </tbody>
+  </table>
+
+  <div id="nm-net-pagination"
+       class="d-flex align-items-center justify-content-between mt-2"
+       {% if net_pages <= 1 %}style="display:none!important"{% endif %}>
+    <span class="text-muted" style="font-size:0.8rem">
+      {{ __('Mostrando', 'newmanagement') }}
+      {{ ((net_page - 1) * net_page_size) + 1 }}–{{ min(net_page * net_page_size, net_total) }}
+      {{ __('de', 'newmanagement') }} {{ net_total }}
+      {{ __('redes', 'newmanagement') }}
+    </span>
+    <div class="d-flex gap-1">
+      <button type="button" class="btn btn-sm btn-outline-secondary nm-page-btn"
+              data-section-id="nm-net-section" data-dir="prev"
+              {% if net_page <= 1 %}disabled{% endif %}
+              title="{{ __('Página anterior', 'newmanagement') }}">
+        <i class="ti ti-chevron-left"></i>
+      </button>
+      <span class="btn btn-sm disabled px-3" style="min-width:90px;text-align:center">
+        {{ net_page }} / {{ net_pages }}
+      </span>
+      <button type="button" class="btn btn-sm btn-outline-secondary nm-page-btn"
+              data-section-id="nm-net-section" data-dir="next"
+              {% if net_page >= net_pages %}disabled{% endif %}
+              title="{{ __('Próxima página', 'newmanagement') }}">
+        <i class="ti ti-chevron-right"></i>
+      </button>
+    </div>
   </div>
-  {% endif %}
 
 </div>
