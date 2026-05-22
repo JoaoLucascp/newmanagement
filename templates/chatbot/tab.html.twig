@@ -13,6 +13,13 @@
     mass_comm      — array de rows
     wa_restrictions — array de rows
     users          — array de rows
+
+  Fix [A1] — SEGURANÇA:
+    Os campos admin_password e superadmin_password NUNCA recebem value.
+    O template usa f.has_admin_password / f.has_superadmin_password (bool)
+    apenas para exibir o placeholder "••••••" quando uma senha está salva,
+    indicando ao usuário que existe senha sem revelar seu valor.
+    Preencher o campo substitui a senha; deixar vazio mantém a senha atual.
 #}
 <div class="nm-chatbot-tab"
      data-action-url="{{ action_url|e('html_attr') }}"
@@ -116,12 +123,35 @@
              class="form-control" autocomplete="off"
              {{ not can_write ? 'readonly disabled' }}
         ></td>
-        <td>{{ __('Senha Admin', 'newmanagement') }}</td>
+
+        {#
+          Fix [A1] — CAMPO DE SENHA:
+          - value é SEMPRE vazio: a senha nunca sai do servidor.
+          - placeholder "••••••" indica que uma senha está salva,
+            sem revelar nenhum caractere do valor real.
+          - Label "Nova Senha Admin" deixa claro que só é necessário
+            preencher para trocar; deixar vazio mantém a senha atual.
+          - O backend (ajax/chatbot_sub.php) só sobrescreve a senha
+            se o campo vier preenchido no POST.
+        #}
+        <td>
+          {% if chatbot_id > 0 %}
+            {{ __('Nova Senha Admin', 'newmanagement') }}
+            <small class="text-muted d-block">
+              {{ __('Deixe em branco para manter a senha atual', 'newmanagement') }}
+            </small>
+          {% else %}
+            {{ __('Senha Admin', 'newmanagement') }}
+          {% endif %}
+        </td>
         <td>
           <div class="input-group">
-            <input type="password" id="nm-chatbot-admin_password"
-                   class="form-control" autocomplete="new-password"
-                   value="{{ f.admin_password|e('html_attr') }}"
+            <input type="password"
+                   id="nm-chatbot-admin_password"
+                   class="form-control"
+                   autocomplete="new-password"
+                   value=""
+                   placeholder="{{ f.has_admin_password ? '••••••' : '' }}"
                    {{ not can_write ? 'readonly disabled' }}
             >
             {% if can_write %}
@@ -141,12 +171,28 @@
              class="form-control" autocomplete="off"
              {{ not can_write ? 'readonly disabled' }}
         ></td>
-        <td>{{ __('Senha Super-Admin', 'newmanagement') }}</td>
+
+        {#
+          Fix [A1] — mesmo padrão do campo admin_password acima.
+        #}
+        <td>
+          {% if chatbot_id > 0 %}
+            {{ __('Nova Senha Super-Admin', 'newmanagement') }}
+            <small class="text-muted d-block">
+              {{ __('Deixe em branco para manter a senha atual', 'newmanagement') }}
+            </small>
+          {% else %}
+            {{ __('Senha Super-Admin', 'newmanagement') }}
+          {% endif %}
+        </td>
         <td>
           <div class="input-group">
-            <input type="password" id="nm-chatbot-superadmin_password"
-                   class="form-control" autocomplete="new-password"
-                   value="{{ f.superadmin_password|e('html_attr') }}"
+            <input type="password"
+                   id="nm-chatbot-superadmin_password"
+                   class="form-control"
+                   autocomplete="new-password"
+                   value=""
+                   placeholder="{{ f.has_superadmin_password ? '••••••' : '' }}"
                    {{ not can_write ? 'readonly disabled' }}
             >
             {% if can_write %}
