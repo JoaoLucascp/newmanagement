@@ -2,42 +2,44 @@
 
 ## O que é
 
-**Newmanagement** é um plugin para o GLPI 11 que centraliza a documentação técnica de empresas clientes, organizando em uma única ficha todas as informações que uma equipe de suporte precisa para atender um cliente: dados cadastrais, IPBX (ramais, dispositivos, rede), chatbot, linha fixa, tarefas e contratos.
+O **Newmanagement** é um plugin para o GLPI 11 que centraliza a documentação técnica de empresas clientes. Ele adiciona uma entidade **Empresa** com abas dedicadas para cada módulo de infraestrutura de telecomunicações.
 
 ## Objetivo
 
-Eliminar o uso de planilhas e documentos dispersos para registrar configurações de clientes. Toda a documentação técnica fica dentro do GLPI, com controle de permissões, histórico de alterações e rastreabilidade nativa.
+Permitir que equipes de suporte e gestão de TI registrem, consultem e mantenham atualizada toda a documentação técnica de clientes — servidores IPBX, ramais, dispositivos, redes, chatbots, linhas fixas e tarefas com geolocalização — diretamente dentro do GLPI, sem ferramentas externas.
 
 ## Público-alvo
 
-- Equipes de suporte e NOC que atendem múltiplos clientes
-- Prestadores de serviço de TI e Telecom
-- Administradores GLPI que precisam documentar infraestrutura de clientes
+- Provedores de telecomunicações
+- Integradores de sistemas de comunicação (IPBX, VoIP, Chatbot)
+- Equipes de suporte técnico N1/N2/N3 que usam GLPI como sistema principal
 
-## Funcionalidades principais
+## Módulos disponíveis
 
 | Módulo | Descrição |
 |---|---|
-| **Empresa** | Ficha completa com CNPJ, contato, endereço e documentos |
-| **IPBX** | Ramais, dispositivos SIP, configuração de rede e linha fixa |
-| **Chatbot** | Credenciais e configuração de chatbots de atendimento |
-| **Tarefas** | Checklist de atividades vinculadas à empresa |
-| **Linha Fixa** | Linhas DDR, portabilidade, operadora e status |
+| **Empresas** | Cadastro de clientes com CNPJ, razão social, contato e status de contrato |
+| **IPBX On-Premise** | Servidor IPBX com ramais, dispositivos e redes paginados |
+| **Linha Fixa** | Linhas SIP/analógicas vinculadas ao IPBX |
+| **Chatbot** | Plataformas de chatbot com usuários, comunicações em massa e restrições WhatsApp |
+| **Tarefas** | Tarefas com geolocalização vinculadas à empresa |
 
 ## Requisitos
 
-- GLPI 11.0.0 ou superior (testado até 11.0.6)
-- PHP 8.1 ou superior
-- MySQL/MariaDB compatível com GLPI 11
+- GLPI 11.0.0 – 11.99.99
+- PHP 8.1 ou superior (recomendado 8.2+)
+- MySQL 8.0+ ou MariaDB 10.6+
 
 ## Instalação rápida
 
-Veja o guia completo em [Doc/INSTALL.md](./INSTALL.md).
+Consulte [Doc/INSTALL.md](./INSTALL.md) para o guia completo passo a passo.
 
 ```bash
-cd /var/www/html/glpi/plugins
+# Clone na pasta de plugins do GLPI
+cd /var/www/glpi/plugins
 git clone https://github.com/JoaoLucascp/newmanagement.git newmanagement
-# Ativar em: GLPI → Configuração → Plugins
+
+# No GLPI: Configuração > Plugins > Newmanagement > Instalar > Ativar
 ```
 
 ## Licença

@@ -4,162 +4,118 @@
 
 ### Requisitos
 
-- Docker e Docker Compose (recomendado)
-- PHP 8.1+ com extensões: `sodium`, `mysqli`, `mbstring`, `gd`, `intl`, `xml`, `curl`
+- Docker + Docker Compose (recomendado)
+- PHP 8.2+ com extensões: `sodium`, `pdo_mysql`, `mbstring`, `xml`, `curl`
 - Composer 2.x
-- GLPI 11.0.x instalado localmente ou via Docker
+- GLPI 11.0.6 instalado localmente ou via container
 
 ### Setup com Docker
 
 ```bash
-# 1. Clone o GLPI
-git clone https://github.com/glpi-project/glpi.git --branch 11.0 glpi
+# Clone o GLPI
+git clone https://github.com/glpi-project/glpi.git glpi
 cd glpi
 
-# 2. Clone o plugin dentro de plugins/
-cd plugins
-git clone https://github.com/JoaoLucascp/newmanagement.git newmanagement
-cd ..
+# Clone o plugin dentro de plugins/
+git clone https://github.com/JoaoLucascp/newmanagement.git plugins/newmanagement
 
-# 3. Suba o ambiente
+# Suba o ambiente
 docker compose up -d
 
-# 4. Instale dependências do GLPI
-docker compose exec glpi composer install
+# Instale dependências do GLPI
+docker compose exec app composer install
 
-# 5. Configure o GLPI (acesse http://localhost e siga o wizard)
-```
-
-### Setup manual
-
-```bash
-# Copie o plugin para a pasta plugins do GLPI
-cp -r newmanagement /var/www/html/glpi/plugins/newmanagement
-
-# Acesse o GLPI e ative o plugin em
-# Configuração → Plugins → Newmanagement → Instalar → Ativar
-```
-
----
-
-## Estrutura de arquivos
-
-```
-newmanagement/
-├── ajax/               ← Endpoints AJAX (POST)
-│   └── ipbx_sub.php
-├── Doc/                ← Documentação técnica
-├── front/              ← Entry points HTTP (listagem, formulários)
-├── hook.php            ← Install / Uninstall / Upgrade
-├── locales/            ← Arquivos de tradução .po/.mo
-├── public/
-│   ├── css/            ← Estilos do plugin
-│   └── js/             ← JavaScript do plugin
-├── setup.php           ← Inicialização do plugin
-├── src/                ← Classes PHP (PSR-4, namespace GlpiPlugin\Newmanagement)
-└── templates/          ← Templates Twig (@newmanagement/...)
-```
-
----
-
-## Padrões de codificação
-
-- **PSR-12** para formatação de código PHP
-- **Namespace:** `GlpiPlugin\Newmanagement\` para todas as classes em `src/`
-- **Nomes de classes:** PascalCase (`Company`, `IpbxExtension`)
-- **Nomes de métodos:** camelCase (`showForm`, `prepareInputForAdd`)
-- **Nomes de tabelas:** `glpi_plugin_newmanagement_{entidade}` (snake_case, plural)
-- **Docblocks:** obrigatórios em todos os métodos públicos
-- **i18n:** todas as strings visíveis ao usuário usam `__("string", "newmanagement")`
-
-### Exemplo de classe modelo
-
-```php
-<?php
-
-namespace GlpiPlugin\Newmanagement;
-
-use CommonDBTM;
-
-class MinhaEntidade extends CommonDBTM
-{
-    public static $rightname = 'plugin_newmanagement_minhaentidade';
-
-    public static function getTypeName($nb = 0): string
-    {
-        return __('Minha Entidade', 'newmanagement');
-    }
-
-    public static function getTable($classname = null): string
-    {
-        return 'glpi_plugin_newmanagement_minhasentidades';
-    }
-}
+# Acesse http://localhost:8080 e instale o GLPI
+# Depois: Configuração > Plugins > Newmanagement > Instalar > Ativar
 ```
 
 ---
 
 ## Executar testes
 
-> Os testes usam PHPUnit, já incluído como dependência de desenvolvimento do GLPI.
-
 ```bash
-# A partir da raiz do GLPI
+# Dentro da pasta do GLPI (não do plugin)
+cd glpi
+
+# Instalar PHPUnit via Composer do GLPI
+composer install
+
+# Executar testes do plugin
 ./vendor/bin/phpunit \
-  --configuration plugins/newmanagement/phpunit.xml \
+  --bootstrap tests/bootstrap.php \
   plugins/newmanagement/tests/
 ```
 
-### Estrutura de testes
+### Estrutura de testes sugerida
 
 ```
-tests/
+newmanagement/tests/
+├── bootstrap.php           # Inclui autoloader do GLPI
 ├── Unit/
-│   ├── CompanyTest.php
-│   ├── IpbxTest.php
-│   └── ChatbotTest.php
+│   ├── CompanyTest.php     # isValidCnpj(), formatCnpj(), prepareInput()
+│   ├── FixedLineTest.php   # isValidPhoneNumber()
+│   └── IpbxTest.php        # fetchPage(), renderExtensionRow()
 └── Integration/
-    └── InstallTest.php
+    ├── CompanyCRUDTest.php  # add/update/delete via CommonDBTM
+    └── IpbxTabTest.php     # showTabForCompany() sem exceções
 ```
 
 ---
 
-## Como contribuir
+## Padrões de contribuição
 
-1. Crie uma branch a partir de `main`:
-   ```bash
-   git checkout -b feat/nome-da-feature
-   # ou
-   git checkout -b fix/descricao-do-bug
-   ```
+### Código
 
-2. Faça commits pequenos e descritivos seguindo o padrão:
-   ```
-   tipo(escopo): descrição curta em português
+- Siga **PSR-12** para formatação
+- Todos os métodos públicos devem ter **docblock** com `@param` e `@return`
+- Propriedades estáticas herdadas de `CommonDBTM` devem ter tipo explícito: `public static string $rightname`
+- Nunca usar `echo` diretamente em métodos de modelo — sempre via `TemplateRenderer`
+- Strings visíveis ao usuário sempre via `__('texto', 'newmanagement')` para i18n
 
-   tipo: feat | fix | docs | refactor | test | chore
-   escopo: company | ipbx | chatbot | task | setup | hook | ajax
-   ```
+### Banco de dados
 
-3. Abra um Pull Request para `main` com:
-   - Descrição do que foi alterado
-   - Como testar
-   - Referência ao item do relatório de auditoria (ex: `[M3]`) se aplicável
+- Sempre usar `$DB->insert()`, `$DB->update()`, `$DB->delete()` — nunca SQL raw
+- Novos campos devem ter migration em `hook.php` na função `plugin_newmanagement_update()`
+- Nunca alterar tabelas nativas do GLPI
 
-4. O PR só é mergeado após:
-   - Testes passando
-   - Revisão de código aprovada
-   - Sem erros nos logs do GLPI
+### Segurança
+
+- Senhas: sempre `Toolbox::sodiumEncrypt()` para salvar, nunca descriptografar para o frontend
+- Todas as ações AJAX exigem: `Session::checkLoginUser()` + CSRF + `Session::checkRight()`
+- Erros de exceção: log via `Toolbox::logError()`, mensagem genérica ao cliente
+- Entradas do usuário: nunca concatenar em SQL; sempre usar arrays parametrizados
+
+### Commits
+
+Use [Conventional Commits](https://www.conventionalcommits.org/):
+
+```
+feat(company): adiciona campo de website na ficha de empresa
+fix(security): remove senha descriptografada do contexto Twig
+docs: atualiza guia de instalação
+chore: bump versão para 1.1.0
+```
+
+---
+
+## Adicionar novo módulo
+
+1. Criar `src/NovoModulo.php` estendendo `CommonDBTM`
+2. Criar `templates/novomodulo/tab.html.twig`
+3. Registrar em `setup.php` via `Plugin::registerClass()`
+4. Adicionar tabela em `hook.php` nas funções `install` e `uninstall`
+5. Adicionar `$rightname` e registrar direito em `hook.php`
+6. Adicionar aba em `Company::defineTabs()` se vinculado à empresa
 
 ---
 
 ## Variáveis de ambiente úteis
 
 ```bash
-# Ativa modo debug do GLPI (mais detalhes nos logs)
+# Ativar modo debug do GLPI (mostra erros PHP e queries)
 export GLPI_ENVIRONMENT_TYPE=development
 
-# Logs em
-tail -f /var/www/html/glpi/files/_log/php-errors.log
-tail -f /var/www/html/glpi/files/_log/sql-errors.log
+# Log do GLPI fica em:
+cat /var/www/glpi/files/_log/php-errors.log
+cat /var/www/glpi/files/_log/sql-errors.log
 ```

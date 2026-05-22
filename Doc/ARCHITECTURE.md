@@ -2,108 +2,157 @@
 
 ## Visão geral
 
-O plugin segue a arquitetura padrão do GLPI 11: cada entidade é uma classe PHP que estende `CommonDBTM`, os formulários são renderizados via `TemplateRenderer` (Twig), e as ações AJAX são tratadas por arquivos em `ajax/`.
+O plugin segue a arquitetura padrão do GLPI 11: **CommonDBTM** para modelos, **TemplateRenderer + Twig** para views, e endpoints AJAX para operações assíncronas. Não há framework adicional — apenas as APIs nativas do GLPI.
+
+---
+
+## Estrutura de pastas
+
+```
+newmanagement/
+├── setup.php               # Bootstrap: versão, init, hooks, menu
+├── hook.php                # Install / uninstall / upgrade (DDL)
+├── composer.json           # Autoload PSR-4
+│
+├── src/                    # Models (CommonDBTM)
+│   ├── Company.php         # Entidade principal
+│   ├── Ipbx.php            # Servidor IPBX + sub-tabelas
+│   ├── IpbxExtension.php   # Ramais (sub-tabela)
+│   ├── IpbxDevice.php      # Dispositivos (sub-tabela)
+│   ├── IpbxNetwork.php     # Redes (sub-tabela)
+│   ├── FixedLine.php       # Linhas fixas
+│   ├── Chatbot.php         # Chatbot + sub-tabelas
+│   └── Task.php            # Tarefas com geolocalização
+│
+├── templates/              # Views Twig (@newmanagement namespace)
+│   ├── company/
+│   ├── ipbx/
+│   ├── fixedline/
+│   ├── chatbot/
+│   └── task/
+│
+├── ajax/                   # Endpoints AJAX (JSON)
+│   ├── ipbx_sub.php        # CRUD IPBX, ramais, dispositivos, redes, linha fixa
+│   ├── ipbx_paginate.php   # Paginação das sub-tabelas IPBX
+│   └── chatbot_sub.php     # CRUD Chatbot e sub-tabelas
+│
+├── front/                  # Páginas GLPI (list + form)
+│   ├── company.php
+│   ├── ipbx.php
+│   ├── chatbot.php
+│   ├── fixedline.php
+│   └── task.php
+│
+└── public/
+    ├── css/newmanagement.css
+    └── js/newmanagement.js
+```
+
+---
 
 ## Diagrama de componentes
 
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                        GLPI Core                        │
-│  CommonDBTM · DBmysql · Session · TemplateRenderer      │
-└───────────────────────┬─────────────────────────────────┘
-                        │ estende / usa
-┌───────────────────────▼─────────────────────────────────┐
-│               Plugin Newmanagement                      │
-│                                                         │
-│  src/                                                   │
-│  ├── Company.php        ← Entidade principal            │
-│  ├── Ipbx.php           ← IPBX (ramais, rede, dispos.)  │
-│  ├── IpbxExtension.php  ← Ramais (aba do IPBX)         │
-│  ├── IpbxDevice.php     ← Dispositivos (aba do IPBX)   │
-│  ├── IpbxNetwork.php    ← Rede (aba do IPBX)           │
-│  ├── Chatbot.php        ← Credenciais de chatbot        │
-│  ├── Task.php           ← Tarefas da empresa            │
-│  └── FixedLine.php      ← Linha fixa / DDR              │
-│                                                         │
-│  ajax/                                                  │
-│  └── ipbx_sub.php       ← Handler AJAX para IPBX        │
-│                                                         │
-│  templates/             ← Templates Twig (@newmanagement)│
-│  front/                 ← Entry points HTTP             │
-│  public/css|js/         ← Assets estáticos              │
-│  hook.php               ← Install / Uninstall / Upgrade  │
-│  setup.php              ← plugin_init / plugin_version  │
+│  CommonDBTM  │  Session  │  TemplateRenderer  │  DBmysql │
+└──────┬───────┴─────┬─────┴────────┬───────────┴────┬────┘
+       │             │              │                │
+┌──────▼─────────────▼──────────────▼────────────────▼────┐
+│                   Newmanagement Plugin                   │
+│                                                          │
+│  Models (src/)          Views (templates/)               │
+│  ┌──────────┐           ┌─────────────────┐             │
+│  │ Company  │──defineTabs▶  company/form   │             │
+│  │  Ipbx    │           │  ipbx/tab        │             │
+│  │ Chatbot  │           │  chatbot/tab     │             │
+│  │FixedLine │           │  fixedline/tab   │             │
+│  │  Task    │           │  task/tab        │             │
+│  └────┬─────┘           └─────────────────┘             │
+│       │ AJAX                                             │
+│  ┌────▼────────────┐                                     │
+│  │ ajax/ipbx_sub   │  ← POST JSON (CSRF single-use)      │
+│  │ ajax/chatbot_sub│  → resposta JSON + novo token        │
+│  └─────────────────┘                                     │
 └─────────────────────────────────────────────────────────┘
 ```
 
-## Fluxo de dados — exibição de ficha
+---
+
+## Fluxo de dados — Aba IPBX
 
 ```
-Usuário → front/company.form.php
-  → Company::showForm()
-    → TemplateRenderer::display('@newmanagement/company.form.html.twig')
-      → HTML renderizado ao navegador
+Usuário abre ficha de Empresa
+        │
+        ▼
+GLPI chama Ipbx::displayTabContentForItem()
+        │
+        ▼
+Ipbx::showTabForCompany()
+  ├─ Lê registro IPBX principal (LIMIT 1)
+  ├─ Senhas NÃO descriptografadas — apenas booleano has_*_password
+  ├─ Lê sub-tabelas paginadas (PAGE_SIZE = 20)
+  └─ TemplateRenderer::display('@newmanagement/ipbx/tab.html.twig', [...])
+        │
+        ▼
+Template Twig renderiza formulário + tabelas
+        │
+        ▼ (ação do usuário)
+fetch() → POST ajax/ipbx_sub.php
+  ├─ Session::checkLoginUser()
+  ├─ CSRF (version_compare GLPI_VERSION)
+  ├─ Session::checkRight()
+  ├─ switch($action) → DB::insert/update/delete
+  └─ nmJson(true, ['csrf' => novo_token, ...])
+        │
+        ▼
+JS atualiza token + DOM (sem reload)
 ```
 
-## Fluxo de dados — ação AJAX (IPBX)
-
-```
-Navegador (JS)
-  → POST ajax/ipbx_sub.php  {action, companies_id, csrf_token, ...}
-    → Session::checkLoginUser()       [autenticação]
-    → version_compare(GLPI_VERSION)   [CSRF: GLPI 10 ou 11]
-    → Session::checkRight(READ)       [autorização mínima]
-    → switch($action)
-        → Session::checkRight(CREATE/UPDATE/DELETE)
-        → $DB->insert/update/delete
-        → nmJson(true, ['id' => ..., 'csrf' => novo_token])
-  ← JSON { success, id?, csrf, error? }
-```
-
-## Namespaces e autoloading
-
-```json
-{
-  "autoload": {
-    "psr-4": {
-      "GlpiPlugin\\Newmanagement\\": "src/"
-    }
-  }
-}
-```
-
-Classes em `src/` seguem o namespace `GlpiPlugin\Newmanagement\`.
+---
 
 ## Banco de dados
 
-Todas as tabelas seguem o prefixo `glpi_plugin_newmanagement_`.
+### Tabelas principais
 
-| Tabela | Descrição |
-|---|---|
-| `glpi_plugin_newmanagement_companies` | Empresa principal |
-| `glpi_plugin_newmanagement_ipbxs` | IPBX |
-| `glpi_plugin_newmanagement_ipbx_extensions` | Ramais |
-| `glpi_plugin_newmanagement_ipbx_devices` | Dispositivos |
-| `glpi_plugin_newmanagement_ipbx_networks` | Rede |
-| `glpi_plugin_newmanagement_ipbx_lines` | Linha fixa |
-| `glpi_plugin_newmanagement_chatbots` | Chatbot |
-| `glpi_plugin_newmanagement_tasks` | Tarefas |
+| Tabela | Descrição | Chave estrangeira |
+|---|---|---|
+| `glpi_plugin_newmanagement_companies` | Empresas | — |
+| `glpi_plugin_newmanagement_ipbx` | Servidores IPBX | `companies_id` |
+| `glpi_plugin_newmanagement_ipbx_extensions` | Ramais | `ipbx_id`, `companies_id` |
+| `glpi_plugin_newmanagement_ipbx_devices` | Dispositivos | `ipbx_id`, `companies_id` |
+| `glpi_plugin_newmanagement_ipbx_network` | Redes | `ipbx_id`, `companies_id` |
+| `glpi_plugin_newmanagement_ipbx_lines` | Linhas fixas | `ipbx_id`, `companies_id` |
+| `glpi_plugin_newmanagement_chatbots` | Chatbots | `companies_id` |
+| `glpi_plugin_newmanagement_chatbot_users` | Usuários do chatbot | `chatbot_id` |
+| `glpi_plugin_newmanagement_chatbot_mass_comm` | Comunicações em massa | `chatbot_id` |
+| `glpi_plugin_newmanagement_chatbot_wa_restrictions` | Restrições WhatsApp | `chatbot_id` |
+| `glpi_plugin_newmanagement_tasks` | Tarefas | `companies_id` |
 
-### Colunas padrão em todas as tabelas
+### Campos comuns (padrão GLPI)
 
-- `id` — INT UNSIGNED AUTO_INCREMENT PRIMARY KEY
-- `date_creation` — DATETIME
-- `date_mod` — DATETIME
-- `is_deleted` — TINYINT(1) DEFAULT 0
+Todas as tabelas possuem: `id`, `is_deleted`, `date_creation`, `date_mod`.
 
-## Segurança
+### Segurança de senhas
 
-- Senhas armazenadas com `Toolbox::sodiumEncrypt()` — cifra AES-256-GCM via libsodium
-- Senhas **nunca** são enviadas ao template Twig em texto puro
-- CSRF: GLPI 10 usa `Session::checkCSRF()`; GLPI 11 usa `CheckCsrfListener` do Symfony
-- Permissões por `Session::checkRight()` antes de cada operação
-- Erros internos logados em `Toolbox::logError()` — cliente recebe mensagem genérica
+Todos os campos de senha são armazenados com `Toolbox::sodiumEncrypt()` (libsodium). A chave de criptografia é a `GLPIKEY` configurada no `config/config_db.php` do GLPI. **Nunca** são enviados ao frontend — apenas booleanos `has_*_password`.
+
+---
+
+## Proteção CSRF
+
+O plugin usa o sistema **single-use token** do GLPI 11:
+
+1. Cada formulário/request recebe um token via `Session::getNewCSRFToken()`
+2. O token é enviado no header `X-Glpi-Csrf-Token` (GLPI 11) ou no body `_glpi_csrf_token` (GLPI 10)
+3. Após cada resposta AJAX, um novo token é retornado em `csrf` e o JS atualiza o campo hidden
+4. Compatibilidade GLPI 10/11 via `version_compare(GLPI_VERSION, '11.0.0', '<')`
+
+---
 
 ## Dependências externas
 
-Nenhuma. O plugin usa exclusivamente APIs nativas do GLPI e bibliotecas já incluídas no core (Twig, Symfony, libsodium via PHP).
+Nenhuma. O plugin usa exclusivamente:
+- APIs nativas do GLPI (`CommonDBTM`, `Session`, `Toolbox`, `Plugin`, `TemplateRenderer`)
+- Twig (já incluído no GLPI)
+- Tabler Icons (já incluído no GLPI 11)

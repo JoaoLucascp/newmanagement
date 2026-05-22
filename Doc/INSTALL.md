@@ -2,57 +2,57 @@
 
 ## Pré-requisitos
 
-- GLPI 11.0.0 – 11.x instalado e funcionando
-- PHP 8.1+
-- Permissão de escrita na pasta `glpi/plugins/`
-- Usuário GLPI com perfil **Super-Admin**
+- GLPI 11.0.0 ou superior instalado e funcionando
+- PHP 8.1+ com extensões: `sodium`, `pdo_mysql`, `mbstring`
+- Acesso SSH ao servidor ou acesso FTP à pasta `plugins/`
+- Usuário GLPI com perfil **Super-Admin** para instalar plugins
 
 ---
 
-## Instalação
+## Instalação nova
 
 ### 1. Baixar o plugin
 
 ```bash
-cd /var/www/html/glpi/plugins
+cd /var/www/glpi/plugins
 git clone https://github.com/JoaoLucascp/newmanagement.git newmanagement
 ```
 
-Ou extraia o ZIP na pasta `plugins/` de forma que a estrutura fique:
+Ou faça o download do ZIP e extraia na pasta `plugins/newmanagement/`.
 
+### 2. Verificar a estrutura
+
+A pasta deve conter os arquivos:
 ```
-glpi/
-└── plugins/
-    └── newmanagement/
-        ├── setup.php
-        ├── hook.php
-        ├── src/
-        └── ...
-```
-
-> **⚠️ Atenção:** A pasta deve se chamar exatamente `newmanagement` (sem espaços, sem maiúsculas).
-
-### 2. Ajustar permissões
-
-```bash
-chown -R www-data:www-data /var/www/html/glpi/plugins/newmanagement
-chmod -R 755 /var/www/html/glpi/plugins/newmanagement
+newmanagement/
+├── setup.php
+├── hook.php
+├── composer.json
+├── src/
+├── templates/
+├── ajax/
+├── front/
+└── public/
 ```
 
-### 3. Ativar no GLPI
+### 3. Instalar via interface GLPI
 
-1. Acesse **GLPI → Configuração → Plugins**
+1. Acesse **Configuração → Plugins**
 2. Localize **Newmanagement** na lista
-3. Clique em **Instalar** (ícone de download)
-4. Clique em **Ativar** (ícone de play)
+3. Clique em **Instalar** (ícone de engrenagem)
+4. Após instalação, clique em **Ativar**
 
-O GLPI executará automaticamente `plugin_newmanagement_install()` do `hook.php`, criando todas as tabelas necessárias.
+O GLPI executará automaticamente os scripts de criação de tabelas em `hook.php`.
 
-### 4. Verificar instalação
+### 4. Configurar permissões
 
-- Acesse **Plugins → Newmanagement → Empresas**
-- A lista de empresas deve carregar sem erros
-- Verifique os logs em `glpi/files/_log/php-errors.log` se houver problemas
+1. Acesse **Administração → Perfis**
+2. Para cada perfil que deve usar o plugin, vá na aba **Plugins**
+3. Ative os direitos desejados:
+   - `plugin_newmanagement_company` — Empresas
+   - `plugin_newmanagement_ipbx` — IPBX + Linha Fixa
+   - `plugin_newmanagement_chatbot` — Chatbot
+   - `plugin_newmanagement_task` — Tarefas
 
 ---
 
@@ -62,59 +62,49 @@ O GLPI executará automaticamente `plugin_newmanagement_install()` do `hook.php`
 
 ```bash
 # Backup do banco
-mysqldump -u root -p glpi glpi_plugin_newmanagement_companies \
-  glpi_plugin_newmanagement_ipbxs \
+mysqldump -u root -p glpi \
+  glpi_plugin_newmanagement_companies \
+  glpi_plugin_newmanagement_ipbx \
+  glpi_plugin_newmanagement_ipbx_extensions \
+  glpi_plugin_newmanagement_ipbx_devices \
+  glpi_plugin_newmanagement_ipbx_network \
+  glpi_plugin_newmanagement_ipbx_lines \
   glpi_plugin_newmanagement_chatbots \
   glpi_plugin_newmanagement_tasks \
   > backup_newmanagement_$(date +%Y%m%d).sql
-
-# Backup dos arquivos
-cp -r /var/www/html/glpi/plugins/newmanagement \
-       /var/www/html/glpi/plugins/newmanagement_backup_$(date +%Y%m%d)
 ```
 
 ### 2. Atualizar o código
 
 ```bash
-cd /var/www/html/glpi/plugins/newmanagement
+cd /var/www/glpi/plugins/newmanagement
 git pull origin main
 ```
 
-### 3. Executar upgrade no GLPI
+### 3. Executar o upgrade no GLPI
 
-1. Acesse **GLPI → Configuração → Plugins**
-2. Se o plugin mostrar botão **Upgrade**, clique nele
-3. O GLPI executará `plugin_newmanagement_upgrade()` do `hook.php`
-
-### 4. Limpar cache
-
-```bash
-rm -rf /var/www/html/glpi/files/_cache/*
-```
+1. Acesse **Configuração → Plugins**
+2. Clique em **Atualizar** ao lado do Newmanagement (se o botão aparecer)
+3. O GLPI executará os scripts de upgrade em `hook.php`
 
 ---
 
 ## Desinstalação
 
-> **⚠️ Atenção:** A desinstalação remove **todos os dados** do plugin do banco de dados. Faça backup antes.
-
-1. Acesse **GLPI → Configuração → Plugins**
-2. Clique em **Desativar** e depois em **Desinstalar**
+1. Acesse **Configuração → Plugins**
+2. Clique em **Desinstalar** ao lado do Newmanagement
 3. O GLPI executará `plugin_newmanagement_uninstall()` que remove todas as tabelas
-4. Após desinstalar, você pode remover a pasta:
+4. Delete a pasta `plugins/newmanagement/` do servidor
 
-```bash
-rm -rf /var/www/html/glpi/plugins/newmanagement
-```
+> ⚠️ A desinstalação remove **todos os dados** do plugin. Faça backup antes.
 
 ---
 
-## Troubleshooting
+## Solução de problemas
 
 | Problema | Causa provável | Solução |
 |---|---|---|
-| Plugin não aparece na lista | Pasta com nome errado | Renomear para `newmanagement` |
-| Erro ao instalar | Permissão de banco | Verificar usuário MySQL tem CREATE TABLE |
-| Tela em branco | Erro PHP | Ver `glpi/files/_log/php-errors.log` |
-| Aba IPBX não carrega | Cache do GLPI | Limpar `files/_cache/` |
-| CSRF error | Token expirado | Recarregar a página |
+| Plugin não aparece na lista | Pasta com nome errado | Pasta deve se chamar exatamente `newmanagement` |
+| Erro ao instalar | Versão do GLPI incompatível | Verifique `PLUGIN_NEWMANAGEMENT_MIN_GLPI_VERSION` em `setup.php` |
+| Templates não carregam | Namespace Twig não registrado | Verifique se `plugin_init_newmanagement()` rodou sem erros |
+| Senhas não salvam | Extensão sodium ausente | Instale `php-sodium` e reinicie o PHP-FPM |
