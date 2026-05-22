@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  phpunit.xml — Configuração do PHPUnit para o plugin Newmanagement
+
+  Como executar (a partir da raiz do GLPI):
+    ./vendor/bin/phpunit --configuration plugins/newmanagement/phpunit.xml
+
+  Requisitos:
+    - PHPUnit 10+ (incluído como dependência de dev do GLPI 11)
+    - Plugin ativado no GLPI de teste
+    - Variável de ambiente GLPI_CONFIG_DIR apontando para a config do GLPI
+-->
+<phpunit
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.5/phpunit.xsd"
+    bootstrap="../../tests/bootstrap.php"
+    colors="true"
+    displayDetailsOnTestsThatTriggerErrors="true"
+    displayDetailsOnTestsThatTriggerWarnings="true"
+>
+    <testsuites>
+        <testsuite name="Newmanagement Unit">
+            <directory>tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Newmanagement Integration">
+            <directory>tests/Integration</directory>
+        </testsuite>
+    </testsuites>
+
+    <source>
+        <include>
+            <directory>src</directory>
+        </include>
+    </source>
+
+    <coverage/>
+</phpunit>
