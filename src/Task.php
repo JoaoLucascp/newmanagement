@@ -13,7 +13,7 @@ if (!defined('GLPI_ROOT')) {
 
 class Task extends \CommonDBTM
 {
-    public static $rightname = 'plugin_newmanagement_task';
+    public static string $rightname = 'plugin_newmanagement_task';
 
     public static function getTypeName($nb = 0): string
     {
@@ -32,9 +32,6 @@ class Task extends \CommonDBTM
         return $ong;
     }
 
-    /**
-     * Retorna os labels de status disponíveis.
-     */
     public static function getStatusLabels(): array
     {
         return [
@@ -44,16 +41,6 @@ class Task extends \CommonDBTM
         ];
     }
 
-    // ------------------------------------------------------------------
-    // Aba dentro da ficha de Empresa
-    // ------------------------------------------------------------------
-
-    /**
-     * Retorna o nome da aba com contador de tarefas.
-     *
-     * Fix [M5]: inclui getEntitiesRestrictCriteria() para que ambientes
-     * multi-entidade não exibam contagem de tarefas de outras entidades.
-     */
     public function getTabNameForItem(\CommonGLPI $item, $withtemplate = 0): string|array
     {
         if ($item instanceof Company) {
@@ -105,14 +92,6 @@ class Task extends \CommonDBTM
         ]);
     }
 
-    /**
-     * Renderiza o formulário via TemplateRenderer (página própria da Task).
-     *
-     * Fix [A2]: substitui query direta em glpi_plugin_newmanagement_companies
-     * por getAllDataFromTable(), que respeita softdelete, entidade e helpers
-     * nativos do GLPI — eliminando duplicação de lógica e risco de dados
-     * de outras entidades vazarem no select.
-     */
     public function showForm($ID, array $options = []): bool
     {
         global $DB;
@@ -123,8 +102,6 @@ class Task extends \CommonDBTM
         $can_update = \Session::haveRight(self::$rightname, UPDATE);
         $can_delete = \Session::haveRight(self::$rightname, DELETE);
 
-        // Fix [A2]: getAllDataFromTable em vez de $DB->request direto.
-        // Respeita is_deleted, order e todos os helpers do modelo Company.
         $companies = getAllDataFromTable(
             Company::getTable(),
             ['is_deleted' => 0],
@@ -132,7 +109,6 @@ class Task extends \CommonDBTM
             'name'
         );
 
-        // Usuários ativos para o select de responsável
         $users = [];
         $result = $DB->request([
             'SELECT' => ['id', 'name'],

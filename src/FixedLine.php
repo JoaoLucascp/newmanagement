@@ -19,9 +19,9 @@ use Glpi\Application\View\TemplateRenderer;
 class FixedLine extends \CommonDBTM
 {
     /** Compartilha as permissões do módulo IPBX (intencional). */
-    public static $rightname = 'plugin_newmanagement_ipbx';
-    public static $itemtype  = Company::class;
-    public static $items_id  = 'companies_id';
+    public static string $rightname = 'plugin_newmanagement_ipbx';
+    public static string $itemtype  = Company::class;
+    public static string $items_id  = 'companies_id';
 
     public static function getTypeName($nb = 0): string
     {
@@ -33,49 +33,33 @@ class FixedLine extends \CommonDBTM
         return 'glpi_plugin_newmanagement_ipbx_lines';
     }
 
-    // -------------------------------------------------------
-    // Validação de número de telefone (backend)
-    // -------------------------------------------------------
-
-    /**
-     * Valida número de telefone brasileiro.
-     * Aceita formatos: (XX) 9XXXX-XXXX, (XX) XXXX-XXXX, +55XXXXXXXXXXX
-     * Retorna true se válido ou se estiver em branco (campo opcional).
-     */
     public static function isValidPhoneNumber(string $phone): bool
     {
         $digits = preg_replace('/\D/', '', $phone);
 
-        // Aceita vazio (campo opcional)
         if ($digits === '') {
             return true;
         }
 
-        // Com DDI +55: 12 dígitos (fixo) ou 13 (celular)
         if (strlen($digits) === 12 || strlen($digits) === 13) {
-            // Remove o DDI 55 e valida o restante
             $digits = substr($digits, 2);
         }
 
         $len = strlen($digits);
 
-        // Fixo: DDD (2) + 8 dígitos = 10 | Celular: DDD (2) + 9 dígitos = 11
         if ($len !== 10 && $len !== 11) {
             return false;
         }
 
-        // DDD válido: 11 a 99 (exclui 00-10 que não existem)
         $ddd = (int) substr($digits, 0, 2);
         if ($ddd < 11 || $ddd > 99) {
             return false;
         }
 
-        // Celular com 11 dígitos deve começar com 9
         if ($len === 11 && $digits[2] !== '9') {
             return false;
         }
 
-        // Rejeita sequências repetidas (ex: 11111111111)
         if (preg_match('/^(\d)\1+$/', $digits)) {
             return false;
         }
@@ -83,27 +67,16 @@ class FixedLine extends \CommonDBTM
         return true;
     }
 
-    /**
-     * Validação chamada antes de INSERT.
-     * [FIX] pilot_number validado no backend.
-     */
     public function prepareInputForAdd($input)
     {
         return $this->prepareInput($input);
     }
 
-    /**
-     * Validação chamada antes de UPDATE.
-     * [FIX] pilot_number validado no backend.
-     */
     public function prepareInputForUpdate($input)
     {
         return $this->prepareInput($input);
     }
 
-    /**
-     * Lógica comum de validação para add e update.
-     */
     private function prepareInput(array $input)
     {
         if (!empty($input['pilot_number'])) {
@@ -117,7 +90,6 @@ class FixedLine extends \CommonDBTM
             }
         }
 
-        // channels e ddr_count devem ser inteiros não negativos
         if (isset($input['channels'])) {
             $input['channels'] = max(0, (int) $input['channels']);
         }
@@ -127,10 +99,6 @@ class FixedLine extends \CommonDBTM
 
         return $input;
     }
-
-    // -------------------------------------------------------
-    // Tab / display
-    // -------------------------------------------------------
 
     public function getTabNameForItem(\CommonGLPI $item, $withtemplate = 0): string
     {
@@ -156,8 +124,7 @@ class FixedLine extends \CommonDBTM
 
         $can_write = \Session::haveRight(self::$rightname, UPDATE);
 
-        // Busca o IPBX vinculado a esta empresa
-        $ipbx_id  = 0;
+        $ipbx_id = 0;
         foreach ($DB->request([
             'FROM'  => Ipbx::getTable(),
             'WHERE' => ['companies_id' => $companies_id, 'is_deleted' => 0],
