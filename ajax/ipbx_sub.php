@@ -25,7 +25,6 @@
 include('../../../inc/includes.php');
 
 use GlpiPlugin\Newmanagement\Ipbx;
-use Glpi\Toolbox\Encryption;
 
 Html::header_nocache();
 header('Content-Type: application/json; charset=utf-8');
@@ -54,9 +53,8 @@ function nmJson(bool $ok, array $extra = []): void
 }
 
 /**
- * Criptografa senha usando a API correta conforme versão do GLPI.
- * - GLPI 11+: Glpi\Toolbox\Encryption::encrypt()
- * - GLPI 10:  Toolbox::sodiumEncrypt()
+ * Criptografa senha usando GLPIKey — API correta para GLPI 11.
+ * Fallback para Toolbox::sodiumEncrypt() no GLPI 10.
  * Retorna null para valor vazio (sem senha definida).
  */
 function nmEncryptPassword(string $value): ?string
@@ -64,8 +62,9 @@ function nmEncryptPassword(string $value): ?string
     if ($value === '') {
         return null;
     }
-    if (class_exists('Glpi\\Toolbox\\Encryption')) {
-        return Encryption::encrypt($value);
+    // GLPI 11+ — forma correta
+    if (class_exists('GLPIKey')) {
+        return (new \GLPIKey())->encrypt($value);
     }
     // Fallback GLPI 10
     return \Toolbox::sodiumEncrypt($value);
