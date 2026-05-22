@@ -14,65 +14,45 @@
  *  4. Por ação: checkRight(CREATE | UPDATE | DELETE) conforme necessário
  *
  * NOTA GLPI 11 — CheckCsrfListener (Symfony):
- *   O listener busca o token EM ORDEM:
- *     1. Header  X-Glpi-Csrf-Token
- *     2. Body    _glpi_csrf_token  (apenas se Content-Type adequado)
- *   Para fetch() com FormData, o Content-Type é multipart/form-data.
- *   O Symfony NÃO faz parse de multipart para _glpi_csrf_token —
- *   portanto o token DEVE vir no header X-Glpi-Csrf-Token.
- *   O JS já envia o header; mas se o listener rejeitar antes do PHP,
- *   este arquivo nem roda. A solução é garantir que o token no header
- *   seja sempre fresco (gerado na renderização da aba, não da página).
- *
- *   TOKENS SÃO SINGLE-USE no GLPI 11. Portanto:
- *   - Cada resposta JSON retorna um novo token em `csrf`.
- *   - O JS deve atualizar #nm-ipbx-csrf com esse token.
+ *   O listener valida o header X-Glpi-Csrf-Token antes do PHP executar.
+ *   TOKENS SÃO SINGLE-USE: cada resposta JSON retorna novo token em `csrf`.
+ *   O JS deve atualizar o campo hidden com esse token após cada request.
  *
  * COMPATIBILIDADE GLPI 10:
- *   Session::checkCSRF($_POST) é chamado quando não há header Symfony.
+ *   Session::checkCSRF($_POST) é chamado quando GLPI_VERSION < 11.0.0.
+ *
+ * Fix [M3]: detecção de versão via version_compare(GLPI_VERSION, '11.0.0', '<')
+ *   em vez de verificar presença do header HTTP — eliminando falso-positivo
+ *   em ambientes com proxies que removem headers customizados.
  */
 
 include('../../../inc/includes.php');
 
 use GlpiPlugin\Newmanagement\Ipbx;
 
-// Impede cache — padrão para endpoints AJAX no GLPI
 Html::header_nocache();
 header('Content-Type: application/json; charset=utf-8');
 
 // Camada 1 — usuário logado
 Session::checkLoginUser();
 
-// Camada 2 — CSRF compatível GLPI 10 e 11
-//
-// NO GLPI 11: O CheckCsrfListener do Symfony intercepta o request ANTES
-// do PHP e valida o header X-Glpi-Csrf-Token. Se o listener passar,
-// este código já está rodando com CSRF validado — NÃO chamamos
-// Session::checkCSRF() novamente para não consumir o token duas vezes.
-//
-// NO GLPI 10: Não há CheckCsrfListener. O token vem em $_POST e
-// Session::checkCSRF($_POST) é o mecanismo correto.
-//
-// Identificamos o GLPI 11 pela presença do header X-Glpi-Csrf-Token.
-// Se o header estiver ausente, caímos no caminho GLPI 10.
-$csrfHeader = $_SERVER['HTTP_X_GLPI_CSRF_TOKEN'] ?? '';
-if ($csrfHeader === '') {
+// Camada 2 — CSRF
+// Fix [M3]: version_compare é determinístico; não depende de header HTTP.
+if (version_compare(GLPI_VERSION, '11.0.0', '<')) {
     // GLPI 10: token vem no body — valida pelo método nativo
     Session::checkCSRF($_POST);
 }
-// GLPI 11: Symfony já validou. Não chamar checkCSRF aqui.
+// GLPI 11+: CheckCsrfListener do Symfony já validou antes deste arquivo rodar.
 
 // Camada 3 — direito mínimo de leitura no plugin
 Session::checkRight(Ipbx::$rightname, READ);
 
 /**
  * Resposta JSON padronizada.
- * Sempre inclui um novo token CSRF para o JS renovar #nm-ipbx-csrf,
- * evitando falhas em requests sequenciais com tokens single-use.
+ * Sempre inclui novo token CSRF para requests sequenciais (tokens single-use).
  */
 function nmJson(bool $ok, array $extra = []): void
 {
-    // Gera novo token para o próximo request
     $extra['csrf'] = Session::getNewCSRFToken();
     echo json_encode(array_merge(['success' => $ok], $extra));
     exit;
@@ -340,6 +320,12 @@ try {
             nmJson(false, ['error' => 'Ação desconhecida: ' . htmlspecialchars($action)]);
     }
 } catch (\Throwable $e) {
-    \Toolbox::logDebug('ipbx_sub.php error: ' . $e->getMessage());
-    nmJson(false, ['error' => 'Erro interno: ' . $e->getMessage()]);
+    // Fix [M2]: detalhe do erro vai apenas para o log do servidor.
+    // O cliente recebe mensagem genérica — não vaza nomes de tabelas,
+    // queries SQL nem stack traces (OWASP A05 — Security Misconfiguration).
+    \Toolbox::logError(
+        '[Newmanagement] ipbx_sub.php error: ' . $e->getMessage()
+        . ' | ' . $e->getFile() . ':' . $e->getLine()
+    );
+    nmJson(false, ['error' => __('Ocorreu um erro interno. Contate o administrador.', 'newmanagement')]);
 }

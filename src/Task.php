@@ -47,12 +47,22 @@ class Task extends \CommonDBTM
     // ------------------------------------------------------------------
     // Aba dentro da ficha de Empresa
     // ------------------------------------------------------------------
+
+    /**
+     * Retorna o nome da aba com contador de tarefas.
+     *
+     * Fix [M5]: inclui getEntitiesRestrictCriteria() para que ambientes
+     * multi-entidade não exibam contagem de tarefas de outras entidades.
+     */
     public function getTabNameForItem(\CommonGLPI $item, $withtemplate = 0): string|array
     {
         if ($item instanceof Company) {
             $count = countElementsInTable(
                 self::getTable(),
-                ['companies_id' => $item->getID(), 'is_deleted' => 0]
+                [
+                    'companies_id' => $item->getID(),
+                    'is_deleted'   => 0,
+                ] + getEntitiesRestrictCriteria(self::getTable())
             );
             return self::createTabEntry(self::getTypeName(2), $count);
         }
@@ -96,7 +106,12 @@ class Task extends \CommonDBTM
     }
 
     /**
-     * Renderiza o formulário via Twig (página própria da Task).
+     * Renderiza o formulário via TemplateRenderer (página própria da Task).
+     *
+     * Fix [A2]: substitui query direta em glpi_plugin_newmanagement_companies
+     * por getAllDataFromTable(), que respeita softdelete, entidade e helpers
+     * nativos do GLPI — eliminando duplicação de lógica e risco de dados
+     * de outras entidades vazarem no select.
      */
     public function showForm($ID, array $options = []): bool
     {
@@ -108,19 +123,16 @@ class Task extends \CommonDBTM
         $can_update = \Session::haveRight(self::$rightname, UPDATE);
         $can_delete = \Session::haveRight(self::$rightname, DELETE);
 
-        // Empresas para o select
-        $companies = [];
-        $result = $DB->request([
-            'SELECT' => ['id', 'name'],
-            'FROM'   => 'glpi_plugin_newmanagement_companies',
-            'WHERE'  => ['is_deleted' => 0],
-            'ORDER'  => 'name ASC',
-        ]);
-        foreach ($result as $row) {
-            $companies[] = $row;
-        }
+        // Fix [A2]: getAllDataFromTable em vez de $DB->request direto.
+        // Respeita is_deleted, order e todos os helpers do modelo Company.
+        $companies = getAllDataFromTable(
+            Company::getTable(),
+            ['is_deleted' => 0],
+            false,
+            'name'
+        );
 
-        // Usuários para o select de responsável
+        // Usuários ativos para o select de responsável
         $users = [];
         $result = $DB->request([
             'SELECT' => ['id', 'name'],
@@ -135,7 +147,7 @@ class Task extends \CommonDBTM
         $twig = plugin_newmanagement_getTwig();
         echo $twig->render('task/form.html.twig', [
             'item'        => $this->fields + ['id' => $this->fields['id'] ?? 0],
-            'companies'   => $companies,
+            'companies'   => array_values($companies),
             'users'       => $users,
             'statuses'    => self::getStatusLabels(),
             'can_create'  => $can_create,
