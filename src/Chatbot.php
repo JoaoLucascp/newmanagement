@@ -35,10 +35,21 @@ class Chatbot extends \CommonDBTM
     const TABLE_WA_RESTRICTIONS = 'glpi_plugin_newmanagement_chatbot_wa_restrictions';
     const TABLE_USERS           = 'glpi_plugin_newmanagement_chatbot_users';
 
+    /**
+     * Retorna o nome da aba com contador de chatbots cadastrados.
+     *
+     * Fix [M6]: antes retornava string estática sem contador.
+     * Agora usa createTabEntry() para exibir o número junto ao título,
+     * seguindo o padrão nativo do GLPI (ex.: Documentos (3)).
+     */
     public function getTabNameForItem(\CommonGLPI $item, $withtemplate = 0): string
     {
         if ($item instanceof Company) {
-            return self::getTypeName(1);
+            $count = countElementsInTable(
+                self::getTable(),
+                ['companies_id' => $item->getID(), 'is_deleted' => 0]
+            );
+            return self::createTabEntry(self::getTypeName(1), $count);
         }
         return '';
     }
@@ -59,6 +70,17 @@ class Chatbot extends \CommonDBTM
         return $ong;
     }
 
+    /**
+     * Exibe a aba de Chatbot dentro da ficha de uma Empresa.
+     *
+     * Fix [A1]: senhas NUNCA são descriptografadas nem enviadas ao template.
+     *   - 'has_admin_password'      => bool (true = senha salva no banco)
+     *   - 'has_superadmin_password' => bool (true = senha salva no banco)
+     * O template Twig deve:
+     *   - Mostrar placeholder '\u2022\u2022\u2022\u2022\u2022\u2022' quando o bool for true.
+     *   - Só enviar nova senha ao servidor se o campo vier preenchido no POST.
+     *   - Nunca popular value="" com a senha real.
+     */
     public function showTabForCompany(int $companies_id): void
     {
         global $DB;
@@ -92,35 +114,31 @@ class Chatbot extends \CommonDBTM
             'supervisors_count'       => '',
             'admins_count'            => '',
             'admin_login'             => '',
-            'admin_password'          => '',
             'superadmin_login'        => '',
-            'superadmin_password'     => '',
             'manager_name'            => '',
             'manager_contact'         => '',
             'manager_email'           => '',
             'social_networks'         => '',
             'comment'                 => '',
+            // Fix [A1]: booleanos indicam se a senha existe no banco,
+            //           sem jamais expor o valor em texto puro.
+            'has_admin_password'      => false,
+            'has_superadmin_password' => false,
         ];
 
         foreach ($rows as $row) {
+            $skip = ['admin_password', 'superadmin_password'];
             foreach (array_keys($f) as $key) {
-                if (isset($row[$key])) {
+                if (!in_array($key, $skip, true) && isset($row[$key])) {
                     $f[$key] = $row[$key];
                 }
             }
             $chatbot_id = (int) $row['id'];
 
-            // Descriptografa senhas para exibição
-            try {
-                if (!empty($f['admin_password'])) {
-                    $f['admin_password'] = \Toolbox::sodiumDecrypt($f['admin_password']);
-                }
-            } catch (\Throwable $e) {}
-            try {
-                if (!empty($f['superadmin_password'])) {
-                    $f['superadmin_password'] = \Toolbox::sodiumDecrypt($f['superadmin_password']);
-                }
-            } catch (\Throwable $e) {}
+            // Indica ao template se uma senha está salva (para mostrar placeholder)
+            // sem nunca descriptografar nem enviar o valor.
+            $f['has_admin_password']      = !empty($row['admin_password']);
+            $f['has_superadmin_password'] = !empty($row['superadmin_password']);
         }
 
         // Carrega sub-tabelas como arrays simples para o Twig
