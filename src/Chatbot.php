@@ -3,6 +3,10 @@
 /**
  * Newmanagement - Plugin GLPI
  * Classe: Chatbot — aba dentro da ficha de Empresa
+ *
+ * @fix A1  Senhas nunca são descriptografadas para o template.
+ *          O template recebe apenas flags booleanos (has_*_password).
+ * @fix M6  getTabNameForItem usa createTabEntry com contador.
  */
 
 namespace GlpiPlugin\Newmanagement;
@@ -35,10 +39,18 @@ class Chatbot extends \CommonDBTM
     const TABLE_WA_RESTRICTIONS = 'glpi_plugin_newmanagement_chatbot_wa_restrictions';
     const TABLE_USERS           = 'glpi_plugin_newmanagement_chatbot_users';
 
+    /**
+     * [FIX M6] Retorna nome da aba com contador de registros.
+     * Antes retornava apenas string estática sem contagem.
+     */
     public function getTabNameForItem(\CommonGLPI $item, $withtemplate = 0): string
     {
         if ($item instanceof Company) {
-            return self::getTypeName(1);
+            $count = countElementsInTable(
+                self::getTable(),
+                ['companies_id' => $item->getID(), 'is_deleted' => 0]
+            );
+            return self::createTabEntry(self::getTypeName(1), $count);
         }
         return '';
     }
@@ -92,9 +104,7 @@ class Chatbot extends \CommonDBTM
             'supervisors_count'       => '',
             'admins_count'            => '',
             'admin_login'             => '',
-            'admin_password'          => '',
             'superadmin_login'        => '',
-            'superadmin_password'     => '',
             'manager_name'            => '',
             'manager_contact'         => '',
             'manager_email'           => '',
@@ -102,25 +112,29 @@ class Chatbot extends \CommonDBTM
             'comment'                 => '',
         ];
 
+        // [FIX A1] Flags booleanos informam ao template se a senha existe,
+        //          sem nunca descriptografar nem expor o valor ao HTML/DOM.
+        $f['has_admin_password']      = false;
+        $f['has_superadmin_password'] = false;
+
         foreach ($rows as $row) {
             foreach (array_keys($f) as $key) {
+                // Nunca copiar admin_password/superadmin_password — apenas derivar flag
+                if (in_array($key, ['has_admin_password', 'has_superadmin_password'], true)) {
+                    continue;
+                }
                 if (isset($row[$key])) {
                     $f[$key] = $row[$key];
                 }
             }
             $chatbot_id = (int) $row['id'];
 
-            // Descriptografa senhas para exibição
-            try {
-                if (!empty($f['admin_password'])) {
-                    $f['admin_password'] = \Toolbox::sodiumDecrypt($f['admin_password']);
-                }
-            } catch (\Throwable $e) {}
-            try {
-                if (!empty($f['superadmin_password'])) {
-                    $f['superadmin_password'] = \Toolbox::sodiumDecrypt($f['superadmin_password']);
-                }
-            } catch (\Throwable $e) {}
+            // Deriva flags a partir dos campos criptografados sem descriptografar
+            $f['has_admin_password']      = !empty($row['admin_password']);
+            $f['has_superadmin_password'] = !empty($row['superadmin_password']);
+
+            // Garante que os valores criptografados nunca saiam deste método
+            unset($f['admin_password'], $f['superadmin_password']);
         }
 
         // Carrega sub-tabelas como arrays simples para o Twig
