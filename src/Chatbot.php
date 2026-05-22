@@ -15,10 +15,11 @@ use Glpi\Application\View\TemplateRenderer;
 
 class Chatbot extends \CommonDBTM
 {
-    public static string $rightname = 'plugin_newmanagement_chatbot';
-
-    public static string $itemtype = Company::class;
-    public static string $items_id = 'companies_id';
+    // Sem tipagem explícita: CommonGLPI declara estas propriedades sem tipo,
+    // e o PHP 8.1+ proíbe a filha de redeclarar com tipo.
+    public static $rightname = 'plugin_newmanagement_chatbot';
+    public static $itemtype  = Company::class;
+    public static $items_id  = 'companies_id';
 
     public static function getTypeName($nb = 0): string
     {

@@ -15,7 +15,9 @@ use Glpi\Application\View\TemplateRenderer;
 
 class Company extends \CommonDBTM
 {
-    public static string $rightname = 'plugin_newmanagement_company';
+    // Sem tipagem explícita: CommonGLPI declara $rightname sem tipo,
+    // e o PHP 8.1+ proíbe a filha de redeclarar com tipo.
+    public static $rightname = 'plugin_newmanagement_company';
 
     const CONTRACT_NO_CONTRACT = 0;
     const CONTRACT_ACTIVE      = 1;
