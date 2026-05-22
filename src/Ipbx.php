@@ -13,9 +13,9 @@ if (!defined('GLPI_ROOT')) {
 
 class Ipbx extends \CommonDBTM
 {
-    public static string $rightname = 'plugin_newmanagement_ipbx';
-    public static string $itemtype  = Company::class;
-    public static string $items_id  = 'companies_id';
+    public static $rightname = 'plugin_newmanagement_ipbx';
+    public static $itemtype  = Company::class;
+    public static $items_id  = 'companies_id';
 
     const PAGE_SIZE = 20;
 

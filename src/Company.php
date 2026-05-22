@@ -15,7 +15,7 @@ use Glpi\Application\View\TemplateRenderer;
 
 class Company extends \CommonDBTM
 {
-    public static string $rightname = 'plugin_newmanagement_company';
+    public static $rightname = 'plugin_newmanagement_company';
 
     const CONTRACT_NO_CONTRACT = 0;
     const CONTRACT_ACTIVE      = 1;

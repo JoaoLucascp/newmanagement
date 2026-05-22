@@ -11,9 +11,11 @@ if (!defined('GLPI_ROOT')) {
     die('Sorry. You can\'t access this file directly');
 }
 
+use Glpi\Application\View\TemplateRenderer;
+
 class Task extends \CommonDBTM
 {
-    public static string $rightname = 'plugin_newmanagement_task';
+    public static $rightname = 'plugin_newmanagement_task';
 
     public static function getTypeName($nb = 0): string
     {
@@ -80,16 +82,18 @@ class Task extends \CommonDBTM
             'ORDER' => 'date_due ASC',
         ]));
 
-        $twig = plugin_newmanagement_getTwig();
-        echo $twig->render('task/tab.html.twig', [
-            'rows'         => $rows,
-            'companies_id' => $companies_id,
-            'statuses'     => self::getStatusLabels(),
-            'can_write'    => $can_write,
-            'can_delete'   => $can_delete,
-            'csrf'         => $csrf,
-            'action_url'   => $action_url,
-        ]);
+        TemplateRenderer::getInstance()->display(
+            '@newmanagement/task/tab.html.twig',
+            [
+                'rows'         => $rows,
+                'companies_id' => $companies_id,
+                'statuses'     => self::getStatusLabels(),
+                'can_write'    => $can_write,
+                'can_delete'   => $can_delete,
+                'csrf'         => $csrf,
+                'action_url'   => $action_url,
+            ]
+        );
     }
 
     public function showForm($ID, array $options = []): bool
@@ -120,19 +124,21 @@ class Task extends \CommonDBTM
             $users[] = $row;
         }
 
-        $twig = plugin_newmanagement_getTwig();
-        echo $twig->render('task/form.html.twig', [
-            'item'        => $this->fields + ['id' => $this->fields['id'] ?? 0],
-            'companies'   => array_values($companies),
-            'users'       => $users,
-            'statuses'    => self::getStatusLabels(),
-            'can_create'  => $can_create,
-            'can_update'  => $can_update,
-            'can_delete'  => $can_delete,
-            'csrf_token'  => \Session::getNewCSRFToken(),
-            'form_url'    => self::getFormURL(),
-            'search_url'  => self::getSearchURL(),
-        ]);
+        TemplateRenderer::getInstance()->display(
+            '@newmanagement/task/form.html.twig',
+            [
+                'item'        => $this->fields + ['id' => $this->fields['id'] ?? 0],
+                'companies'   => array_values($companies),
+                'users'       => $users,
+                'statuses'    => self::getStatusLabels(),
+                'can_create'  => $can_create,
+                'can_update'  => $can_update,
+                'can_delete'  => $can_delete,
+                'csrf_token'  => \Session::getNewCSRFToken(),
+                'form_url'    => self::getFormURL(),
+                'search_url'  => self::getSearchURL(),
+            ]
+        );
 
         return true;
     }

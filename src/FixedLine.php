@@ -19,9 +19,9 @@ use Glpi\Application\View\TemplateRenderer;
 class FixedLine extends \CommonDBTM
 {
     /** Compartilha as permissões do módulo IPBX (intencional). */
-    public static string $rightname = 'plugin_newmanagement_ipbx';
-    public static string $itemtype  = Company::class;
-    public static string $items_id  = 'companies_id';
+    public static $rightname = 'plugin_newmanagement_ipbx';
+    public static $itemtype  = Company::class;
+    public static $items_id  = 'companies_id';
 
     public static function getTypeName($nb = 0): string
     {
