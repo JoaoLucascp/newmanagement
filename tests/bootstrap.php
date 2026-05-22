@@ -1,38 +1,84 @@
 <?php
 
-/**
- * tests/bootstrap.php
- *
- * Bootstrap standalone para testes UNITARIOS.
- * Define as constantes minimas do GLPI para que as classes
- * do plugin possam ser carregadas sem um GLPI completo.
- *
- * NAO use este bootstrap para testes de integracao.
- * Testes de integracao requerem o bootstrap real do GLPI.
- */
-
 declare(strict_types=1);
 
 // Constantes minimas exigidas pelas classes do plugin
-define('GLPI_ROOT',      dirname(__DIR__, 4)); // raiz do GLPI
-define('GLPI_VERSION',   '11.0.6');
+define('GLPI_ROOT',           dirname(__DIR__, 4));
+define('GLPI_VERSION',        '11.0.6');
 define('GLPI_SCHEMA_VERSION', '11.0.6@dev');
-define('GLPI_CONFIG_DIR', GLPI_ROOT . '/config');
-define('GLPI_VAR_DIR',    GLPI_ROOT . '/files');
-define('GLPI_LOG_DIR',    GLPI_ROOT . '/files/_log');
-define('GLPI_CACHE_DIR',  GLPI_ROOT . '/files/_cache');
+define('GLPI_CONFIG_DIR',     GLPI_ROOT . '/config');
+define('GLPI_VAR_DIR',        GLPI_ROOT . '/files');
+define('GLPI_LOG_DIR',        GLPI_ROOT . '/files/_log');
+define('GLPI_CACHE_DIR',      GLPI_ROOT . '/files/_cache');
 define('GLPI_PLUGIN_DOC_DIR', GLPI_ROOT . '/files/_plugins');
 define('PLUGINS_DIRECTORIES', [GLPI_ROOT . '/plugins']);
-define('ERROR',    1);
-define('WARNING',  2);
-define('NOTICE',   4);
-define('INFO',     8);
+define('ERROR',   1);
+define('WARNING', 2);
+define('NOTICE',  4);
+define('INFO',    8);
 
-// Autoloader do plugin (gerado pelo composer install)
+// Autoloader do plugin
 require_once __DIR__ . '/../vendor/autoload.php';
 
-// Stub minimo de Session::addMessageAfterRedirect
-// para que prepareInput() nao quebre nos testes unitarios
+// Helper de traducao (stub)
+if (!function_exists('__')) {
+    function __(string $str, string $domain = ''): string { return $str; }
+}
+if (!function_exists('_n')) {
+    function _n(string $singular, string $plural, int $n, string $domain = ''): string
+    {
+        return $n === 1 ? $singular : $plural;
+    }
+}
+if (!function_exists('getAllDataFromTable')) {
+    function getAllDataFromTable(string $table, array $criteria = [], bool $usecache = false, string $order = ''): array
+    {
+        return [];
+    }
+}
+if (!function_exists('countElementsInTable')) {
+    function countElementsInTable(string $table, array $condition = []): int { return 0; }
+}
+if (!function_exists('getEntitiesRestrictCriteria')) {
+    function getEntitiesRestrictCriteria(string $table = '', string $field = '', $val = '', bool $is_recursive = false): array
+    {
+        return [];
+    }
+}
+
+// Stub: CommonGLPI (base de CommonDBTM)
+if (!class_exists('CommonGLPI')) {
+    abstract class CommonGLPI
+    {
+        public static function getTypeName(int $nb = 0): string { return ''; }
+        public static function getTable(?string $classname = null): string { return ''; }
+        public function getID(): int { return 0; }
+    }
+}
+
+// Stub: CommonDBTM (pai de todas as entidades do GLPI)
+if (!class_exists('CommonDBTM')) {
+    abstract class CommonDBTM extends CommonGLPI
+    {
+        public array  $fields = [];
+        public static string $rightname = '';
+
+        public function prepareInputForAdd($input) { return $input; }
+        public function prepareInputForUpdate($input) { return $input; }
+        public function initForm(int $ID, array $options = []): void {}
+        public function showFormHeader(array $options = []): void {}
+        public function showFormButtons(array $options = []): void {}
+        public function addDefaultFormTab(array &$ong): void {}
+        public function addStandardTab(string $class, array &$ong, array $options = []): void {}
+
+        public static function createTabEntry(string $name, int $nb = 0): string
+        {
+            return $nb > 0 ? "$name ($nb)" : $name;
+        }
+    }
+}
+
+// Stub: Session
 if (!class_exists('Session')) {
     class Session
     {
@@ -44,16 +90,10 @@ if (!class_exists('Session')) {
             int $type = INFO,
             bool $displayed = false
         ): void {
-            self::$messages[] = [
-                'message' => $message,
-                'type'    => $type,
-            ];
+            self::$messages[] = ['message' => $message, 'type' => $type];
         }
 
-        public static function haveRight(string $right, int $value): bool
-        {
-            return true;
-        }
+        public static function haveRight(string $right, int $value): bool { return true; }
 
         public static function getLastMessage(): ?string
         {
@@ -61,30 +101,31 @@ if (!class_exists('Session')) {
             return $last ? $last['message'] : null;
         }
 
-        public static function clearMessages(): void
-        {
-            self::$messages = [];
-        }
+        public static function clearMessages(): void { self::$messages = []; }
     }
 }
 
-// Stub de Toolbox para nao depender do core do GLPI
+// Stub: Toolbox
 if (!class_exists('Toolbox')) {
     class Toolbox
     {
-        public static function sodiumEncrypt(string $value): string
-        {
-            return base64_encode($value); // mock simples
-        }
+        public static function sodiumEncrypt(string $value): string { return base64_encode($value); }
+        public static function sodiumDecrypt(string $value): string { return base64_decode($value); }
+        public static function logDebug(string $message): void {}
+    }
+}
 
-        public static function sodiumDecrypt(string $value): string
+// Stub: Plugin
+if (!class_exists('Plugin')) {
+    class Plugin
+    {
+        public static function getPhpDir(string $plugin): string
         {
-            return base64_decode($value); // mock simples
+            return GLPI_ROOT . '/plugins/' . $plugin;
         }
-
-        public static function logDebug(string $message): void
+        public static function getWebDir(string $plugin): string
         {
-            // silencioso nos testes
+            return '/plugins/' . $plugin;
         }
     }
 }
