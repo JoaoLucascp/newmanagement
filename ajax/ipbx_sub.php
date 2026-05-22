@@ -29,7 +29,11 @@
  *   - O JS deve atualizar #nm-ipbx-csrf com esse token.
  *
  * COMPATIBILIDADE GLPI 10:
- *   Session::checkCSRF($_POST) é chamado quando não há header Symfony.
+ *   Session::checkCSRF($_POST) é chamado quando GLPI_VERSION < 11.0.0.
+ *
+ * @fix M2  Mensagem de erro genérica ao cliente; detalhes apenas nos logs.
+ * @fix M3  Detecção de versão GLPI por version_compare (GLPI_VERSION),
+ *          não mais pela presença do header HTTP (frágil em proxies).
  */
 
 include('../../../inc/includes.php');
@@ -45,22 +49,18 @@ Session::checkLoginUser();
 
 // Camada 2 — CSRF compatível GLPI 10 e 11
 //
-// NO GLPI 11: O CheckCsrfListener do Symfony intercepta o request ANTES
-// do PHP e valida o header X-Glpi-Csrf-Token. Se o listener passar,
-// este código já está rodando com CSRF validado — NÃO chamamos
-// Session::checkCSRF() novamente para não consumir o token duas vezes.
+// [FIX M3] Antes: heurística por header HTTP_X_GLPI_CSRF_TOKEN,
+//          que proxies corporativos podem remover.
+// Agora:   version_compare robusto e independente de headers.
 //
-// NO GLPI 10: Não há CheckCsrfListener. O token vem em $_POST e
-// Session::checkCSRF($_POST) é o mecanismo correto.
+// GLPI 11+: CheckCsrfListener do Symfony intercepta ANTES do PHP.
+//           Se chegarmos aqui, o CSRF já foi validado.
+//           NÃO chamar Session::checkCSRF() para não consumir o token 2x.
 //
-// Identificamos o GLPI 11 pela presença do header X-Glpi-Csrf-Token.
-// Se o header estiver ausente, caímos no caminho GLPI 10.
-$csrfHeader = $_SERVER['HTTP_X_GLPI_CSRF_TOKEN'] ?? '';
-if ($csrfHeader === '') {
-    // GLPI 10: token vem no body — valida pelo método nativo
+// GLPI 10:  Não há CheckCsrfListener. Valida pelo método nativo.
+if (version_compare(GLPI_VERSION, '11.0.0', '<')) {
     Session::checkCSRF($_POST);
 }
-// GLPI 11: Symfony já validou. Não chamar checkCSRF aqui.
 
 // Camada 3 — direito mínimo de leitura no plugin
 Session::checkRight(Ipbx::$rightname, READ);
@@ -340,6 +340,8 @@ try {
             nmJson(false, ['error' => 'Ação desconhecida: ' . htmlspecialchars($action)]);
     }
 } catch (\Throwable $e) {
-    \Toolbox::logDebug('ipbx_sub.php error: ' . $e->getMessage());
-    nmJson(false, ['error' => 'Erro interno: ' . $e->getMessage()]);
+    // [FIX M2] Loga detalhe internamente; retorna mensagem genérica ao cliente
+    //          para evitar information disclosure (OWASP A05).
+    \Toolbox::logDebug('[newmanagement] ipbx_sub.php error: ' . $e->getMessage());
+    nmJson(false, ['error' => __('Ocorreu um erro interno. Contate o administrador.', 'newmanagement')]);
 }

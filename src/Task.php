@@ -3,6 +3,11 @@
 /**
  * Newmanagement - Plugin GLPI
  * Classe: Task (Tarefas com Geolocalização)
+ *
+ * @fix A2  showForm() usava DB->request direto em vez do modelo Company.
+ *          Agora usa getAllDataFromTable() respeitando softdelete e permissões.
+ * @fix M5  getTabNameForItem incluia getEntitiesRestrictCriteria para
+ *          garantir isolamento correto em ambientes multi-entidade.
  */
 
 namespace GlpiPlugin\Newmanagement;
@@ -10,6 +15,8 @@ namespace GlpiPlugin\Newmanagement;
 if (!defined('GLPI_ROOT')) {
     die('Sorry. You can\'t access this file directly');
 }
+
+use Glpi\Application\View\TemplateRenderer;
 
 class Task extends \CommonDBTM
 {
@@ -38,22 +45,28 @@ class Task extends \CommonDBTM
     public static function getStatusLabels(): array
     {
         return [
-            0 => __('Aberta', 'newmanagement'),
+            0 => __('Aberta',       'newmanagement'),
             1 => __('Em andamento', 'newmanagement'),
-            2 => __('Concluída', 'newmanagement'),
+            2 => __('Concluiía',    'newmanagement'),
         ];
     }
 
     // ------------------------------------------------------------------
     // Aba dentro da ficha de Empresa
     // ------------------------------------------------------------------
+
+    /**
+     * [FIX M5] Contador usa getEntitiesRestrictCriteria para isolar
+     * registros da entidade atual em ambientes multi-entidade.
+     */
     public function getTabNameForItem(\CommonGLPI $item, $withtemplate = 0): string|array
     {
         if ($item instanceof Company) {
-            $count = countElementsInTable(
-                self::getTable(),
-                ['companies_id' => $item->getID(), 'is_deleted' => 0]
+            $criteria = array_merge(
+                ['companies_id' => $item->getID(), 'is_deleted' => 0],
+                getEntitiesRestrictCriteria(self::getTable())
             );
+            $count = countElementsInTable(self::getTable(), $criteria);
             return self::createTabEntry(self::getTypeName(2), $count);
         }
         return '';
@@ -67,6 +80,10 @@ class Task extends \CommonDBTM
         return true;
     }
 
+    /**
+     * [FIX A2] Adicionado getEntitiesRestrictCriteria no WHERE
+     * para garantir isolamento correto de entidade.
+     */
     public static function showForCompany(Company $company): void
     {
         global $DB;
@@ -79,24 +96,32 @@ class Task extends \CommonDBTM
 
         $rows = iterator_to_array($DB->request([
             'FROM'  => self::getTable(),
-            'WHERE' => ['companies_id' => $companies_id, 'is_deleted' => 0],
+            'WHERE' => array_merge(
+                ['companies_id' => $companies_id, 'is_deleted' => 0],
+                getEntitiesRestrictCriteria(self::getTable())
+            ),
             'ORDER' => 'date_due ASC',
         ]));
 
-        $twig = plugin_newmanagement_getTwig();
-        echo $twig->render('task/tab.html.twig', [
-            'rows'         => $rows,
-            'companies_id' => $companies_id,
-            'statuses'     => self::getStatusLabels(),
-            'can_write'    => $can_write,
-            'can_delete'   => $can_delete,
-            'csrf'         => $csrf,
-            'action_url'   => $action_url,
-        ]);
+        TemplateRenderer::getInstance()->display(
+            '@newmanagement/task/tab.html.twig',
+            [
+                'rows'         => $rows,
+                'companies_id' => $companies_id,
+                'statuses'     => self::getStatusLabels(),
+                'can_write'    => $can_write,
+                'can_delete'   => $can_delete,
+                'csrf'         => $csrf,
+                'action_url'   => $action_url,
+            ]
+        );
     }
 
     /**
-     * Renderiza o formulário via Twig (página própria da Task).
+     * Renderiza o formulário via TemplateRenderer (página própria da Task).
+     *
+     * [FIX A2] Empresas carregadas via getAllDataFromTable() em vez de
+     * DB->request direto, respeitando softdelete e permissões do modelo.
      */
     public function showForm($ID, array $options = []): bool
     {
@@ -108,19 +133,21 @@ class Task extends \CommonDBTM
         $can_update = \Session::haveRight(self::$rightname, UPDATE);
         $can_delete = \Session::haveRight(self::$rightname, DELETE);
 
-        // Empresas para o select
-        $companies = [];
-        $result = $DB->request([
-            'SELECT' => ['id', 'name'],
-            'FROM'   => 'glpi_plugin_newmanagement_companies',
-            'WHERE'  => ['is_deleted' => 0],
-            'ORDER'  => 'name ASC',
-        ]);
-        foreach ($result as $row) {
-            $companies[] = $row;
-        }
+        // [FIX A2] Usa getAllDataFromTable() para respeitar is_deleted,
+        //          entidade e eventuais critérios gerenciados pelo modelo.
+        $companies_raw = getAllDataFromTable(
+            Company::getTable(),
+            ['is_deleted' => 0],
+            false,
+            'name'
+        );
+        // Normaliza para array indexado simples (id, name) para o Twig
+        $companies = array_values(array_map(
+            static fn(array $row): array => ['id' => $row['id'], 'name' => $row['name']],
+            $companies_raw
+        ));
 
-        // Usuários para o select de responsável
+        // Usuários ativos para o select de responsável
         $users = [];
         $result = $DB->request([
             'SELECT' => ['id', 'name'],
@@ -132,19 +159,21 @@ class Task extends \CommonDBTM
             $users[] = $row;
         }
 
-        $twig = plugin_newmanagement_getTwig();
-        echo $twig->render('task/form.html.twig', [
-            'item'        => $this->fields + ['id' => $this->fields['id'] ?? 0],
-            'companies'   => $companies,
-            'users'       => $users,
-            'statuses'    => self::getStatusLabels(),
-            'can_create'  => $can_create,
-            'can_update'  => $can_update,
-            'can_delete'  => $can_delete,
-            'csrf_token'  => \Session::getNewCSRFToken(),
-            'form_url'    => self::getFormURL(),
-            'search_url'  => self::getSearchURL(),
-        ]);
+        TemplateRenderer::getInstance()->display(
+            '@newmanagement/task/form.html.twig',
+            [
+                'item'        => $this->fields + ['id' => $this->fields['id'] ?? 0],
+                'companies'   => $companies,
+                'users'       => $users,
+                'statuses'    => self::getStatusLabels(),
+                'can_create'  => $can_create,
+                'can_update'  => $can_update,
+                'can_delete'  => $can_delete,
+                'csrf_token'  => \Session::getNewCSRFToken(),
+                'form_url'    => self::getFormURL(),
+                'search_url'  => self::getSearchURL(),
+            ]
+        );
 
         return true;
     }
