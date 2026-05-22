@@ -5,53 +5,75 @@
  * Ações: add/delete de ramais, dispositivos, rede e linha fixa
  * + add/update do registro principal IPBX
  *
- * Responde SEMPRE com JSON { success: bool, error?: string, id?: int }
+ * Responde SEMPRE com JSON { success: bool, error?: string, id?: int, csrf?: string }
  *
  * Proteção em camadas:
  *  1. Session::checkLoginUser()   — usuário autenticado
- *  2. Validação CSRF manual       — compatível GLPI 10 e 11
+ *  2. CSRF — compatível GLPI 10 e 11 (veja nota abaixo)
  *  3. Session::checkRight(READ)   — direito mínimo de leitura
  *  4. Por ação: checkRight(CREATE | UPDATE | DELETE) conforme necessário
  *
- * NOTA GLPI 11 — tokens CSRF single-use via Symfony CheckCsrfListener:
- *   O Symfony intercepta o header X-Glpi-Csrf-Token ANTES do PHP rodar
- *   e já marca o token como usado. Chamar Session::checkCSRF($_POST) em
- *   seguida tenta consumir o mesmo token novamente e lança 403.
- *   Solução: usar Session::validateIDOR() ou checar o header diretamente.
- *   Para máxima compatibilidade (GLPI 10 + 11), verificamos o header
- *   X-Glpi-Csrf-Token primeiro; se ausente, caímos no $_POST.
+ * NOTA GLPI 11 — CheckCsrfListener (Symfony):
+ *   O listener busca o token EM ORDEM:
+ *     1. Header  X-Glpi-Csrf-Token
+ *     2. Body    _glpi_csrf_token  (apenas se Content-Type adequado)
+ *   Para fetch() com FormData, o Content-Type é multipart/form-data.
+ *   O Symfony NÃO faz parse de multipart para _glpi_csrf_token —
+ *   portanto o token DEVE vir no header X-Glpi-Csrf-Token.
+ *   O JS já envia o header; mas se o listener rejeitar antes do PHP,
+ *   este arquivo nem roda. A solução é garantir que o token no header
+ *   seja sempre fresco (gerado na renderização da aba, não da página).
+ *
+ *   TOKENS SÃO SINGLE-USE no GLPI 11. Portanto:
+ *   - Cada resposta JSON retorna um novo token em `csrf`.
+ *   - O JS deve atualizar #nm-ipbx-csrf com esse token.
+ *
+ * COMPATIBILIDADE GLPI 10:
+ *   Session::checkCSRF($_POST) é chamado quando não há header Symfony.
  */
 
 include('../../../inc/includes.php');
 
 use GlpiPlugin\Newmanagement\Ipbx;
 
+// Impede cache — padrão para endpoints AJAX no GLPI
+Html::header_nocache();
+header('Content-Type: application/json; charset=utf-8');
+
 // Camada 1 — usuário logado
 Session::checkLoginUser();
 
 // Camada 2 — CSRF compatível GLPI 10 e 11
-// No GLPI 11 o Symfony já validou o header X-Glpi-Csrf-Token antes
-// de chegar aqui. Forçar checkCSRF($_POST) consumiria o token duas
-// vezes (single-use) e causaria 403 mesmo com token correto.
-// Estratégia: se o header estiver presente e bater com a sessão, OK.
-// Caso contrário, usa o caminho tradicional do GLPI 10 ($_POST).
+//
+// NO GLPI 11: O CheckCsrfListener do Symfony intercepta o request ANTES
+// do PHP e valida o header X-Glpi-Csrf-Token. Se o listener passar,
+// este código já está rodando com CSRF validado — NÃO chamamos
+// Session::checkCSRF() novamente para não consumir o token duas vezes.
+//
+// NO GLPI 10: Não há CheckCsrfListener. O token vem em $_POST e
+// Session::checkCSRF($_POST) é o mecanismo correto.
+//
+// Identificamos o GLPI 11 pela presença do header X-Glpi-Csrf-Token.
+// Se o header estiver ausente, caímos no caminho GLPI 10.
 $csrfHeader = $_SERVER['HTTP_X_GLPI_CSRF_TOKEN'] ?? '';
 if ($csrfHeader === '') {
     // GLPI 10: token vem no body — valida pelo método nativo
     Session::checkCSRF($_POST);
-} else {
-    // GLPI 11: Symfony já validou o header; apenas confirma que a sessão
-    // está ativa (checkLoginUser acima já garantiu isso).
-    // Não chamamos checkCSRF novamente para não consumir o token duas vezes.
 }
+// GLPI 11: Symfony já validou. Não chamar checkCSRF aqui.
 
 // Camada 3 — direito mínimo de leitura no plugin
 Session::checkRight(Ipbx::$rightname, READ);
 
-header('Content-Type: application/json; charset=utf-8');
-
+/**
+ * Resposta JSON padronizada.
+ * Sempre inclui um novo token CSRF para o JS renovar #nm-ipbx-csrf,
+ * evitando falhas em requests sequenciais com tokens single-use.
+ */
 function nmJson(bool $ok, array $extra = []): void
 {
+    // Gera novo token para o próximo request
+    $extra['csrf'] = Session::getNewCSRFToken();
     echo json_encode(array_merge(['success' => $ok], $extra));
     exit;
 }

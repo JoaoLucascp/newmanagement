@@ -83,15 +83,16 @@ function nmSetLoading(btnId, loading) {
 //
 // PRIORIDADE DE BUSCA DO TOKEN:
 //   1. #nm-ipbx-csrf   — gerado fresh pelo PHP a cada renderização da aba
-//                         (mais confiável no GLPI 11 com tokens single-use)
+//                        (tokens SINGLE-USE no GLPI 11 — deve ser o mais fresco)
 //   2. #nm-chatbot-csrf — equivalente para a aba Chatbot
 //   3. <meta property="glpi:csrf_token"> — GLPI 11 (pode estar expirado após AJAX)
 //   4. <input name="_glpi_csrf_token">   — Fallback GLPI 10
 //
-// IMPORTANTE: O GLPI 11 usa tokens CSRF single-use (Symfony CheckCsrfListener).
-// A meta tag pode conter um token já consumido se a página foi carregada via
-// AJAX. Os hidden inputs gerados pelo PHP na renderização da aba são sempre
-// frescos e devem ser consultados primeiro.
+// RENOVAÇÃO AUTOMÁTICA:
+//   nmPost() atualiza #nm-ipbx-csrf com o token retornado na resposta JSON
+//   (campo `csrf`). O PHP gera um novo token em TODA resposta via
+//   Session::getNewCSRFToken(). Isso garante que requests sequenciais
+//   nunca reutilizem um token já consumido.
 // ---------------------------------------------------------------------------
 
 function nmGetCsrfToken() {
@@ -114,29 +115,42 @@ function nmGetCsrfToken() {
     return '';
 }
 
+/**
+ * Atualiza o token CSRF nos hiddens do DOM com o token retornado
+ * na resposta JSON do servidor. Chamado após TODA resposta bem-sucedida.
+ * Isso garante que o próximo request use sempre um token fresco.
+ */
+function nmRefreshCsrfToken(newToken) {
+    if (!newToken) return;
+    const ipbxHidden = document.getElementById('nm-ipbx-csrf');
+    if (ipbxHidden) ipbxHidden.value = newToken;
+    const chatbotHidden = document.getElementById('nm-chatbot-csrf');
+    if (chatbotHidden) chatbotHidden.value = newToken;
+    // Atualiza meta tag também para manter consistência com o GLPI
+    const meta = document.querySelector('meta[property="glpi:csrf_token"]');
+    if (meta) meta.setAttribute('content', newToken);
+}
+
 // ---------------------------------------------------------------------------
 // Fetch AJAX com CSRF — envia FormData e retorna JSON
 //
-// SOLUÇÃO A: o token CSRF é capturado AQUI, imediatamente antes do fetch,
-// garantindo que seja sempre o mais fresco possível.
-// Qualquer _glpi_csrf_token enviado pelo chamador é DESCARTADO — o token
-// montado no objeto data pode ter envelhecido entre a montagem e a chamada,
-// causando 403 no GLPI 11 (tokens single-use do CheckCsrfListener).
-//
-// GLPI 11 (Symfony CheckCsrfListener) valida o token de duas formas:
-//   1. Header  X-Glpi-Csrf-Token  → interceptado pelo Symfony antes do PHP
-//   2. Body    _glpi_csrf_token   → validado por Session::checkCSRF($_POST)
-// Enviamos os dois para garantir compatibilidade com GLPI 10 e 11.
+// SOLUÇÃO DEFINITIVA para GLPI 11 (tokens single-use):
+//   1. Token capturado IMEDIATAMENTE antes do fetch (mais fresco possível)
+//   2. Enviado no HEADER X-Glpi-Csrf-Token (lido pelo CheckCsrfListener)
+//   3. Enviado também no BODY _glpi_csrf_token (compatibilidade GLPI 10)
+//   4. Resposta JSON sempre contém `csrf` com novo token
+//   5. nmRefreshCsrfToken() atualiza o DOM após cada resposta
 // ---------------------------------------------------------------------------
 
 async function nmPost(url, data) {
     const csrf = nmGetCsrfToken();
     const body = new FormData();
 
+    // Token no body para compatibilidade GLPI 10
     body.append('_glpi_csrf_token', csrf);
 
     Object.entries(data).forEach(([k, v]) => {
-        if (k === '_glpi_csrf_token') return;
+        if (k === '_glpi_csrf_token') return; // não duplicar
         if (Array.isArray(v)) {
             v.forEach(item => body.append(k, item == null ? '' : item));
         } else {
@@ -146,32 +160,35 @@ async function nmPost(url, data) {
 
     const res = await fetch(url, {
         method: 'POST',
+        // Token no header — lido pelo Symfony CheckCsrfListener no GLPI 11
         headers: { 'X-Glpi-Csrf-Token': csrf },
         body,
     });
 
     if (res.status === 403) {
-        // Lê apenas texto simples para não passar HTML bruto ao alert()
-        // (HTML de erro quebraria o glpi_html_dialog com SyntaxError)
-        let msg = '';
+        let msg = 'Token CSRF inválido ou expirado. Recarregue a página e tente novamente.';
         try {
             const text = await res.text();
-            // Tenta extrair JSON; se falhar, usa mensagem genérica
             try {
                 const json = JSON.parse(text);
-                msg = json.error || json.message || '';
+                msg = json.error || json.message || msg;
             } catch {
-                // Resposta é HTML (página de erro do Symfony/GLPI) — não exibir
-                msg = 'Token CSRF inválido ou expirado. Recarregue a página e tente novamente.';
+                // Resposta é HTML de erro do Symfony — usar mensagem genérica
             }
-        } catch {
-            msg = 'Token CSRF inválido ou expirado. Recarregue a página e tente novamente.';
-        }
+        } catch { /* ignora erros de leitura */ }
         throw new Error('HTTP 403: ' + msg);
     }
 
     if (!res.ok) throw new Error('HTTP ' + res.status);
-    return res.json();
+
+    const json = await res.json();
+
+    // Renova token CSRF no DOM com o token retornado pelo servidor
+    if (json && json.csrf) {
+        nmRefreshCsrfToken(json.csrf);
+    }
+
+    return json;
 }
 
 // ---------------------------------------------------------------------------
@@ -314,11 +331,8 @@ function nmInitPagination() {
                 if (pageLabel) pageLabel.textContent = `${data.page} / ${newTotalPages}`;
             }
 
-            if (data.csrf) {
-                section.querySelectorAll('[data-csrf]').forEach(el => {
-                    el.dataset.csrf = data.csrf;
-                });
-            }
+            // Renova token após resposta da paginação
+            if (data.csrf) nmRefreshCsrfToken(data.csrf);
 
         } catch (err) {
             console.error('[NM] Erro na paginação:', err.message);
@@ -331,19 +345,6 @@ function nmInitPagination() {
 
 // ---------------------------------------------------------------------------
 // Botões Adicionar / Remover — IPBX
-//
-// [FIX] Botão Salvar IPBX (#nm-save-all) migrado para delegação no document.
-//
-// PROBLEMA ANTERIOR: o listener era registrado diretamente no elemento via
-// _nmBound. Quando o GLPI recarregava a aba via AJAX (common.tabs.php),
-// o botão era destruído e recriado no DOM — o listener sumia junto.
-// A flag nmDelegatedListenersRegistered ficava true → o bloco de delegados
-// não rodava novamente → botão Salvar não respondia ao clique.
-//
-// SOLUÇÃO: usar window._nmIpbxSaveDelegated (separado dos outros delegados)
-// e registrar o handler do Salvar no document via event delegation,
-// igual ao padrão já adotado pelo Chatbot. O handler usa e.target.closest()
-// para localizar #nm-save-all a cada clique — funciona mesmo após AJAX.
 // ---------------------------------------------------------------------------
 
 let nmDelegatedListenersRegistered = false;
@@ -370,7 +371,6 @@ function nmInitIpbxButtons() {
             const btnSaveAll = e.target.closest('#nm-save-all');
             if (!btnSaveAll) return;
 
-            // Lê actionUrl do próprio botão (preenchido pelo Twig via data-action-url)
             const actionUrl = btnSaveAll.dataset.actionUrl || nmGetIpbxActionUrl();
 
             const ipbxData = {
@@ -388,7 +388,6 @@ function nmInitIpbxButtons() {
                 comment:        nmVal('nm-ipbx-comment'),
             };
 
-            // Feedback visual imediato: desabilita o botão durante o request
             btnSaveAll.disabled = true;
             const originalHtml = btnSaveAll.innerHTML;
             btnSaveAll.innerHTML = '<span class="nm-spinner"></span> Salvando...';
@@ -396,8 +395,6 @@ function nmInitIpbxButtons() {
             try {
                 const result = await nmPost(actionUrl, ipbxData);
 
-                // add_ipbx retorna { success: true, id: N }
-                // update_ipbx retorna { success: true } (sem id)
                 if (result && result.id) {
                     nmUpdateIpbxId(result.id);
                 }
@@ -411,8 +408,6 @@ function nmInitIpbxButtons() {
                 }, 2000);
             } catch (error) {
                 console.error('[NM] Erro ao salvar IPBX:', error.message);
-                // Exibe apenas texto — nunca passar HTML bruto ao alert()
-                // para não quebrar o glpi_html_dialog (SyntaxError: Unexpected token '<')
                 alert('Erro ao salvar IPBX: ' + error.message);
                 btnSaveAll.innerHTML = originalHtml;
                 btnSaveAll.disabled = false;
