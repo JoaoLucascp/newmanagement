@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 declare(strict_types=1);
 
 define('GLPI_ROOT',           dirname(__DIR__, 4));
