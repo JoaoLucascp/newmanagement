@@ -323,7 +323,10 @@ try {
     // Fix [M2]: detalhe do erro vai apenas para o log do servidor.
     // O cliente recebe mensagem genérica — não vaza nomes de tabelas,
     // queries SQL nem stack traces (OWASP A05 — Security Misconfiguration).
-    \Toolbox::logError(
+    // Fix [GLPI11]: Toolbox::logError() foi removido no GLPI 11.
+    //               O método correto é Toolbox::logInFile().
+    \Toolbox::logInFile(
+        'php-errors',
         '[Newmanagement] ipbx_sub.php error: ' . $e->getMessage()
         . ' | ' . $e->getFile() . ':' . $e->getLine()
     );
