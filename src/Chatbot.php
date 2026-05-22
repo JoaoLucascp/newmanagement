@@ -15,10 +15,10 @@ use Glpi\Application\View\TemplateRenderer;
 
 class Chatbot extends \CommonDBTM
 {
-    public static $rightname = 'plugin_newmanagement_chatbot';
+    public static string $rightname = 'plugin_newmanagement_chatbot';
 
-    public static $itemtype = Company::class;
-    public static $items_id = 'companies_id';
+    public static string $itemtype = Company::class;
+    public static string $items_id = 'companies_id';
 
     public static function getTypeName($nb = 0): string
     {
@@ -77,7 +77,7 @@ class Chatbot extends \CommonDBTM
      *   - 'has_admin_password'      => bool (true = senha salva no banco)
      *   - 'has_superadmin_password' => bool (true = senha salva no banco)
      * O template Twig deve:
-     *   - Mostrar placeholder '\u2022\u2022\u2022\u2022\u2022\u2022' quando o bool for true.
+     *   - Mostrar placeholder '••••••' quando o bool for true.
      *   - Só enviar nova senha ao servidor se o campo vier preenchido no POST.
      *   - Nunca popular value="" com a senha real.
      */
