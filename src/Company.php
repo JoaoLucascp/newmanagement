@@ -15,7 +15,7 @@ use Glpi\Application\View\TemplateRenderer;
 
 class Company extends \CommonDBTM
 {
-    public static $rightname = 'plugin_newmanagement_company';
+    public static string $rightname = 'plugin_newmanagement_company';
 
     const CONTRACT_NO_CONTRACT = 0;
     const CONTRACT_ACTIVE      = 1;
@@ -44,19 +44,11 @@ class Company extends \CommonDBTM
     // Validação de CNPJ (backend)
     // -------------------------------------------------------
 
-    /**
-     * Remove caracteres não numéricos do CNPJ.
-     * Retorna apenas os 14 dígitos ou string vazia se inválido.
-     */
     private static function sanitizeCnpj(string $cnpj): string
     {
         return preg_replace('/\D/', '', $cnpj);
     }
 
-    /**
-     * Valida CNPJ completo: formato + dígitos verificadores.
-     * Implementação do algoritmo oficial da Receita Federal.
-     */
     public static function isValidCnpj(string $cnpj): bool
     {
         $cnpj = self::sanitizeCnpj($cnpj);
@@ -65,12 +57,10 @@ class Company extends \CommonDBTM
             return false;
         }
 
-        // Rejeita sequências com todos dígitos iguais (ex: 00000000000000)
         if (preg_match('/^(\d)\1{13}$/', $cnpj)) {
             return false;
         }
 
-        // Calcula 1º dígito verificador
         $sum    = 0;
         $weight = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
         for ($i = 0; $i < 12; $i++) {
@@ -83,7 +73,6 @@ class Company extends \CommonDBTM
             return false;
         }
 
-        // Calcula 2º dígito verificador
         $sum    = 0;
         $weight = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
         for ($i = 0; $i < 13; $i++) {
@@ -95,10 +84,6 @@ class Company extends \CommonDBTM
         return (int) $cnpj[13] === $digit2;
     }
 
-    /**
-     * Formata CNPJ para armazenamento padronizado: XX.XXX.XXX/XXXX-XX.
-     * Retorna o valor original se não tiver 14 dígitos.
-     */
     private static function formatCnpj(string $cnpj): string
     {
         $digits = self::sanitizeCnpj($cnpj);
@@ -108,32 +93,18 @@ class Company extends \CommonDBTM
         return vsprintf('%s%s.%s%s%s.%s%s%s/%s%s%s%s-%s%s', str_split($digits));
     }
 
-    /**
-     * Validação e sanitização chamada antes de INSERT.
-     * [FIX] CNPJ agora é validado no backend — não depende só do JS.
-     */
     public function prepareInputForAdd($input)
     {
         return $this->prepareInput($input);
     }
 
-    /**
-     * Validação e sanitização chamada antes de UPDATE.
-     * [FIX] CNPJ agora é validado no backend — não depende só do JS.
-     */
     public function prepareInputForUpdate($input)
     {
         return $this->prepareInput($input);
     }
 
-    /**
-     * Lógica comum de validação para add e update.
-     * Retorna false (com mensagem de erro) se o CNPJ for inválido.
-     * Retorna o array de input sanitizado se tudo estiver ok.
-     */
     private function prepareInput(array $input)
     {
-        // name é obrigatório
         if (isset($input['name']) && trim($input['name']) === '') {
             \Session::addMessageAfterRedirect(
                 __('O campo Nome é obrigatório.', 'newmanagement'),
@@ -143,7 +114,6 @@ class Company extends \CommonDBTM
             return false;
         }
 
-        // Valida CNPJ somente se foi enviado e não está em branco
         if (!empty($input['cnpj'])) {
             $cnpj = trim($input['cnpj']);
 
@@ -156,11 +126,9 @@ class Company extends \CommonDBTM
                 return false;
             }
 
-            // Armazena sempre no formato padronizado XX.XXX.XXX/XXXX-XX
             $input['cnpj'] = self::formatCnpj($cnpj);
         }
 
-        // Sanitiza e-mail se enviado
         if (!empty($input['email'])) {
             $email = filter_var(trim($input['email']), FILTER_VALIDATE_EMAIL);
             if ($email === false) {
@@ -196,11 +164,12 @@ class Company extends \CommonDBTM
             'massiveaction' => false,
         ];
         $tab[] = [
-            'id'       => 2,
-            'table'    => self::getTable(),
-            'field'    => 'cnpj',
-            'name'     => __('CNPJ', 'newmanagement'),
-            'datatype' => 'string',
+            'id'            => 2,
+            'table'         => self::getTable(),
+            'field'         => 'cnpj',
+            'name'          => __('CNPJ', 'newmanagement'),
+            'datatype'      => 'string',
+            'massiveaction' => false,
         ];
         $tab[] = [
             'id'       => 3,
@@ -224,11 +193,12 @@ class Company extends \CommonDBTM
             'datatype' => 'email',
         ];
         $tab[] = [
-            'id'       => 6,
-            'table'    => self::getTable(),
-            'field'    => 'address',
-            'name'     => __('Endereco', 'newmanagement'),
-            'datatype' => 'text',
+            'id'            => 6,
+            'table'         => self::getTable(),
+            'field'         => 'address',
+            'name'          => __('Endereco', 'newmanagement'),
+            'datatype'      => 'text',
+            'massiveaction' => false,
         ];
         $tab[] = [
             'id'       => 7,
@@ -238,11 +208,12 @@ class Company extends \CommonDBTM
             'datatype' => 'specific',
         ];
         $tab[] = [
-            'id'       => 8,
-            'table'    => self::getTable(),
-            'field'    => 'comment',
-            'name'     => __('Comentario', 'newmanagement'),
-            'datatype' => 'text',
+            'id'            => 8,
+            'table'         => self::getTable(),
+            'field'         => 'comment',
+            'name'          => __('Comentario', 'newmanagement'),
+            'datatype'      => 'text',
+            'massiveaction' => false,
         ];
         $tab[] = [
             'id'            => 19,
