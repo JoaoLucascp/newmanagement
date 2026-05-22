@@ -81,24 +81,36 @@ function nmSetLoading(btnId, loading) {
 // ---------------------------------------------------------------------------
 // CSRF Helper — GLPI 11 exige X-Glpi-Csrf-Token em todo POST
 //
-// GLPI 11 armazena o token em: <meta property="glpi:csrf_token" content="...">
-// O atributo é "property", NÃO "name". Usar o seletor errado retorna null
-// e o token enviado fica vazio, causando 403 em todas as chamadas POST.
+// PRIORIDADE DE BUSCA DO TOKEN:
+//   1. #nm-ipbx-csrf   — gerado fresh pelo PHP a cada renderização da aba
+//                         (mais confiável no GLPI 11 com tokens single-use)
+//   2. #nm-chatbot-csrf — equivalente para a aba Chatbot
+//   3. <meta property="glpi:csrf_token"> — GLPI 11 (pode estar expirado após AJAX)
+//   4. <input name="_glpi_csrf_token">   — Fallback GLPI 10
 //
-// IMPORTANTE: O GLPI 11 usa tokens CSRF single-use.
-// Sempre chamar nmGetCsrfToken() NO MOMENTO do fetch para obter o token
-// atual, que o GLPI atualiza a cada resposta.
+// IMPORTANTE: O GLPI 11 usa tokens CSRF single-use (Symfony CheckCsrfListener).
+// A meta tag pode conter um token já consumido se a página foi carregada via
+// AJAX. Os hidden inputs gerados pelo PHP na renderização da aba são sempre
+// frescos e devem ser consultados primeiro.
 // ---------------------------------------------------------------------------
 
 function nmGetCsrfToken() {
-    // GLPI 11: <meta property="glpi:csrf_token" content="...">
+    // Prioridade 1: hidden gerado pelo PHP na aba IPBX (sempre fresco)
+    const ipbxHidden = document.getElementById('nm-ipbx-csrf');
+    if (ipbxHidden && ipbxHidden.value) return ipbxHidden.value;
+
+    // Prioridade 2: hidden da aba Chatbot
+    const chatbotHidden = document.getElementById('nm-chatbot-csrf');
+    if (chatbotHidden && chatbotHidden.value) return chatbotHidden.value;
+
+    // Prioridade 3: GLPI 11 meta tag (pode estar expirada após AJAX)
     const meta = document.querySelector('meta[property="glpi:csrf_token"]');
     if (meta) return meta.getAttribute('content');
-    // Fallback GLPI 10: <input name="_glpi_csrf_token">
+
+    // Fallback GLPI 10: input hidden no formulário
     const hidden = document.querySelector('input[name="_glpi_csrf_token"]');
     if (hidden) return hidden.value;
-    const nmHidden = document.getElementById('nm-chatbot-csrf');
-    if (nmHidden && nmHidden.value) return nmHidden.value;
+
     return '';
 }
 
@@ -139,9 +151,23 @@ async function nmPost(url, data) {
     });
 
     if (res.status === 403) {
+        // Lê apenas texto simples para não passar HTML bruto ao alert()
+        // (HTML de erro quebraria o glpi_html_dialog com SyntaxError)
         let msg = '';
-        try { msg = await res.text(); } catch (e) { msg = ''; }
-        throw new Error('HTTP 403 (CSRF inválido ou expirado) ' + (msg ? ': ' + msg : ''));
+        try {
+            const text = await res.text();
+            // Tenta extrair JSON; se falhar, usa mensagem genérica
+            try {
+                const json = JSON.parse(text);
+                msg = json.error || json.message || '';
+            } catch {
+                // Resposta é HTML (página de erro do Symfony/GLPI) — não exibir
+                msg = 'Token CSRF inválido ou expirado. Recarregue a página e tente novamente.';
+            }
+        } catch {
+            msg = 'Token CSRF inválido ou expirado. Recarregue a página e tente novamente.';
+        }
+        throw new Error('HTTP 403: ' + msg);
     }
 
     if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -385,6 +411,8 @@ function nmInitIpbxButtons() {
                 }, 2000);
             } catch (error) {
                 console.error('[NM] Erro ao salvar IPBX:', error.message);
+                // Exibe apenas texto — nunca passar HTML bruto ao alert()
+                // para não quebrar o glpi_html_dialog (SyntaxError: Unexpected token '<')
                 alert('Erro ao salvar IPBX: ' + error.message);
                 btnSaveAll.innerHTML = originalHtml;
                 btnSaveAll.disabled = false;
