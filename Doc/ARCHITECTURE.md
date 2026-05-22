@@ -8,7 +8,7 @@ O plugin segue a arquitetura padrão do GLPI 11: **CommonDBTM** para modelos, **
 
 ## Estrutura de pastas
 
-```
+```apache
 newmanagement/
 ├── setup.php               # Bootstrap: versão, init, hooks, menu
 ├── hook.php                # Install / uninstall / upgrade (DDL)
@@ -55,33 +55,33 @@ newmanagement/
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                        GLPI Core                        │
-│  CommonDBTM  │  Session  │  TemplateRenderer  │  DBmysql │
+│  CommonDBTM  │  Session  │  TemplateRenderer  │ DBmysql │
 └──────┬───────┴─────┬─────┴────────┬───────────┴────┬────┘
        │             │              │                │
-┌──────▼─────────────▼──────────────▼────────────────▼────┐
+┌──────▼─────────────▼──────────────▼────────────────▼─────┐
 │                   Newmanagement Plugin                   │
 │                                                          │
 │  Models (src/)          Views (templates/)               │
-│  ┌──────────┐           ┌─────────────────┐             │
-│  │ Company  │──defineTabs▶  company/form   │             │
+│  ┌──────────┐           ┌──────────────────┐             │
+│  │ Company  │──defineTabs>  company/form   │             │
 │  │  Ipbx    │           │  ipbx/tab        │             │
 │  │ Chatbot  │           │  chatbot/tab     │             │
 │  │FixedLine │           │  fixedline/tab   │             │
 │  │  Task    │           │  task/tab        │             │
-│  └────┬─────┘           └─────────────────┘             │
+│  └────┬─────┘           └──────────────────┘             │
 │       │ AJAX                                             │
 │  ┌────▼────────────┐                                     │
 │  │ ajax/ipbx_sub   │  ← POST JSON (CSRF single-use)      │
-│  │ ajax/chatbot_sub│  → resposta JSON + novo token        │
+│  │ ajax/chatbot_sub│  → resposta JSON + novo token       │
 │  └─────────────────┘                                     │
-└─────────────────────────────────────────────────────────┘
+└──────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## Fluxo de dados — Aba IPBX
 
-```
+```apache
 Usuário abre ficha de Empresa
         │
         ▼
@@ -115,19 +115,19 @@ JS atualiza token + DOM (sem reload)
 
 ### Tabelas principais
 
-| Tabela | Descrição | Chave estrangeira |
-|---|---|---|
-| `glpi_plugin_newmanagement_companies` | Empresas | — |
-| `glpi_plugin_newmanagement_ipbx` | Servidores IPBX | `companies_id` |
-| `glpi_plugin_newmanagement_ipbx_extensions` | Ramais | `ipbx_id`, `companies_id` |
-| `glpi_plugin_newmanagement_ipbx_devices` | Dispositivos | `ipbx_id`, `companies_id` |
-| `glpi_plugin_newmanagement_ipbx_network` | Redes | `ipbx_id`, `companies_id` |
-| `glpi_plugin_newmanagement_ipbx_lines` | Linhas fixas | `ipbx_id`, `companies_id` |
-| `glpi_plugin_newmanagement_chatbots` | Chatbots | `companies_id` |
-| `glpi_plugin_newmanagement_chatbot_users` | Usuários do chatbot | `chatbot_id` |
-| `glpi_plugin_newmanagement_chatbot_mass_comm` | Comunicações em massa | `chatbot_id` |
-| `glpi_plugin_newmanagement_chatbot_wa_restrictions` | Restrições WhatsApp | `chatbot_id` |
-| `glpi_plugin_newmanagement_tasks` | Tarefas | `companies_id` |
+| Tabela                                                | Descrição             | Chave estrangeira             |
+| ----------------------------------------------------- | ----------------------- | ----------------------------- |
+| `glpi_plugin_newmanagement_companies`               | Empresas                | —                            |
+| `glpi_plugin_newmanagement_ipbx`                    | Servidores IPBX         | `companies_id`              |
+| `glpi_plugin_newmanagement_ipbx_extensions`         | Ramais                  | `ipbx_id`, `companies_id` |
+| `glpi_plugin_newmanagement_ipbx_devices`            | Dispositivos            | `ipbx_id`, `companies_id` |
+| `glpi_plugin_newmanagement_ipbx_network`            | Redes                   | `ipbx_id`, `companies_id` |
+| `glpi_plugin_newmanagement_ipbx_lines`              | Linhas fixas            | `ipbx_id`, `companies_id` |
+| `glpi_plugin_newmanagement_chatbots`                | Chatbots                | `companies_id`              |
+| `glpi_plugin_newmanagement_chatbot_users`           | Usuários do chatbot    | `chatbot_id`                |
+| `glpi_plugin_newmanagement_chatbot_mass_comm`       | Comunicações em massa | `chatbot_id`                |
+| `glpi_plugin_newmanagement_chatbot_wa_restrictions` | Restrições WhatsApp   | `chatbot_id`                |
+| `glpi_plugin_newmanagement_tasks`                   | Tarefas                 | `companies_id`              |
 
 ### Campos comuns (padrão GLPI)
 
@@ -153,6 +153,7 @@ O plugin usa o sistema **single-use token** do GLPI 11:
 ## Dependências externas
 
 Nenhuma. O plugin usa exclusivamente:
+
 - APIs nativas do GLPI (`CommonDBTM`, `Session`, `Toolbox`, `Plugin`, `TemplateRenderer`)
 - Twig (já incluído no GLPI)
 - Tabler Icons (já incluído no GLPI 11)
