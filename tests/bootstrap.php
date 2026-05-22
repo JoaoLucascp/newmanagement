@@ -1,8 +1,6 @@
-<?php
-
+﻿<?php
 declare(strict_types=1);
 
-// Constantes minimas exigidas pelas classes do plugin
 define('GLPI_ROOT',           dirname(__DIR__, 4));
 define('GLPI_VERSION',        '11.0.6');
 define('GLPI_SCHEMA_VERSION', '11.0.6@dev');
@@ -17,52 +15,36 @@ define('WARNING', 2);
 define('NOTICE',  4);
 define('INFO',    8);
 
-// Autoloader do plugin
 require_once __DIR__ . '/../vendor/autoload.php';
 
-// Helper de traducao (stub)
 if (!function_exists('__')) {
     function __(string $str, string $domain = ''): string { return $str; }
 }
 if (!function_exists('_n')) {
-    function _n(string $singular, string $plural, int $n, string $domain = ''): string
-    {
-        return $n === 1 ? $singular : $plural;
-    }
+    function _n(string $s, string $p, int $n, string $d = ''): string { return $n === 1 ? $s : $p; }
 }
 if (!function_exists('getAllDataFromTable')) {
-    function getAllDataFromTable(string $table, array $criteria = [], bool $usecache = false, string $order = ''): array
-    {
-        return [];
-    }
+    function getAllDataFromTable(string $t, array $c = [], bool $u = false, string $o = ''): array { return []; }
 }
 if (!function_exists('countElementsInTable')) {
-    function countElementsInTable(string $table, array $condition = []): int { return 0; }
+    function countElementsInTable(string $t, array $c = []): int { return 0; }
 }
 if (!function_exists('getEntitiesRestrictCriteria')) {
-    function getEntitiesRestrictCriteria(string $table = '', string $field = '', $val = '', bool $is_recursive = false): array
-    {
-        return [];
-    }
+    function getEntitiesRestrictCriteria(string $t = '', string $f = '', $v = '', bool $r = false): array { return []; }
 }
 
-// Stub: CommonGLPI (base de CommonDBTM)
 if (!class_exists('CommonGLPI')) {
-    abstract class CommonGLPI
-    {
+    abstract class CommonGLPI {
         public static function getTypeName(int $nb = 0): string { return ''; }
-        public static function getTable(?string $classname = null): string { return ''; }
+        public static function getTable(?string $c = null): string { return ''; }
         public function getID(): int { return 0; }
     }
 }
 
-// Stub: CommonDBTM (pai de todas as entidades do GLPI)
 if (!class_exists('CommonDBTM')) {
-    abstract class CommonDBTM extends CommonGLPI
-    {
-        public array  $fields = [];
+    abstract class CommonDBTM extends CommonGLPI {
+        public array $fields = [];
         public static string $rightname = '';
-
         public function prepareInputForAdd($input) { return $input; }
         public function prepareInputForUpdate($input) { return $input; }
         public function initForm(int $ID, array $options = []): void {}
@@ -70,62 +52,38 @@ if (!class_exists('CommonDBTM')) {
         public function showFormButtons(array $options = []): void {}
         public function addDefaultFormTab(array &$ong): void {}
         public function addStandardTab(string $class, array &$ong, array $options = []): void {}
-
-        public static function createTabEntry(string $name, int $nb = 0): string
-        {
+        public static function createTabEntry(string $name, int $nb = 0): string {
             return $nb > 0 ? "$name ($nb)" : $name;
         }
     }
 }
 
-// Stub: Session
 if (!class_exists('Session')) {
-    class Session
-    {
+    class Session {
         public static array $messages = [];
-
-        public static function addMessageAfterRedirect(
-            string $message,
-            bool $check_once = false,
-            int $type = INFO,
-            bool $displayed = false
-        ): void {
+        public static function addMessageAfterRedirect(string $message, bool $check_once = false, int $type = INFO, bool $displayed = false): void {
             self::$messages[] = ['message' => $message, 'type' => $type];
         }
-
         public static function haveRight(string $right, int $value): bool { return true; }
-
-        public static function getLastMessage(): ?string
-        {
+        public static function getLastMessage(): ?string {
             $last = end(self::$messages);
             return $last ? $last['message'] : null;
         }
-
         public static function clearMessages(): void { self::$messages = []; }
     }
 }
 
-// Stub: Toolbox
 if (!class_exists('Toolbox')) {
-    class Toolbox
-    {
+    class Toolbox {
         public static function sodiumEncrypt(string $value): string { return base64_encode($value); }
         public static function sodiumDecrypt(string $value): string { return base64_decode($value); }
         public static function logDebug(string $message): void {}
     }
 }
 
-// Stub: Plugin
 if (!class_exists('Plugin')) {
-    class Plugin
-    {
-        public static function getPhpDir(string $plugin): string
-        {
-            return GLPI_ROOT . '/plugins/' . $plugin;
-        }
-        public static function getWebDir(string $plugin): string
-        {
-            return '/plugins/' . $plugin;
-        }
+    class Plugin {
+        public static function getPhpDir(string $plugin): string { return GLPI_ROOT . '/plugins/' . $plugin; }
+        public static function getWebDir(string $plugin): string { return '/plugins/' . $plugin; }
     }
 }
