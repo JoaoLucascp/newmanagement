@@ -3,6 +3,11 @@
 /**
  * Newmanagement - Plugin GLPI
  * Classe: Company (Empresas)
+ *
+ * @fix M4  rawSearchOptions: 'massiveaction' => false adicionado em cnpj,
+ *          address e comment para evitar edição em lote em campos com
+ *          validação custom (cnpj) ou sem sentido semântico em lote
+ *          (address, comment).
  */
 
 namespace GlpiPlugin\Newmanagement;
@@ -110,7 +115,6 @@ class Company extends \CommonDBTM
 
     /**
      * Validação e sanitização chamada antes de INSERT.
-     * [FIX] CNPJ agora é validado no backend — não depende só do JS.
      */
     public function prepareInputForAdd($input)
     {
@@ -119,7 +123,6 @@ class Company extends \CommonDBTM
 
     /**
      * Validação e sanitização chamada antes de UPDATE.
-     * [FIX] CNPJ agora é validado no backend — não depende só do JS.
      */
     public function prepareInputForUpdate($input)
     {
@@ -128,12 +131,9 @@ class Company extends \CommonDBTM
 
     /**
      * Lógica comum de validação para add e update.
-     * Retorna false (com mensagem de erro) se o CNPJ for inválido.
-     * Retorna o array de input sanitizado se tudo estiver ok.
      */
     private function prepareInput(array $input)
     {
-        // name é obrigatório
         if (isset($input['name']) && trim($input['name']) === '') {
             \Session::addMessageAfterRedirect(
                 __('O campo Nome é obrigatório.', 'newmanagement'),
@@ -143,7 +143,6 @@ class Company extends \CommonDBTM
             return false;
         }
 
-        // Valida CNPJ somente se foi enviado e não está em branco
         if (!empty($input['cnpj'])) {
             $cnpj = trim($input['cnpj']);
 
@@ -156,11 +155,9 @@ class Company extends \CommonDBTM
                 return false;
             }
 
-            // Armazena sempre no formato padronizado XX.XXX.XXX/XXXX-XX
             $input['cnpj'] = self::formatCnpj($cnpj);
         }
 
-        // Sanitiza e-mail se enviado
         if (!empty($input['email'])) {
             $email = filter_var(trim($input['email']), FILTER_VALIDATE_EMAIL);
             if ($email === false) {
@@ -195,12 +192,16 @@ class Company extends \CommonDBTM
             'datatype'      => 'itemlink',
             'massiveaction' => false,
         ];
+        // [FIX M4] massiveaction false: CNPJ tem validação de dígitos
+        // verificadores em prepareInput. Ação em lote ignoraria essa
+        // validação e permitiria armazenar CNPJs inválidos.
         $tab[] = [
-            'id'       => 2,
-            'table'    => self::getTable(),
-            'field'    => 'cnpj',
-            'name'     => __('CNPJ', 'newmanagement'),
-            'datatype' => 'string',
+            'id'            => 2,
+            'table'         => self::getTable(),
+            'field'         => 'cnpj',
+            'name'          => __('CNPJ', 'newmanagement'),
+            'datatype'      => 'string',
+            'massiveaction' => false,
         ];
         $tab[] = [
             'id'       => 3,
@@ -223,12 +224,15 @@ class Company extends \CommonDBTM
             'name'     => __('E-mail', 'newmanagement'),
             'datatype' => 'email',
         ];
+        // [FIX M4] massiveaction false: endereço é único por empresa;
+        // edição em lote não faz sentido semântico.
         $tab[] = [
-            'id'       => 6,
-            'table'    => self::getTable(),
-            'field'    => 'address',
-            'name'     => __('Endereco', 'newmanagement'),
-            'datatype' => 'text',
+            'id'            => 6,
+            'table'         => self::getTable(),
+            'field'         => 'address',
+            'name'          => __('Endereco', 'newmanagement'),
+            'datatype'      => 'text',
+            'massiveaction' => false,
         ];
         $tab[] = [
             'id'       => 7,
@@ -237,12 +241,15 @@ class Company extends \CommonDBTM
             'name'     => __('Status do Contrato', 'newmanagement'),
             'datatype' => 'specific',
         ];
+        // [FIX M4] massiveaction false: sobrescrita em lote de anotações
+        // individuais seria destrutiva sem confirmação adequada.
         $tab[] = [
-            'id'       => 8,
-            'table'    => self::getTable(),
-            'field'    => 'comment',
-            'name'     => __('Comentario', 'newmanagement'),
-            'datatype' => 'text',
+            'id'            => 8,
+            'table'         => self::getTable(),
+            'field'         => 'comment',
+            'name'          => __('Comentario', 'newmanagement'),
+            'datatype'      => 'text',
+            'massiveaction' => false,
         ];
         $tab[] = [
             'id'            => 19,
