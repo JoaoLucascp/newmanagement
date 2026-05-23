@@ -14,11 +14,11 @@
 
 include('../../../inc/includes.php');
 
-// [C2] Camada 1 — usuário logado
+// Camada 1 — usuário logado
 Session::checkLoginUser();
-// [C2] Camada 2 — token CSRF obrigatório (GLPI 11)
+// Camada 2 — token CSRF obrigatório (GLPI 11)
 Session::checkCSRF($_POST);
-// [C2] Camada 3 — direito mínimo de leitura no plugin
+// Camada 3 — direito mínimo de leitura no plugin
 Session::checkRight('plugin_newmanagement_chatbot', READ);
 
 header('Content-Type: application/json; charset=utf-8');
@@ -29,11 +29,23 @@ function nmChatbotJson(bool $ok, array $extra = []): void {
 }
 
 /**
- * Criptografa senha com sodiumEncrypt; retorna null para valores vazios
- * para evitar que blobs criptografados inúteis sejam gravados no banco.
+ * Criptografa senha usando GLPIKey — API correta para GLPI 11.
+ * Fallback para Toolbox::sodiumEncrypt() no GLPI 10.
+ * Retorna null para valor vazio (sem senha definida).
+ *
+ * Fix [A1-chatbot]: era Toolbox::sodiumEncrypt() direto.
+ * Padronizado com ipbx_sub.php: GLPIKey::encrypt() no GLPI 11+.
  */
 function nmChatbotEncryptPassword(string $value): ?string {
-    return $value !== '' ? \Toolbox::sodiumEncrypt($value) : null;
+    if ($value === '') {
+        return null;
+    }
+    // GLPI 11+ — forma correta
+    if (class_exists('GLPIKey')) {
+        return (new \GLPIKey())->encrypt($value);
+    }
+    // Fallback GLPI 10
+    return \Toolbox::sodiumEncrypt($value);
 }
 
 $action       = $_POST['action']       ?? '';
@@ -55,7 +67,7 @@ $d = function(string $key): ?string {
 };
 
 /**
- * Insere usuários em lote — método interno (não global para evitar conflito de nomes).
+ * Insere usuários em lote — método interno.
  */
 $bulkUsers = static function(int $chatbotId, int $companiesId, array $users, string $now) use ($DB): void {
     $names  = $users['user_name'] ?? [];
@@ -138,7 +150,6 @@ try {
     switch ($action) {
 
         case 'add_chatbot':
-            // [C2] Direito exato: CREATE
             Session::checkRight('plugin_newmanagement_chatbot', CREATE);
             $data = [
                 'companies_id'            => $companies_id,
@@ -176,11 +187,9 @@ try {
             nmChatbotJson(true, ['id' => $newId]);
 
         case 'update_chatbot':
-            // [C2] Direito exato: UPDATE
             Session::checkRight('plugin_newmanagement_chatbot', UPDATE);
             if ($id <= 0) nmChatbotJson(false, ['error' => 'ID inválido']);
 
-            // [FIX] Verifica se o chatbot pertence ao companies_id do usuário autenticado
             $existing = $DB->request([
                 'FROM'  => 'glpi_plugin_newmanagement_chatbots',
                 'WHERE' => ['id' => $id, 'companies_id' => $companies_id],
@@ -229,7 +238,6 @@ try {
             nmChatbotJson(true);
 
         case 'add_mass_comm':
-            // [C2] Direito exato: CREATE
             Session::checkRight('plugin_newmanagement_chatbot', CREATE);
             $chatbot_id = $n('chatbot_id');
             if ($chatbot_id <= 0) nmChatbotJson(false, ['error' => 'chatbot_id inválido']);
@@ -252,10 +260,8 @@ try {
             nmChatbotJson(true, ['id' => $newId]);
 
         case 'delete_mass_comm':
-            // [C2] Direito exato: DELETE
             Session::checkRight('plugin_newmanagement_chatbot', DELETE);
             if ($id <= 0) nmChatbotJson(false, ['error' => 'ID inválido']);
-            // [FIX] Garante que o registro pertence ao companies_id autenticado
             $DB->delete('glpi_plugin_newmanagement_chatbot_mass_comm', [
                 'id'           => $id,
                 'companies_id' => $companies_id,
@@ -263,7 +269,6 @@ try {
             nmChatbotJson(true);
 
         case 'add_wa_restriction':
-            // [C2] Direito exato: CREATE
             Session::checkRight('plugin_newmanagement_chatbot', CREATE);
             $chatbot_id = $n('chatbot_id');
             if ($chatbot_id <= 0) nmChatbotJson(false, ['error' => 'chatbot_id inválido']);
@@ -282,10 +287,8 @@ try {
             nmChatbotJson(true, ['id' => $newId]);
 
         case 'delete_wa_restriction':
-            // [C2] Direito exato: DELETE
             Session::checkRight('plugin_newmanagement_chatbot', DELETE);
             if ($id <= 0) nmChatbotJson(false, ['error' => 'ID inválido']);
-            // [FIX] Garante que o registro pertence ao companies_id autenticado
             $DB->delete('glpi_plugin_newmanagement_chatbot_wa_restrictions', [
                 'id'           => $id,
                 'companies_id' => $companies_id,
@@ -293,7 +296,6 @@ try {
             nmChatbotJson(true);
 
         case 'add_chatbot_user':
-            // [C2] Direito exato: CREATE
             Session::checkRight('plugin_newmanagement_chatbot', CREATE);
             $chatbot_id = $n('chatbot_id');
             if ($chatbot_id <= 0) nmChatbotJson(false, ['error' => 'chatbot_id inválido']);
@@ -313,10 +315,8 @@ try {
             nmChatbotJson(true, ['id' => $newId]);
 
         case 'delete_chatbot_user':
-            // [C2] Direito exato: DELETE
             Session::checkRight('plugin_newmanagement_chatbot', DELETE);
             if ($id <= 0) nmChatbotJson(false, ['error' => 'ID inválido']);
-            // [FIX] Garante que o registro pertence ao companies_id autenticado
             $DB->delete('glpi_plugin_newmanagement_chatbot_users', [
                 'id'           => $id,
                 'companies_id' => $companies_id,
@@ -327,7 +327,6 @@ try {
             nmChatbotJson(false, ['error' => 'Ação desconhecida: ' . htmlspecialchars($action, ENT_QUOTES)]);
     }
 } catch (\Throwable $e) {
-    // [C2] Não vazar stack trace para o cliente
     \Toolbox::logDebug('chatbot_sub.php error: ' . $e->getMessage());
     nmChatbotJson(false, ['error' => 'Erro interno ao processar requisição']);
 }
