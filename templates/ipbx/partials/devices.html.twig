@@ -67,23 +67,6 @@
           </td>
         </tr>
       {% endfor %}
-
-      {% if can_write and ipbx_id > 0 %}
-      <tr class="tab_bg_2 nm-add-row" id="nm-dev-add-row">
-        <td><input type="text"     class="form-control form-control-sm" id="nm-dev-device_type" placeholder="{{ __('Tipo', 'newmanagement') }}"></td>
-        <td><input type="text"     class="form-control form-control-sm" id="nm-dev-ip_address"  placeholder="{{ __('IP', 'newmanagement') }}"></td>
-        <td><input type="text"     class="form-control form-control-sm" id="nm-dev-login"       placeholder="{{ __('Login', 'newmanagement') }}"></td>
-        <td><input type="password" class="form-control form-control-sm" id="nm-dev-password"    placeholder="{{ __('Senha', 'newmanagement') }}" autocomplete="new-password"></td>
-        <td>
-          <button type="button" class="btn btn-sm btn-success nm-add-dev-btn"
-                  data-ipbx-id="{{ ipbx_id }}"
-                  data-companies-id="{{ companies_id }}"
-                  title="{{ __('Adicionar dispositivo', 'newmanagement') }}">
-            <i class="ti ti-plus"></i>
-          </button>
-        </td>
-      </tr>
-      {% endif %}
     </tbody>
   </table>
 

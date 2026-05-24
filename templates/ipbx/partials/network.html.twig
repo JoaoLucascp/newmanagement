@@ -71,25 +71,6 @@
           </td>
         </tr>
       {% endfor %}
-
-      {% if can_write and ipbx_id > 0 %}
-      <tr class="tab_bg_2 nm-add-row" id="nm-net-add-row">
-        <td><input type="text" class="form-control form-control-sm" id="nm-net-ip_network"    autocomplete="off" placeholder="192.168.1.0"></td>
-        <td><input type="text" class="form-control form-control-sm" id="nm-net-netmask"       autocomplete="off" placeholder="255.255.255.0"></td>
-        <td><input type="text" class="form-control form-control-sm" id="nm-net-gateway"       autocomplete="off" placeholder="192.168.1.1"></td>
-        <td><input type="text" class="form-control form-control-sm" id="nm-net-dns_primary"   autocomplete="off" placeholder="8.8.8.8"></td>
-        <td><input type="text" class="form-control form-control-sm" id="nm-net-dns_secondary" autocomplete="off" placeholder="8.8.4.4"></td>
-        <td><input type="text" class="form-control form-control-sm" id="nm-net-supplier"      autocomplete="off" placeholder="{{ __('Fornecedor', 'newmanagement') }}"></td>
-        <td>
-          <button type="button" class="btn btn-sm btn-success nm-add-net-btn"
-                  data-ipbx-id="{{ ipbx_id }}"
-                  data-companies-id="{{ companies_id }}"
-                  title="{{ __('Adicionar rede', 'newmanagement') }}">
-            <i class="ti ti-plus"></i>
-          </button>
-        </td>
-      </tr>
-      {% endif %}
     </tbody>
   </table>
 

@@ -71,30 +71,6 @@
           </td>
         </tr>
       {% endfor %}
-
-      {% if can_write and ipbx_id > 0 %}
-      <tr class="tab_bg_2 nm-add-row" id="nm-ext-add-row">
-        <td><input type="text"     class="form-control form-control-sm" id="nm-ext-number"       placeholder="{{ __('Ramal', 'newmanagement') }}"></td>
-        <td><input type="password" class="form-control form-control-sm" id="nm-ext-password"     placeholder="{{ __('Senha', 'newmanagement') }}" autocomplete="new-password"></td>
-        <td><input type="text"     class="form-control form-control-sm" id="nm-ext-device_ip"    placeholder="{{ __('IP Dispositivo', 'newmanagement') }}"></td>
-        <td><input type="text"     class="form-control form-control-sm" id="nm-ext-user_name"    placeholder="{{ __('Usuário', 'newmanagement') }}"></td>
-        <td>
-          <select class="form-select form-select-sm" id="nm-ext-records_calls">
-            <option value="0">{{ __('Não grava', 'newmanagement') }}</option>
-            <option value="1">{{ __('Grava', 'newmanagement') }}</option>
-          </select>
-        </td>
-        <td><input type="text"     class="form-control form-control-sm" id="nm-ext-department"   placeholder="{{ __('Departamento', 'newmanagement') }}"></td>
-        <td>
-          <button type="button" class="btn btn-sm btn-success nm-add-ext-btn"
-                  data-ipbx-id="{{ ipbx_id }}"
-                  data-companies-id="{{ companies_id }}"
-                  title="{{ __('Adicionar ramal', 'newmanagement') }}">
-            <i class="ti ti-plus"></i>
-          </button>
-        </td>
-      </tr>
-      {% endif %}
     </tbody>
   </table>
 
