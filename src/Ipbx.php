@@ -222,7 +222,8 @@ class Ipbx extends \CommonDBTM
                 . '<i class="ti ti-trash text-danger"></i></button>';
         }
         return '<tr class="tab_bg_1" id="nm-ext-row-' . $id . '">'
-            . '<td>' . $h($row['number']) . '</td><td>…20</td>'
+            . '<td>' . $h($row['number'])   . '</td>'
+            . '<td>••••••</td>'              // senha mascarada — fix CO-02
             . '<td>' . $h($row['device_ip']) . '</td>'
             . '<td>' . $h($row['user_name']) . '</td>'
             . '<td>' . ($row['records_calls'] ? __('Sim', 'newmanagement') : __('Não', 'newmanagement')) . '</td>'
@@ -247,7 +248,7 @@ class Ipbx extends \CommonDBTM
             . '<td>' . $h($row['device_type']) . '</td>'
             . '<td>' . $h($row['ip_address']) . '</td>'
             . '<td>' . $h($row['login'] ?? '') . '</td>'
-            . '<td>…20</td>'
+            . '<td>••••••</td>'              // senha mascarada — fix CO-02
             . '<td>' . $delete_btn . '</td></tr>';
     }
 
