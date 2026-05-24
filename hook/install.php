@@ -264,25 +264,32 @@ function plugin_newmanagement_install_tables(): bool
 
         // -------------------------------------------------------
         // Tasks
+        // fix(DB-01): adiciona assigned_user_id (FK para glpi_users)
+        // fix(DB-02): adiciona digital_signature (texto da assinatura)
         // -------------------------------------------------------
         if (!$DB->tableExists('glpi_plugin_newmanagement_tasks')) {
             $DB->doQueryOrDie("CREATE TABLE `glpi_plugin_newmanagement_tasks` (
-                `id`            int {$key} NOT NULL AUTO_INCREMENT,
-                `name`          varchar(255) NOT NULL DEFAULT '',
-                `companies_id`  int {$key} NOT NULL DEFAULT 0,
-                `status`        tinyint(1)   NOT NULL DEFAULT 0
-                                COMMENT '0=Pendente,1=Em andamento,2=Concluida',
-                `date_due`      timestamp    DEFAULT NULL,
-                `km_calculated` decimal(10,2) DEFAULT NULL,
-                `latitude`      decimal(10,6) DEFAULT NULL,
-                `longitude`     decimal(10,6) DEFAULT NULL,
-                `comment`       text         DEFAULT NULL,
-                `date_creation` timestamp    DEFAULT NULL,
-                `date_mod`      timestamp    DEFAULT NULL,
-                `is_deleted`    tinyint(1)   NOT NULL DEFAULT 0,
+                `id`                int {$key} NOT NULL AUTO_INCREMENT,
+                `name`              varchar(255) NOT NULL DEFAULT '',
+                `companies_id`      int {$key} NOT NULL DEFAULT 0,
+                `assigned_user_id`  int {$key}            DEFAULT NULL
+                                    COMMENT 'FK glpi_users.id — usuário responsável',
+                `status`            tinyint(1)   NOT NULL DEFAULT 0
+                                    COMMENT '0=Pendente,1=Em andamento,2=Concluida',
+                `date_due`          timestamp    DEFAULT NULL,
+                `km_calculated`     decimal(10,2) DEFAULT NULL,
+                `latitude`          decimal(10,6) DEFAULT NULL,
+                `longitude`         decimal(10,6) DEFAULT NULL,
+                `digital_signature` text         DEFAULT NULL
+                                    COMMENT 'Assinatura digital / hash da conclusão',
+                `comment`           text         DEFAULT NULL,
+                `date_creation`     timestamp    DEFAULT NULL,
+                `date_mod`          timestamp    DEFAULT NULL,
+                `is_deleted`        tinyint(1)   NOT NULL DEFAULT 0,
                 PRIMARY KEY (`id`),
                 KEY `name` (`name`),
-                KEY `companies_id` (`companies_id`)
+                KEY `companies_id` (`companies_id`),
+                KEY `assigned_user_id` (`assigned_user_id`)
             ) ENGINE=InnoDB DEFAULT CHARSET={$cs} COLLATE={$col} ROW_FORMAT=DYNAMIC");
         } else {
             $cols = $DB->listFields('glpi_plugin_newmanagement_tasks');
@@ -290,6 +297,25 @@ function plugin_newmanagement_install_tables(): bool
             if (isset($cols['date_due']) && strtolower($cols['date_due']['Type']) === 'datetime')
                 $migration->changeField('glpi_plugin_newmanagement_tasks',
                     'date_due', 'date_due', 'timestamp DEFAULT NULL');
+            // fix(DB-01): migração idempotente para assigned_user_id
+            if (!isset($cols['assigned_user_id'])) {
+                $migration->addField(
+                    'glpi_plugin_newmanagement_tasks',
+                    'assigned_user_id',
+                    "int {$key} DEFAULT NULL COMMENT 'FK glpi_users.id — usuário responsável'",
+                    ['after' => 'companies_id']
+                );
+                $migration->addKey('glpi_plugin_newmanagement_tasks', 'assigned_user_id');
+            }
+            // fix(DB-02): migração idempotente para digital_signature
+            if (!isset($cols['digital_signature'])) {
+                $migration->addField(
+                    'glpi_plugin_newmanagement_tasks',
+                    'digital_signature',
+                    "text DEFAULT NULL COMMENT 'Assinatura digital / hash da conclusão'",
+                    ['after' => 'longitude']
+                );
+            }
         }
 
         // -------------------------------------------------------
@@ -430,9 +456,9 @@ function plugin_newmanagement_install_tables(): bool
                 'restriction_time' => 'varchar(50) DEFAULT NULL',
                 'end_date'         => 'date DEFAULT NULL',
             ];
-            foreach ($optional as $field => $def) {
+            foreach ($optional as $field => $dev) {
                 if (!isset($cols[$field]))
-                    $migration->addField('glpi_plugin_newmanagement_chatbot_wa_restrictions', $field, $def);
+                    $migration->addField('glpi_plugin_newmanagement_chatbot_wa_restrictions', $field, $dev);
             }
             $migration->addKey('glpi_plugin_newmanagement_chatbot_wa_restrictions', 'companies_id');
         }
