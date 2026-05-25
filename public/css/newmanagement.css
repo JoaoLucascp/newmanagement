@@ -88,3 +88,75 @@
     background-color: #e9e8e4;
     color: #555;
 }
+
+/* ── Abas horizontais IPBX ───────────────────────────────────── */
+.nm-tabs-wrapper {
+    border: 1px solid var(--tblr-border-color, #dee2e6);
+    border-radius: var(--tblr-border-radius, .375rem);
+    overflow: hidden;
+}
+
+.nm-tab-bar {
+    display: flex;
+    gap: 0;
+    background: var(--tblr-bg-surface-secondary, #f8fafc);
+    border-bottom: 1px solid var(--tblr-border-color, #dee2e6);
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.nm-tab-bar::-webkit-scrollbar { display: none; }
+
+.nm-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: .55rem 1rem;
+    font-size: .8rem;
+    font-weight: 500;
+    color: var(--tblr-secondary, #6c7a91);
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color .15s, border-color .15s;
+}
+
+.nm-tab:hover {
+    color: var(--tblr-primary, #206bc4);
+}
+
+.nm-tab.active {
+    color: var(--tblr-primary, #206bc4);
+    border-bottom-color: var(--tblr-primary, #206bc4);
+    background: transparent;
+}
+
+.nm-tab-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    font-size: .7rem;
+    font-weight: 600;
+    border-radius: 999px;
+    background: var(--tblr-border-color, #dee2e6);
+    color: var(--tblr-secondary, #6c7a91);
+    transition: background .15s, color .15s;
+}
+
+.nm-tab.active .nm-tab-count {
+    background: var(--tblr-primary, #206bc4);
+    color: #fff;
+}
+
+.nm-tab-panel {
+    padding: 1rem;
+}
+
+.nm-tab-panel[hidden] {
+    display: none;
+}
+/* ───────────────────────────────────────────────────────── */
