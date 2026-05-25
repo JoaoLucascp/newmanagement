@@ -64,9 +64,10 @@ try {
             $newid = $task->add($data);
             if ($newid) {
                 echo json_encode([
-                    'success'    => true,
-                    'id'         => $newid,
-                    'csrf_token' => Session::getNewCSRFToken(),
+                    'success' => true,
+                    'id'      => $newid,
+                    // fix(JS-01): campo 'csrf' alinhado com nmRefreshCsrfToken no JS
+                    'csrf'    => Session::getNewCSRFToken(),
                 ]);
             } else {
                 echo json_encode(['success' => false, 'message' => __('Erro ao criar tarefa.', 'newmanagement')]);
@@ -104,8 +105,9 @@ try {
 
             $task->update($data);
             echo json_encode([
-                'success'    => true,
-                'csrf_token' => Session::getNewCSRFToken(),
+                'success' => true,
+                // fix(JS-01): campo 'csrf' alinhado com nmRefreshCsrfToken no JS
+                'csrf'    => Session::getNewCSRFToken(),
             ]);
             break;
 
@@ -120,7 +122,11 @@ try {
             }
 
             $task->delete(['id' => $id], true); // true = purge (deleção permanente)
-            echo json_encode(['success' => true]);
+            // fix(SE-02): retorna novo token CSRF após delete para manter sessão válida
+            echo json_encode([
+                'success' => true,
+                'csrf'    => Session::getNewCSRFToken(),
+            ]);
             break;
 
         default:
