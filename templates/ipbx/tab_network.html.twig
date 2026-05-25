@@ -10,51 +10,9 @@
      data-ipbx-id="{{ ipbx_id }}"
      data-companies-id="{{ companies_id }}">
 
-  {# === Lista de redes === #}
-  <table class="tab_cadre_fixe">
-    <thead>
-      <tr class="tab_bg_2">
-        <th>{{ 'Rede'|trans({}, 'newmanagement') }}</th>
-        <th>{{ 'Máscara'|trans({}, 'newmanagement') }}</th>
-        <th>{{ 'Gateway'|trans({}, 'newmanagement') }}</th>
-        <th>{{ 'DNS Primário'|trans({}, 'newmanagement') }}</th>
-        <th>{{ 'DNS Secundário'|trans({}, 'newmanagement') }}</th>
-        <th>{{ 'Provedor'|trans({}, 'newmanagement') }}</th>
-        {% if can_delete %}<th></th>{% endif %}
-      </tr>
-    </thead>
-    <tbody id="nm-net-rows">
-      {% for row in rows %}
-      <tr id="nm-net-row-{{ row.id }}">
-        <td>{{ row.ip_network|default('-')|e }}</td>
-        <td>{{ row.netmask|default('-')|e }}</td>
-        <td>{{ row.gateway|default('-')|e }}</td>
-        <td>{{ row.dns_primary|default('-')|e }}</td>
-        <td>{{ row.dns_secondary|default('-')|e }}</td>
-        <td>{{ row.supplier|default('-')|e }}</td>
-        {% if can_delete %}
-        <td>
-          <button type="button" class="btn btn-sm btn-danger nm-net-delete"
-                  data-id="{{ row.id }}"
-                  data-csrf="{{ csrf|e('html_attr') }}">
-            <i class="ti ti-trash"></i>
-          </button>
-        </td>
-        {% endif %}
-      </tr>
-      {% else %}
-      <tr id="nm-net-empty">
-        <td colspan="{{ can_delete ? 7 : 6 }}" class="text-center text-muted py-3">
-          {{ 'Nenhuma rede cadastrada.'|trans({}, 'newmanagement') }}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-
-  {# === Formulário de adição === #}
+  {# === Formulário de adição (topo) === #}
   {% if can_write %}
-  <div class="card mt-3">
+  <div class="card mb-3">
     <div class="card-header">
       <strong>{{ 'Adicionar Rede'|trans({}, 'newmanagement') }}</strong>
     </div>
@@ -85,13 +43,54 @@
 
       <div class="d-flex justify-content-end mt-3">
         <button type="button" id="nm-net-save" class="btn btn-primary">
-          <i class="ti ti-plus" id="nm-net-save-icon"></i>
+          <i class="ti ti-plus"></i>
           {{ 'Adicionar Rede'|trans({}, 'newmanagement') }}
         </button>
       </div>
     </div>
   </div>
   {% endif %}
+
+  {# === Lista de redes (abaixo do formulário) === #}
+  <table class="tab_cadre_fixe">
+    <thead>
+      <tr class="tab_bg_2">
+        <th>{{ 'Rede'|trans({}, 'newmanagement') }}</th>
+        <th>{{ 'Máscara'|trans({}, 'newmanagement') }}</th>
+        <th>{{ 'Gateway'|trans({}, 'newmanagement') }}</th>
+        <th>{{ 'DNS Primário'|trans({}, 'newmanagement') }}</th>
+        <th>{{ 'DNS Secundário'|trans({}, 'newmanagement') }}</th>
+        <th>{{ 'Provedor'|trans({}, 'newmanagement') }}</th>
+        {% if can_delete %}<th></th>{% endif %}
+      </tr>
+    </thead>
+    <tbody id="nm-net-rows">
+      {% for row in rows %}
+      <tr id="nm-net-row-{{ row.id }}">
+        <td>{{ row.ip_network|default('-')|e }}</td>
+        <td>{{ row.netmask|default('-')|e }}</td>
+        <td>{{ row.gateway|default('-')|e }}</td>
+        <td>{{ row.dns_primary|default('-')|e }}</td>
+        <td>{{ row.dns_secondary|default('-')|e }}</td>
+        <td>{{ row.supplier|default('-')|e }}</td>
+        {% if can_delete %}
+        <td>
+          <button type="button" class="btn btn-sm btn-danger nm-net-delete"
+                  data-id="{{ row.id }}">
+            <i class="ti ti-trash"></i>
+          </button>
+        </td>
+        {% endif %}
+      </tr>
+      {% else %}
+      <tr id="nm-net-empty">
+        <td colspan="{{ can_delete ? 7 : 6 }}" class="text-center text-muted py-3">
+          {{ 'Nenhuma rede cadastrada.'|trans({}, 'newmanagement') }}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 
 </div>
 
@@ -106,7 +105,6 @@
   const ipbxId      = tab.dataset.ipbxId;
   const companiesId = tab.dataset.companiesId;
 
-  /** Lê a meta tag do GLPI — fonte canônica do CSRF no GLPI 11 */
   function nmCsrf() {
     const meta = document.querySelector('meta[property="glpi:csrf_token"]');
     if (meta && meta.getAttribute('content')) return meta.getAttribute('content');
@@ -147,7 +145,6 @@
     btn.disabled = spin;
   }
 
-  // --- ADICIONAR ---
   const saveBtn = document.getElementById('nm-net-save');
   if (saveBtn) {
     saveBtn.addEventListener('click', async () => {
@@ -194,7 +191,6 @@
     });
   }
 
-  // --- EXCLUIR ---
   function bindDeleteButtons() {
     document.querySelectorAll('.nm-net-delete').forEach(btn => {
       if (btn.dataset.bound) return;

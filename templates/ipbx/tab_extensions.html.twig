@@ -16,55 +16,9 @@
      data-ipbx-id="{{ ipbx_id }}"
      data-companies-id="{{ companies_id }}">
 
-  {# === Lista de ramais existentes === #}
-  <table class="tab_cadre_fixe" id="nm-ext-list">
-    <thead>
-      <tr class="tab_bg_2">
-        <th>{{ 'Ramal'|trans({}, 'newmanagement') }}</th>
-        <th>{{ 'Usuário'|trans({}, 'newmanagement') }}</th>
-        <th>{{ 'IP Dispositivo'|trans({}, 'newmanagement') }}</th>
-        <th>{{ 'Departamento'|trans({}, 'newmanagement') }}</th>
-        <th>{{ 'Grava?'|trans({}, 'newmanagement') }}</th>
-        {% if can_delete %}<th></th>{% endif %}
-      </tr>
-    </thead>
-    <tbody id="nm-ext-rows">
-      {% for row in rows %}
-      <tr id="nm-ext-row-{{ row.id }}">
-        <td>{{ row.number|e }}</td>
-        <td>{{ row.user_name|default('-')|e }}</td>
-        <td>{{ row.device_ip|default('-')|e }}</td>
-        <td>{{ row.department|default('-')|e }}</td>
-        <td>
-          {% if row.records_calls %}
-            <span class="badge bg-success">{{ 'Sim'|trans({}, 'newmanagement') }}</span>
-          {% else %}
-            <span class="badge bg-secondary">{{ 'Não'|trans({}, 'newmanagement') }}</span>
-          {% endif %}
-        </td>
-        {% if can_delete %}
-        <td>
-          <button type="button" class="btn btn-sm btn-danger nm-ext-delete"
-                  data-id="{{ row.id }}"
-                  data-csrf="{{ csrf|e('html_attr') }}">
-            <i class="ti ti-trash"></i>
-          </button>
-        </td>
-        {% endif %}
-      </tr>
-      {% else %}
-      <tr id="nm-ext-empty">
-        <td colspan="{{ can_delete ? 6 : 5 }}" class="text-center text-muted py-3">
-          {{ 'Nenhum ramal cadastrado.'|trans({}, 'newmanagement') }}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-
-  {# === Formulário de adição === #}
+  {# === Formulário de adição (topo) === #}
   {% if can_write %}
-  <div class="card mt-3">
+  <div class="card mb-3">
     <div class="card-header">
       <strong>{{ 'Adicionar Ramal'|trans({}, 'newmanagement') }}</strong>
     </div>
@@ -100,13 +54,58 @@
 
       <div class="d-flex justify-content-end mt-3">
         <button type="button" id="nm-ext-save" class="btn btn-primary">
-          <i class="ti ti-plus" id="nm-ext-save-icon"></i>
+          <i class="ti ti-plus"></i>
           {{ 'Adicionar Ramal'|trans({}, 'newmanagement') }}
         </button>
       </div>
     </div>
   </div>
   {% endif %}
+
+  {# === Lista de ramais (abaixo do formulário) === #}
+  <table class="tab_cadre_fixe" id="nm-ext-list">
+    <thead>
+      <tr class="tab_bg_2">
+        <th>{{ 'Ramal'|trans({}, 'newmanagement') }}</th>
+        <th>{{ 'Usuário'|trans({}, 'newmanagement') }}</th>
+        <th>{{ 'IP Dispositivo'|trans({}, 'newmanagement') }}</th>
+        <th>{{ 'Departamento'|trans({}, 'newmanagement') }}</th>
+        <th>{{ 'Grava?'|trans({}, 'newmanagement') }}</th>
+        {% if can_delete %}<th></th>{% endif %}
+      </tr>
+    </thead>
+    <tbody id="nm-ext-rows">
+      {% for row in rows %}
+      <tr id="nm-ext-row-{{ row.id }}">
+        <td>{{ row.number|e }}</td>
+        <td>{{ row.user_name|default('-')|e }}</td>
+        <td>{{ row.device_ip|default('-')|e }}</td>
+        <td>{{ row.department|default('-')|e }}</td>
+        <td>
+          {% if row.records_calls %}
+            <span class="badge bg-success">{{ 'Sim'|trans({}, 'newmanagement') }}</span>
+          {% else %}
+            <span class="badge bg-secondary">{{ 'Não'|trans({}, 'newmanagement') }}</span>
+          {% endif %}
+        </td>
+        {% if can_delete %}
+        <td>
+          <button type="button" class="btn btn-sm btn-danger nm-ext-delete"
+                  data-id="{{ row.id }}">
+            <i class="ti ti-trash"></i>
+          </button>
+        </td>
+        {% endif %}
+      </tr>
+      {% else %}
+      <tr id="nm-ext-empty">
+        <td colspan="{{ can_delete ? 6 : 5 }}" class="text-center text-muted py-3">
+          {{ 'Nenhum ramal cadastrado.'|trans({}, 'newmanagement') }}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 
 </div>
 
@@ -121,7 +120,6 @@
   const ipbxId      = tab.dataset.ipbxId;
   const companiesId = tab.dataset.companiesId;
 
-  /** Lê a meta tag do GLPI — fonte canônica do CSRF no GLPI 11 */
   function nmCsrf() {
     const meta = document.querySelector('meta[property="glpi:csrf_token"]');
     if (meta && meta.getAttribute('content')) return meta.getAttribute('content');
@@ -149,7 +147,6 @@
     });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const json = await r.json();
-    // Atualiza o token para o próximo request
     if (json && json.csrf) {
       const meta = document.querySelector('meta[property="glpi:csrf_token"]');
       if (meta) meta.setAttribute('content', json.csrf);
@@ -159,12 +156,10 @@
 
   function setIcon(btn, icon, spin) {
     const i = btn.querySelector('i');
-    if (!i) return;
-    i.className = 'ti ' + icon + (spin ? ' nm-spin' : '');
+    if (i) { i.className = 'ti ' + icon + (spin ? ' nm-spin' : ''); }
     btn.disabled = spin;
   }
 
-  // --- ADICIONAR ---
   const saveBtn = document.getElementById('nm-ext-save');
   if (saveBtn) {
     saveBtn.addEventListener('click', async () => {
@@ -212,7 +207,6 @@
     });
   }
 
-  // --- EXCLUIR ---
   function bindDeleteButtons() {
     document.querySelectorAll('.nm-ext-delete').forEach(btn => {
       if (btn.dataset.bound) return;

@@ -10,45 +10,9 @@
      data-ipbx-id="{{ ipbx_id }}"
      data-companies-id="{{ companies_id }}">
 
-  {# === Lista de dispositivos === #}
-  <table class="tab_cadre_fixe">
-    <thead>
-      <tr class="tab_bg_2">
-        <th>{{ 'Tipo'|trans({}, 'newmanagement') }}</th>
-        <th>{{ 'IP'|trans({}, 'newmanagement') }}</th>
-        <th>{{ 'Login'|trans({}, 'newmanagement') }}</th>
-        {% if can_delete %}<th></th>{% endif %}
-      </tr>
-    </thead>
-    <tbody id="nm-dev-rows">
-      {% for row in rows %}
-      <tr id="nm-dev-row-{{ row.id }}">
-        <td>{{ row.device_type|default('-')|e }}</td>
-        <td>{{ row.ip_address|default('-')|e }}</td>
-        <td>{{ row.login|default('-')|e }}</td>
-        {% if can_delete %}
-        <td>
-          <button type="button" class="btn btn-sm btn-danger nm-dev-delete"
-                  data-id="{{ row.id }}"
-                  data-csrf="{{ csrf|e('html_attr') }}">
-            <i class="ti ti-trash"></i>
-          </button>
-        </td>
-        {% endif %}
-      </tr>
-      {% else %}
-      <tr id="nm-dev-empty">
-        <td colspan="{{ can_delete ? 4 : 3 }}" class="text-center text-muted py-3">
-          {{ 'Nenhum dispositivo cadastrado.'|trans({}, 'newmanagement') }}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-
-  {# === Formulário de adição === #}
+  {# === Formulário de adição (topo) === #}
   {% if can_write %}
-  <div class="card mt-3">
+  <div class="card mb-3">
     <div class="card-header">
       <strong>{{ 'Adicionar Dispositivo'|trans({}, 'newmanagement') }}</strong>
     </div>
@@ -73,13 +37,48 @@
 
       <div class="d-flex justify-content-end mt-3">
         <button type="button" id="nm-dev-save" class="btn btn-primary">
-          <i class="ti ti-plus" id="nm-dev-save-icon"></i>
+          <i class="ti ti-plus"></i>
           {{ 'Adicionar Dispositivo'|trans({}, 'newmanagement') }}
         </button>
       </div>
     </div>
   </div>
   {% endif %}
+
+  {# === Lista de dispositivos (abaixo do formulário) === #}
+  <table class="tab_cadre_fixe">
+    <thead>
+      <tr class="tab_bg_2">
+        <th>{{ 'Tipo'|trans({}, 'newmanagement') }}</th>
+        <th>{{ 'IP'|trans({}, 'newmanagement') }}</th>
+        <th>{{ 'Login'|trans({}, 'newmanagement') }}</th>
+        {% if can_delete %}<th></th>{% endif %}
+      </tr>
+    </thead>
+    <tbody id="nm-dev-rows">
+      {% for row in rows %}
+      <tr id="nm-dev-row-{{ row.id }}">
+        <td>{{ row.device_type|default('-')|e }}</td>
+        <td>{{ row.ip_address|default('-')|e }}</td>
+        <td>{{ row.login|default('-')|e }}</td>
+        {% if can_delete %}
+        <td>
+          <button type="button" class="btn btn-sm btn-danger nm-dev-delete"
+                  data-id="{{ row.id }}">
+            <i class="ti ti-trash"></i>
+          </button>
+        </td>
+        {% endif %}
+      </tr>
+      {% else %}
+      <tr id="nm-dev-empty">
+        <td colspan="{{ can_delete ? 4 : 3 }}" class="text-center text-muted py-3">
+          {{ 'Nenhum dispositivo cadastrado.'|trans({}, 'newmanagement') }}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 
 </div>
 
@@ -94,7 +93,6 @@
   const ipbxId      = tab.dataset.ipbxId;
   const companiesId = tab.dataset.companiesId;
 
-  /** Lê a meta tag do GLPI — fonte canônica do CSRF no GLPI 11 */
   function nmCsrf() {
     const meta = document.querySelector('meta[property="glpi:csrf_token"]');
     if (meta && meta.getAttribute('content')) return meta.getAttribute('content');
@@ -135,7 +133,6 @@
     btn.disabled = spin;
   }
 
-  // --- ADICIONAR ---
   const saveBtn = document.getElementById('nm-dev-save');
   if (saveBtn) {
     saveBtn.addEventListener('click', async () => {
@@ -180,7 +177,6 @@
     });
   }
 
-  // --- EXCLUIR ---
   function bindDeleteButtons() {
     document.querySelectorAll('.nm-dev-delete').forEach(btn => {
       if (btn.dataset.bound) return;
