@@ -1,6 +1,6 @@
 {#
   templates/ipbx/tab_network.html.twig
-  Aba de Rede dentro da ficha do IPBX On-Premise.
+  Aba de Rede — padrão GLPI 11: linha inline criada pelo botão '+ Adicionar'.
 
   Variáveis recebidas de IpbxNetwork::showForIpbx():
     rows, ipbx_id, companies_id, can_write, can_delete, csrf, action_url
@@ -10,58 +10,22 @@
      data-ipbx-id="{{ ipbx_id }}"
      data-companies-id="{{ companies_id }}">
 
-  {# === Formulário de adição (topo) === #}
-  {% if can_write %}
-  <div class="card mb-3">
-    <div class="card-header">
-      <strong>{{ 'Adicionar Rede'|trans({}, 'newmanagement') }}</strong>
-    </div>
-    <div class="card-body">
-      <input type="hidden" id="nm-net-ipbx-id"      value="{{ ipbx_id }}">
-      <input type="hidden" id="nm-net-companies-id" value="{{ companies_id }}">
-
-      <table class="tab_cadre_fixe">
-        <tr class="tab_bg_1">
-          <td>{{ 'Rede IP'|trans({}, 'newmanagement') }} <span class="text-danger">*</span></td>
-          <td><input type="text" id="nm-net-ip_network"    class="form-control" placeholder="Ex: 192.168.1.0"></td>
-          <td>{{ 'Máscara'|trans({}, 'newmanagement') }}</td>
-          <td><input type="text" id="nm-net-netmask"       class="form-control" placeholder="Ex: 255.255.255.0"></td>
-        </tr>
-        <tr class="tab_bg_1">
-          <td>{{ 'Gateway'|trans({}, 'newmanagement') }}</td>
-          <td><input type="text" id="nm-net-gateway"       class="form-control" placeholder="Ex: 192.168.1.1"></td>
-          <td>{{ 'Provedor'|trans({}, 'newmanagement') }}</td>
-          <td><input type="text" id="nm-net-supplier"      class="form-control" placeholder="Ex: Vivo Empresas"></td>
-        </tr>
-        <tr class="tab_bg_1">
-          <td>{{ 'DNS Primário'|trans({}, 'newmanagement') }}</td>
-          <td><input type="text" id="nm-net-dns_primary"   class="form-control" placeholder="Ex: 8.8.8.8"></td>
-          <td>{{ 'DNS Secundário'|trans({}, 'newmanagement') }}</td>
-          <td><input type="text" id="nm-net-dns_secondary" class="form-control" placeholder="Ex: 8.8.4.4"></td>
-        </tr>
-      </table>
-
-      <div class="d-flex justify-content-end mt-3">
-        <button type="button" id="nm-net-save" class="btn btn-primary">
-          <i class="ti ti-plus"></i>
-          {{ 'Adicionar Rede'|trans({}, 'newmanagement') }}
-        </button>
-      </div>
-    </div>
-  </div>
-  {% endif %}
-
-  {# === Lista de redes (abaixo do formulário) === #}
-  <table class="tab_cadre_fixe">
+  <table class="tab_cadre_fixe" id="nm-net-list">
     <thead>
       <tr class="tab_bg_2">
-        <th>{{ 'Rede'|trans({}, 'newmanagement') }}</th>
+        <th>{{ 'Rede IP'|trans({}, 'newmanagement') }} <span class="text-danger">*</span></th>
         <th>{{ 'Máscara'|trans({}, 'newmanagement') }}</th>
         <th>{{ 'Gateway'|trans({}, 'newmanagement') }}</th>
         <th>{{ 'DNS Primário'|trans({}, 'newmanagement') }}</th>
         <th>{{ 'DNS Secundário'|trans({}, 'newmanagement') }}</th>
         <th>{{ 'Provedor'|trans({}, 'newmanagement') }}</th>
-        {% if can_delete %}<th></th>{% endif %}
+        <th style="width:120px;">
+          {% if can_write %}
+          <button type="button" id="nm-net-add-btn" class="btn btn-sm btn-primary">
+            <i class="ti ti-plus"></i> {{ '+ Adicionar'|trans({}, 'newmanagement') }}
+          </button>
+          {% endif %}
+        </th>
       </tr>
     </thead>
     <tbody id="nm-net-rows">
@@ -73,19 +37,19 @@
         <td>{{ row.dns_primary|default('-')|e }}</td>
         <td>{{ row.dns_secondary|default('-')|e }}</td>
         <td>{{ row.supplier|default('-')|e }}</td>
-        {% if can_delete %}
         <td>
-          <button type="button" class="btn btn-sm btn-danger nm-net-delete"
-                  data-id="{{ row.id }}">
+          {% if can_delete %}
+          <button type="button" class="btn btn-sm btn-danger nm-net-delete" data-id="{{ row.id }}">
             <i class="ti ti-trash"></i>
           </button>
+          {% endif %}
         </td>
-        {% endif %}
       </tr>
       {% else %}
       <tr id="nm-net-empty">
-        <td colspan="{{ can_delete ? 7 : 6 }}" class="text-center text-muted py-3">
-          {{ 'Nenhuma rede cadastrada.'|trans({}, 'newmanagement') }}
+        <td colspan="7" class="text-center text-muted py-3">
+          <i class="ti ti-wifi-off me-1"></i>
+          {{ 'Nenhuma rede cadastrada. Clique em + Adicionar para incluir.'|trans({}, 'newmanagement') }}
         </td>
       </tr>
       {% endfor %}
@@ -112,11 +76,6 @@
     return h ? h.value : '';
   }
 
-  function get(id) {
-    const el = document.getElementById('nm-net-' + id);
-    return el ? el.value : '';
-  }
-
   async function nmPost(body) {
     const csrf = nmCsrf();
     const fd = new FormData();
@@ -141,53 +100,84 @@
 
   function setIcon(btn, icon, spin) {
     const i = btn.querySelector('i');
-    if (i) { i.className = 'ti ' + icon + (spin ? ' nm-spin' : ''); }
+    if (i) i.className = 'ti ' + icon + (spin ? ' nm-spin' : '');
     btn.disabled = spin;
   }
 
-  const saveBtn = document.getElementById('nm-net-save');
-  if (saveBtn) {
-    saveBtn.addEventListener('click', async () => {
-      const network = get('ip_network');
-      if (!network) { document.getElementById('nm-net-ip_network').focus(); return; }
+  /* ── Botão '+ Adicionar' ───────────────────────────── */
+  const addBtn = document.getElementById('nm-net-add-btn');
+  if (addBtn) {
+    addBtn.addEventListener('click', () => {
+      const tbody = document.getElementById('nm-net-rows');
+      const empty = document.getElementById('nm-net-empty');
+      if (empty) empty.remove();
 
-      setIcon(saveBtn, 'ti-loader-2', true);
-      try {
-        const data = await nmPost({
-          action        : 'add_network',
-          ipbx_id       : ipbxId,
-          companies_id  : companiesId,
-          ip_network    : network,
-          netmask       : get('netmask'),
-          gateway       : get('gateway'),
-          dns_primary   : get('dns_primary'),
-          dns_secondary : get('dns_secondary'),
-          supplier      : get('supplier'),
-        });
+      const tr = document.createElement('tr');
+      tr.className = 'nm-net-new-row';
+      tr.innerHTML = `
+        <td><input type="text" class="form-control form-control-sm" id="nm-net-ip_network"    placeholder="Ex: 192.168.1.0" required></td>
+        <td><input type="text" class="form-control form-control-sm" id="nm-net-netmask"       placeholder="255.255.255.0"></td>
+        <td><input type="text" class="form-control form-control-sm" id="nm-net-gateway"       placeholder="192.168.1.1"></td>
+        <td><input type="text" class="form-control form-control-sm" id="nm-net-dns_primary"   placeholder="8.8.8.8"></td>
+        <td><input type="text" class="form-control form-control-sm" id="nm-net-dns_secondary" placeholder="8.8.4.4"></td>
+        <td><input type="text" class="form-control form-control-sm" id="nm-net-supplier"      placeholder="Ex: Vivo Empresas"></td>
+        <td class="d-flex gap-1">
+          <button type="button" class="btn btn-sm btn-success" id="nm-net-save-inline">
+            <i class="ti ti-device-floppy"></i>
+          </button>
+          <button type="button" class="btn btn-sm btn-secondary" id="nm-net-cancel-inline">
+            <i class="ti ti-x"></i>
+          </button>
+        </td>`;
+      tbody.appendChild(tr);
+      tr.querySelector('#nm-net-ip_network').focus();
 
-        if (!data.success) throw new Error(data.error || 'Erro');
-
-        const tbody = document.getElementById('nm-net-rows');
-        const empty = document.getElementById('nm-net-empty');
-        if (empty) empty.remove();
-        if (data.html) {
-          tbody.insertAdjacentHTML('beforeend', data.html);
-          bindDeleteButtons();
+      tr.querySelector('#nm-net-cancel-inline').addEventListener('click', () => {
+        tr.remove();
+        if (!document.querySelector('#nm-net-rows tr:not(.nm-net-new-row)')) {
+          const emptyTr = document.createElement('tr');
+          emptyTr.id = 'nm-net-empty';
+          emptyTr.innerHTML = `<td colspan="7" class="text-center text-muted py-3"><i class="ti ti-wifi-off me-1"></i>Nenhuma rede cadastrada. Clique em + Adicionar para incluir.</td>`;
+          document.getElementById('nm-net-rows').appendChild(emptyTr);
         }
+      });
 
-        ['ip_network','netmask','gateway','dns_primary','dns_secondary','supplier'].forEach(f => {
-          const el = document.getElementById('nm-net-' + f);
-          if (el) el.value = '';
-        });
+      const saveInline = tr.querySelector('#nm-net-save-inline');
+      saveInline.addEventListener('click', async () => {
+        const network = tr.querySelector('#nm-net-ip_network').value.trim();
+        if (!network) { tr.querySelector('#nm-net-ip_network').focus(); return; }
 
-        setIcon(saveBtn, 'ti-check', false);
-        setTimeout(() => setIcon(saveBtn, 'ti-plus', false), 2000);
+        setIcon(saveInline, 'ti-loader-2', true);
+        try {
+          const data = await nmPost({
+            action        : 'add_network',
+            ipbx_id       : ipbxId,
+            companies_id  : companiesId,
+            ip_network    : network,
+            netmask       : tr.querySelector('#nm-net-netmask').value,
+            gateway       : tr.querySelector('#nm-net-gateway').value,
+            dns_primary   : tr.querySelector('#nm-net-dns_primary').value,
+            dns_secondary : tr.querySelector('#nm-net-dns_secondary').value,
+            supplier      : tr.querySelector('#nm-net-supplier').value,
+          });
 
-      } catch (err) {
-        console.error('[NM-net] Erro:', err.message);
-        setIcon(saveBtn, 'ti-x', false);
-        setTimeout(() => setIcon(saveBtn, 'ti-plus', false), 3000);
-      }
+          if (!data.success) throw new Error(data.error || 'Erro ao salvar');
+          if (data.html) {
+            tr.outerHTML = data.html;
+            bindDeleteButtons();
+          } else {
+            tr.remove();
+          }
+        } catch (err) {
+          console.error('[NM-net] Erro:', err.message);
+          setIcon(saveInline, 'ti-alert-circle', false);
+          setTimeout(() => setIcon(saveInline, 'ti-device-floppy', false), 3000);
+        }
+      });
+
+      tr.querySelector('#nm-net-ip_network').addEventListener('keydown', e => {
+        if (e.key === 'Enter') saveInline.click();
+      });
     });
   }
 
@@ -205,7 +195,14 @@
             companies_id : companiesId,
           });
           if (!data.success) throw new Error(data.error || 'Erro');
-          document.getElementById('nm-net-row-' + btn.dataset.id)?.remove();
+          const row = document.getElementById('nm-net-row-' + btn.dataset.id);
+          if (row) row.remove();
+          if (!document.querySelector('#nm-net-rows tr')) {
+            const emptyTr = document.createElement('tr');
+            emptyTr.id = 'nm-net-empty';
+            emptyTr.innerHTML = `<td colspan="7" class="text-center text-muted py-3"><i class="ti ti-wifi-off me-1"></i>Nenhuma rede cadastrada. Clique em + Adicionar para incluir.</td>`;
+            document.getElementById('nm-net-rows').appendChild(emptyTr);
+          }
         } catch (err) { btn.disabled = false; }
       });
     });
