@@ -242,7 +242,7 @@ newmanagement/
 
 ### 🔗 Diagrama de Entidades
 
-```
+```yaml
 ┌─────────────────┐
 │    COMPANY      │  (Empresa Master)
 │─────────────────│
@@ -253,35 +253,57 @@ newmanagement/
 │ contract_status │
 └────────┬────────┘
          │
-    ┌────┴──────────────────────────┐
-    │                               │
-    ↓                               ↓
-┌─────────────┐              ┌──────────────┐
-│   IPBX      │  (1:N)       │  IPBX_CLOUD  │  (1:N)
-│─────────────│              │──────────────│
-│ id (PK)     │              │ id (PK)      │
-│ company_id  │              │ company_id   │
-│ ip_address  │              │ provider     │
-│ admin_user  │              │ url          │
-│ status      │              │ api_key      │
-└─────────────┘              └──────────────┘
-
-    │                               │
-    ├─────────────────────┬────────┤
-    │                     │        │
-    ↓                     ↓        ↓
-┌──────────────┐   ┌────────────┐  ┌──────────────┐
-│  CHATBOT     │   │ FIXEDLINE  │  │    TASK      │
-│──────────────│   │────────────│  │──────────────│
-│ id (PK)      │   │ id (PK)    │  │ id (PK)      │
-│ company_id   │   │ company_id │  │ company_id   │
-│ platform     │   │ phone_numb │  │ title        │
-│ webhook_url  │   │ extension  │  │ assigned_to  │
-│ status       │   │ carrier    │  │ latitude     │
-└──────────────┘   │ status     │  │ longitude    │
-                   └────────────┘  │ signature    │
-                                   │ km_distance  │
-                                   └──────────────┘
+         │
+         ↓
+  ┌─────────────┐
+  │   IPBX      │  (1:N)
+  │─────────────│
+  │ id (PK)     │
+  │ company_id  │
+  │ ip_address  │
+  │ admin_user  │
+  │ status      │
+  └─────┬───────┘
+        │
+        │
+        ↓
+  ┌────────────┐  
+  │ FIXEDLINE  │
+  │────────────│
+  │ id (PK)    │
+  │ company_id │
+  │ phone_numb │
+  │ extension  │
+  │ carrier    │
+  │ status     │
+  └─────┬──────┘
+        │
+        │
+        ↓
+┌──────────────┐
+│  CHATBOT     │
+│──────────────│
+│ id (PK)      │
+│ company_id   │
+│ platform     │
+│ webhook_url  │
+│ status       │
+└──────┬───────┘
+       │
+       │
+       ↓
+┌──────────────┐
+│    TASK      │
+│──────────────│
+│ id (PK)      │
+│ company_id   │
+│ title        │
+│ assigned_to  │
+│ latitude     │
+│ longitude    │
+│ signature    │
+│ km_distance  │
+└──────────────┘
 ```
 
 ---
