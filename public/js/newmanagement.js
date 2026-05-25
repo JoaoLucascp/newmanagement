@@ -12,6 +12,14 @@
  *   - document.addEventListener('click', ...) captura todos os cliques.
  *   - e.target.closest('[seletor]') identifica o elemento alvo.
  *   - Nenhum _nmBound / getElementById binding direto nos botões de ação.
+ *
+ * fix(CSRF-01): nmGetCsrfToken() agora lê a meta[property="glpi:csrf_token"]
+ *   como fonte primária, que é o que o GLPI 11 valida no servidor.
+ *   nmRefreshCsrfToken() sincroniza meta, hiddens e todos os [data-csrf].
+ *
+ * fix(DELEGATE-01): nmEnsureIpbxDelegated() + MutationObserver garante que
+ *   os handlers sejam registrados mesmo quando o GLPI recarrega a aba via
+ *   AJAX em um novo frame/contexto, zerando window._nmIpbxDelegated.
  */
 
 console.log('Newmanagement Plugin carregado.');
@@ -90,32 +98,46 @@ function nmSetLoading(btnId, loading) {
 
 // ---------------------------------------------------------------------------
 // CSRF Helper
+// fix(CSRF-01): a meta[property="glpi:csrf_token"] é a fonte canônica do
+// GLPI 11 — lida PRIMEIRO. Os hiddens do plugin são fallback secundário.
 // ---------------------------------------------------------------------------
 
 function nmGetCsrfToken() {
+    // 1. Meta tag do GLPI 11 — fonte canônica validada pelo servidor
+    const meta = document.querySelector('meta[property="glpi:csrf_token"]');
+    if (meta && meta.getAttribute('content')) return meta.getAttribute('content');
+
+    // 2. Hidden input padrão do GLPI (GLPI 10 / fallback)
+    const hidden = document.querySelector('input[name="_glpi_csrf_token"]');
+    if (hidden && hidden.value) return hidden.value;
+
+    // 3. Hiddens do plugin (mantidos sincronizados por nmRefreshCsrfToken)
     const ipbxHidden = document.getElementById('nm-ipbx-csrf');
     if (ipbxHidden && ipbxHidden.value) return ipbxHidden.value;
 
     const chatbotHidden = document.getElementById('nm-chatbot-csrf');
     if (chatbotHidden && chatbotHidden.value) return chatbotHidden.value;
 
-    const meta = document.querySelector('meta[property="glpi:csrf_token"]');
-    if (meta) return meta.getAttribute('content');
-
-    const hidden = document.querySelector('input[name="_glpi_csrf_token"]');
-    if (hidden) return hidden.value;
-
     return '';
 }
 
 function nmRefreshCsrfToken(newToken) {
     if (!newToken) return;
+
+    // 1. Atualiza meta tag do GLPI (fonte canônica)
+    const meta = document.querySelector('meta[property="glpi:csrf_token"]');
+    if (meta) meta.setAttribute('content', newToken);
+
+    // 2. Atualiza hiddens do plugin
     const ipbxHidden = document.getElementById('nm-ipbx-csrf');
     if (ipbxHidden) ipbxHidden.value = newToken;
     const chatbotHidden = document.getElementById('nm-chatbot-csrf');
     if (chatbotHidden) chatbotHidden.value = newToken;
-    const meta = document.querySelector('meta[property="glpi:csrf_token"]');
-    if (meta) meta.setAttribute('content', newToken);
+
+    // 3. Sincroniza data-csrf em TODOS os botões filhos (evita token stale)
+    document.querySelectorAll('[data-csrf]').forEach(el => {
+        el.dataset.csrf = newToken;
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -331,14 +353,24 @@ function nmInitPagination() {
 }
 
 // ---------------------------------------------------------------------------
-// IPBX — Delegação de eventos (fix UI-01)
+// IPBX — Delegação de eventos
 //
-// TODOS os handlers usam document.addEventListener('click', ...) com
-// e.target.closest() para funcionar em abas carregadas via AJAX pelo GLPI.
+// fix(DELEGATE-01): substituído o guard simples (window._nmIpbxDelegated)
+// por nmEnsureIpbxDelegated(), que verifica se os handlers já foram
+// registrados no document atual e os re-registra se necessário.
+// Isso resolve o problema de window._nmIpbxDelegated = false após reload
+// da aba via AJAX do GLPI (novo frame/contexto de execução).
 // ---------------------------------------------------------------------------
 
-function nmInitIpbxDelegated() {
-    if (window._nmIpbxDelegated) return;
+// Símbolo único colado no document para marcar que os handlers já foram
+// registrados NESTE document (não na window, que pode ser reiniciada).
+const NM_IPBX_BOUND_KEY = '__nmIpbxHandlersBound__';
+
+function nmEnsureIpbxDelegated() {
+    if (document[NM_IPBX_BOUND_KEY]) return;
+    document[NM_IPBX_BOUND_KEY] = true;
+
+    // Compatibilidade com código legado que cheque window._nmIpbxDelegated
     window._nmIpbxDelegated = true;
 
     // -----------------------------------------------------------------------
@@ -668,7 +700,29 @@ function nmInitIpbxDelegated() {
 }
 
 // ---------------------------------------------------------------------------
-// Inicialização — registra delegações uma única vez
+// MutationObserver — garante re-registro dos handlers quando o GLPI injeta
+// a aba IPBX via AJAX (o conteúdo da aba é injetado no DOM após o load).
+// fix(DELEGATE-01): observa inserções de .nm-ipbx-tab no document e chama
+// nmEnsureIpbxDelegated() para registrar os handlers no document atual.
 // ---------------------------------------------------------------------------
-nmInitIpbxDelegated();
+
+(function nmWatchForIpbxTab() {
+    // Registra imediatamente (caso o script seja carregado depois da aba)
+    nmEnsureIpbxDelegated();
+
+    // Observa mutações futuras (aba injetada pelo GLPI via AJAX)
+    const observer = new MutationObserver(() => {
+        if (document.querySelector('.nm-ipbx-tab')) {
+            nmEnsureIpbxDelegated();
+        }
+    });
+    observer.observe(document.body || document.documentElement, {
+        childList: true,
+        subtree: true,
+    });
+})();
+
+// ---------------------------------------------------------------------------
+// Inicialização — paginação registrada uma única vez
+// ---------------------------------------------------------------------------
 nmInitPagination();
