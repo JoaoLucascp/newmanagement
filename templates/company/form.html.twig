@@ -1,7 +1,7 @@
 {#
   Newmanagement — Formulário de Empresa
   Variáveis recebidas do PHP (Company::showForm):
-    item               — array com os campos do registro (ou valores vazios para novo)
+    item               — objeto Company com campos em item.fields
     id                 — int: ID do registro (0 = novo)
     id_label           — string: texto a exibir no campo ID (número ou 'Gerado automaticamente')
     contract_options   — array<int, string>: opções do dropdown Status do Contrato
@@ -28,7 +28,7 @@
   <td>
     <div class="input-group">
       <input type="text" id="cnpj" name="cnpj"
-             value="{{ item.cnpj|default('')|e }}"
+             value="{{ item.fields.cnpj|default('')|e }}"
              class="form-control" placeholder="00.000.000/0000-00" maxlength="18">
       <button type="button" class="btn btn-outline-secondary btn-sm"
               id="btn-buscar-cnpj"
@@ -41,7 +41,7 @@
   <td>{{ __('Razão Social', 'newmanagement') }}</td>
   <td>
     <input type="text" id="razao_social" name="razao_social"
-           value="{{ item.razao_social|default('')|e }}"
+           value="{{ item.fields.razao_social|default('')|e }}"
            class="form-control">
   </td>
 </tr>
@@ -50,13 +50,13 @@
   <td>{{ __('E-mail', 'newmanagement') }}</td>
   <td>
     <input type="email" id="email" name="email"
-           value="{{ item.email|default('')|e }}"
+           value="{{ item.fields.email|default('')|e }}"
            class="form-control">
   </td>
   <td>{{ __('Telefone', 'newmanagement') }}</td>
   <td>
     <input type="text" id="phone" name="phone"
-           value="{{ item.phone|default('')|e }}"
+           value="{{ item.fields.phone|default('')|e }}"
            class="form-control" placeholder="(00) 00000-0000">
   </td>
 </tr>
@@ -66,7 +66,7 @@
   <td>
     <div class="input-group">
       <input type="text" id="cep" name="cep"
-             value="{{ item.cep|default('')|e }}"
+             value="{{ item.fields.cep|default('')|e }}"
              class="form-control" placeholder="00000-000" maxlength="9">
       <button type="button" class="btn btn-outline-secondary btn-sm"
               id="btn-buscar-cep"
@@ -92,13 +92,13 @@
 <tr class="tab_bg_1">
   <td>{{ __('Endereço', 'newmanagement') }}</td>
   <td colspan="3">
-    <textarea id="address" name="address" class="form-control" rows="2">{{ item.address|default('')|e }}</textarea>
+    <textarea id="address" name="address" class="form-control" rows="2">{{ item.fields.address|default('')|e }}</textarea>
   </td>
 </tr>
 
 <tr class="tab_bg_1">
   <td>{{ __('Comentário', 'newmanagement') }}</td>
   <td colspan="3">
-    <textarea id="comment" name="comment" class="form-control" rows="3">{{ item.comment|default('')|e }}</textarea>
+    <textarea id="comment" name="comment" class="form-control" rows="3">{{ item.fields.comment|default('')|e }}</textarea>
   </td>
 </tr>
