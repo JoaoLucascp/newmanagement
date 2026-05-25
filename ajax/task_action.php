@@ -13,6 +13,9 @@ header('Content-Type: application/json; charset=utf-8');
 
 Session::checkLoginUser();
 
+// fix(A4/SE-02): verificação READ global — todos os endpoints IPBX/Chatbot fazem o mesmo
+Session::checkRight(Task::$rightname, READ);
+
 // Lê payload JSON
 $raw   = file_get_contents('php://input');
 $input = json_decode($raw, true);
@@ -36,7 +39,7 @@ $task   = new Task();
 try {
     switch ($action) {
 
-        // ── ADD ──────────────────────────────────────────
+        // ── ADD ────────────────────────────────────────────────
         case 'add_task':
             Session::checkRight(Task::$rightname, CREATE);
 
@@ -70,7 +73,7 @@ try {
             }
             break;
 
-        // ── UPDATE ───────────────────────────────────────
+        // ── UPDATE ───────────────────────────────────────────────
         case 'update_task':
             Session::checkRight(Task::$rightname, UPDATE);
 
@@ -106,7 +109,7 @@ try {
             ]);
             break;
 
-        // ── DELETE ───────────────────────────────────────
+        // ── DELETE ───────────────────────────────────────────────
         case 'delete_task':
             Session::checkRight(Task::$rightname, DELETE);
 
