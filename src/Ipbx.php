@@ -102,7 +102,8 @@ class Ipbx extends \CommonDBTM
         $can_write  = \Session::haveRight(self::$rightname, UPDATE);
         $can_delete = \Session::haveRight(self::$rightname, DELETE);
 
-        $rows    = $DB->request([
+        // Busca registro IPBX existente para a empresa
+        $rows = $DB->request([
             'FROM'  => self::getTable(),
             'WHERE' => ['companies_id' => $companies_id, 'is_deleted' => 0],
             'LIMIT' => 1,
@@ -119,6 +120,31 @@ class Ipbx extends \CommonDBTM
         ];
         $has_web_password = false;
         $has_ssh_password = false;
+
+        // OPÇÃO A: se não existir IPBX, cria um registro pai vazio automaticamente
+        if ($rows->count() === 0 && $can_write) {
+            $ipbx = new self();
+            $ipbx_id = (int) $ipbx->add([
+                'companies_id' => $companies_id,
+                'model'        => '',
+                'server_version' => '',
+                'ip_local'     => '',
+                'ip_external'  => '',
+                'web_port'     => '',
+                'web_password' => '',
+                'ssh_port'     => '',
+                'ssh_password' => '',
+                'comment'      => '',
+            ]);
+
+            if ($ipbx_id > 0) {
+                $rows = $DB->request([
+                    'FROM'  => self::getTable(),
+                    'WHERE' => ['id' => $ipbx_id],
+                    'LIMIT' => 1,
+                ]);
+            }
+        }
 
         foreach ($rows as $row) {
             $fields           = $row;
