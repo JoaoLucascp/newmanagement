@@ -2,6 +2,13 @@
  * Newmanagement - Plugin GLPI
  * Mascaras, busca CNPJ e CEP via BrasilAPI
  * Botões AJAX do formulário IPBX e Chatbot (com token CSRF do GLPI 11)
+ *
+ * fix(UI-01): botões + Adicionar agora clonam a linha de input pré-adicionada.
+ *   - Linha base (nm-*-add-row) sempre visível na tabela.
+ *   - Clicar em + Adicionar lê os dados da linha ativa, faz POST,
+ *     insere linha de leitura com lixeira e reseta a linha base.
+ *   - nm-row-del-btn remove a própria linha (linhas pendentes sem id salvo).
+ *   - Ao salvar com sucesso a lixeira usa nm-del-btn (DELETE real no servidor).
  */
 
 console.log('Newmanagement Plugin carregado.');
@@ -79,78 +86,47 @@ function nmSetLoading(btnId, loading) {
 }
 
 // ---------------------------------------------------------------------------
-// CSRF Helper — GLPI 11 exige X-Glpi-Csrf-Token em todo POST
-//
-// PRIORIDADE DE BUSCA DO TOKEN:
-//   1. #nm-ipbx-csrf   — gerado fresh pelo PHP a cada renderização da aba
-//                        (tokens SINGLE-USE no GLPI 11 — deve ser o mais fresco)
-//   2. #nm-chatbot-csrf — equivalente para a aba Chatbot
-//   3. <meta property="glpi:csrf_token"> — GLPI 11 (pode estar expirado após AJAX)
-//   4. <input name="_glpi_csrf_token">   — Fallback GLPI 10
-//
-// RENOVAÇÃO AUTOMÁTICA:
-//   nmPost() atualiza #nm-ipbx-csrf com o token retornado na resposta JSON
-//   (campo `csrf`). O PHP gera um novo token em TODA resposta via
-//   Session::getNewCSRFToken(). Isso garante que requests sequenciais
-//   nunca reutilizem um token já consumido.
+// CSRF Helper
 // ---------------------------------------------------------------------------
 
 function nmGetCsrfToken() {
-    // Prioridade 1: hidden gerado pelo PHP na aba IPBX (sempre fresco)
     const ipbxHidden = document.getElementById('nm-ipbx-csrf');
     if (ipbxHidden && ipbxHidden.value) return ipbxHidden.value;
 
-    // Prioridade 2: hidden da aba Chatbot
     const chatbotHidden = document.getElementById('nm-chatbot-csrf');
     if (chatbotHidden && chatbotHidden.value) return chatbotHidden.value;
 
-    // Prioridade 3: GLPI 11 meta tag (pode estar expirada após AJAX)
     const meta = document.querySelector('meta[property="glpi:csrf_token"]');
     if (meta) return meta.getAttribute('content');
 
-    // Fallback GLPI 10: input hidden no formulário
     const hidden = document.querySelector('input[name="_glpi_csrf_token"]');
     if (hidden) return hidden.value;
 
     return '';
 }
 
-/**
- * Atualiza o token CSRF nos hiddens do DOM com o token retornado
- * na resposta JSON do servidor. Chamado após TODA resposta bem-sucedida.
- * Isso garante que o próximo request use sempre um token fresco.
- */
 function nmRefreshCsrfToken(newToken) {
     if (!newToken) return;
     const ipbxHidden = document.getElementById('nm-ipbx-csrf');
     if (ipbxHidden) ipbxHidden.value = newToken;
     const chatbotHidden = document.getElementById('nm-chatbot-csrf');
     if (chatbotHidden) chatbotHidden.value = newToken;
-    // Atualiza meta tag também para manter consistência com o GLPI
     const meta = document.querySelector('meta[property="glpi:csrf_token"]');
     if (meta) meta.setAttribute('content', newToken);
 }
 
 // ---------------------------------------------------------------------------
-// Fetch AJAX com CSRF — envia FormData e retorna JSON
-//
-// SOLUÇÃO DEFINITIVA para GLPI 11 (tokens single-use):
-//   1. Token capturado IMEDIATAMENTE antes do fetch (mais fresco possível)
-//   2. Enviado no HEADER X-Glpi-Csrf-Token (lido pelo CheckCsrfListener)
-//   3. Enviado também no BODY _glpi_csrf_token (compatibilidade GLPI 10)
-//   4. Resposta JSON sempre contém `csrf` com novo token
-//   5. nmRefreshCsrfToken() atualiza o DOM após cada resposta
+// nmPost — fetch com CSRF
 // ---------------------------------------------------------------------------
 
 async function nmPost(url, data) {
     const csrf = nmGetCsrfToken();
     const body = new FormData();
 
-    // Token no body para compatibilidade GLPI 10
     body.append('_glpi_csrf_token', csrf);
 
     Object.entries(data).forEach(([k, v]) => {
-        if (k === '_glpi_csrf_token') return; // não duplicar
+        if (k === '_glpi_csrf_token') return;
         if (Array.isArray(v)) {
             v.forEach(item => body.append(k, item == null ? '' : item));
         } else {
@@ -160,7 +136,6 @@ async function nmPost(url, data) {
 
     const res = await fetch(url, {
         method: 'POST',
-        // Token no header — lido pelo Symfony CheckCsrfListener no GLPI 11
         headers: { 'X-Glpi-Csrf-Token': csrf },
         body,
     });
@@ -172,27 +147,20 @@ async function nmPost(url, data) {
             try {
                 const json = JSON.parse(text);
                 msg = json.error || json.message || msg;
-            } catch {
-                // Resposta é HTML de erro do Symfony — usar mensagem genérica
-            }
-        } catch { /* ignora erros de leitura */ }
+            } catch { /* HTML de erro */ }
+        } catch { /* ignora */ }
         throw new Error('HTTP 403: ' + msg);
     }
 
     if (!res.ok) throw new Error('HTTP ' + res.status);
 
     const json = await res.json();
-
-    // Renova token CSRF no DOM com o token retornado pelo servidor
-    if (json && json.csrf) {
-        nmRefreshCsrfToken(json.csrf);
-    }
-
+    if (json && json.csrf) nmRefreshCsrfToken(json.csrf);
     return json;
 }
 
 // ---------------------------------------------------------------------------
-// URL base do endpoint AJAX — IPBX
+// Helpers
 // ---------------------------------------------------------------------------
 
 function nmAjaxUrl() {
@@ -220,23 +188,23 @@ function nmUpdateIpbxId(newId) {
     if (hiddenId) hiddenId.value = newId;
 }
 
-// ---------------------------------------------------------------------------
-// Helpers de leitura/limpeza de campo por ID
-// ---------------------------------------------------------------------------
-
 function nmVal(id) {
     const el = document.getElementById(id);
     return el ? el.value : '';
 }
 
-function nmClear(ids) {
-    ids.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+function nmClearRow(addRowId, fields) {
+    fields.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (el.tagName === 'SELECT') el.selectedIndex = 0;
+        else el.value = '';
+    });
 }
 
-// ---------------------------------------------------------------------------
-// HTML do botão excluir — padrão GLPI
-// ---------------------------------------------------------------------------
-
+/**
+ * Gera o HTML da lixeira para linhas já salvas no servidor (DELETE real).
+ */
 function nmDelBtn(action, id, rowId, companiesId, url, confirmMsg, title) {
     return `<button type="button"
         class="btn btn-sm btn-icon nm-del-btn"
@@ -252,7 +220,7 @@ function nmDelBtn(action, id, rowId, companiesId, url, confirmMsg, title) {
 }
 
 // ---------------------------------------------------------------------------
-// Paginação AJAX — sub-tabelas de Ramais e Dispositivos
+// Paginação AJAX
 // ---------------------------------------------------------------------------
 
 function nmInitPagination() {
@@ -267,9 +235,9 @@ function nmInitPagination() {
         const section   = document.getElementById(sectionId);
         if (!section) return;
 
-        const currentPage = parseInt(section.dataset.page  || '1', 10);
+        const currentPage = parseInt(section.dataset.page     || '1',  10);
         const pageSize    = parseInt(section.dataset.pageSize || '20', 10);
-        const total       = parseInt(section.dataset.total   || '0', 10);
+        const total       = parseInt(section.dataset.total    || '0',  10);
         const ipbxId      = section.dataset.ipbxId;
         const companiesId = section.dataset.companiesId;
         const sectionName = section.dataset.section;
@@ -303,8 +271,12 @@ function nmInitPagination() {
             const data = await res.json();
             if (!data.success) throw new Error(data.error || 'Erro ao paginar');
 
-            const tbodyId = sectionName === 'extensions' ? 'nm-ext-tbody'      : 'nm-dev-tbody';
-            const paginId = sectionName === 'extensions' ? 'nm-ext-pagination' : 'nm-dev-pagination';
+            const tbodyId = sectionName === 'extensions' ? 'nm-ext-tbody'
+                          : sectionName === 'devices'    ? 'nm-dev-tbody'
+                          :                               'nm-net-tbody';
+            const paginId = sectionName === 'extensions' ? 'nm-ext-pagination'
+                          : sectionName === 'devices'    ? 'nm-dev-pagination'
+                          :                               'nm-net-pagination';
 
             const tbody = document.getElementById(tbodyId);
             if (tbody) tbody.innerHTML = data.html;
@@ -315,7 +287,8 @@ function nmInitPagination() {
             if (paginDiv) {
                 const from  = (data.page - 1) * data.page_size + 1;
                 const to    = Math.min(data.page * data.page_size, data.total);
-                const label = sectionName === 'extensions' ? 'ramais' : 'dispositivos';
+                const labelMap = { extensions: 'ramais', devices: 'dispositivos', network: 'redes' };
+                const label = labelMap[sectionName] || 'itens';
                 const counter = paginDiv.querySelector('span.text-muted');
                 if (counter) counter.textContent = `Mostrando ${from}–${to} de ${data.total} ${label}`;
 
@@ -331,7 +304,6 @@ function nmInitPagination() {
                 if (pageLabel) pageLabel.textContent = `${data.page} / ${newTotalPages}`;
             }
 
-            // Renova token após resposta da paginação
             if (data.csrf) nmRefreshCsrfToken(data.csrf);
 
         } catch (err) {
@@ -339,12 +311,22 @@ function nmInitPagination() {
             alert('Erro ao carregar página: ' + err.message);
         } finally {
             spinner.remove();
+            btn.disabled = false;
         }
     });
 }
 
 // ---------------------------------------------------------------------------
-// Botões Adicionar / Remover — IPBX
+// IPBX — Botões Adicionar / Remover
+//
+// fix(UI-01): arquitetura corrigida
+//   1. Linha de input (nm-*-add-row) sempre visível — pré-adicionada pelo Twig.
+//   2. Botão + Adicionar lê os campos da linha base, faz POST AJAX,
+//      insere linha de leitura com lixeira (DELETE real) acima da linha base
+//      e limpa os campos da linha base.
+//   3. nm-row-del-btn (lixeira da linha base ou de cópias pendentes)
+//      remove a linha diretamente sem chamar o servidor.
+//   4. nm-del-btn (lixeira de linhas salvas) faz DELETE real no servidor.
 // ---------------------------------------------------------------------------
 
 let nmDelegatedListenersRegistered = false;
@@ -363,7 +345,7 @@ function nmInitIpbxButtons() {
         return true;
     }
 
-    // --- [FIX] Salvar IPBX via delegação — registrado UMA vez no document ---
+    // --- Salvar IPBX principal ---
     if (!window._nmIpbxSaveDelegated) {
         window._nmIpbxSaveDelegated = true;
 
@@ -397,6 +379,9 @@ function nmInitIpbxButtons() {
 
                 if (result && result.id) {
                     nmUpdateIpbxId(result.id);
+                    // Exibe linhas de input pré-adicionadas que estavam ocultas
+                    // (ipbx_id era 0 ao renderizar — linhas não foram geradas pelo Twig)
+                    // Neste caso o usuário precisa recarregar; apenas mostramos feedback.
                 }
 
                 btnSaveAll.innerHTML = '<i class="ti ti-check"></i> Salvo!';
@@ -415,45 +400,80 @@ function nmInitIpbxButtons() {
         });
     }
 
+    // -----------------------------------------------------------------------
+    // Helper: insere linha de leitura acima da linha de input e limpa campos
+    // -----------------------------------------------------------------------
+    function nmInsertReadRow(addRowId, newTr) {
+        const addRow = document.getElementById(addRowId);
+        if (addRow) {
+            addRow.parentNode.insertBefore(newTr, addRow);
+        } else {
+            // fallback: append no tbody
+            const tbody = newTr.closest ? null : null;
+        }
+    }
+
     // --- Adicionar Ramal ---
     const btnExt = document.getElementById('nm-ext-add-btn');
     if (btnExt && !btnExt._nmBound) {
         btnExt._nmBound = true;
         btnExt.addEventListener('click', async () => {
             if (!checkIpbxSaved(btnExt)) return;
+
+            const number       = nmVal('nm-ext-number');
+            const password     = nmVal('nm-ext-password');
+            const device_ip    = nmVal('nm-ext-device_ip');
+            const user_name    = nmVal('nm-ext-user_name');
+            const records_calls = nmVal('nm-ext-records_calls') || '0';
+            const department   = nmVal('nm-ext-department');
+
+            if (!number.trim()) {
+                alert('Informe o número do ramal.');
+                document.getElementById('nm-ext-number')?.focus();
+                return;
+            }
+
             const data = {
                 action:        btnExt.dataset.action,
                 ipbx_id:       btnExt.dataset.ipbxId,
                 companies_id:  getCompaniesId(btnExt),
-                number:        nmVal('nm-ext-number'),
-                password:      nmVal('nm-ext-password'),
-                device_ip:     nmVal('nm-ext-device_ip'),
-                user_name:     nmVal('nm-ext-user_name'),
-                records_calls: nmVal('nm-ext-records_calls') || '0',
-                department:    nmVal('nm-ext-department'),
+                number, password, device_ip, user_name, records_calls, department,
             };
+
+            const originalHtml = btnExt.innerHTML;
+            btnExt.disabled = true;
+            btnExt.innerHTML = '<span class="nm-spinner"></span>';
+
             try {
                 const result = await nmPost(getBtnUrl(btnExt), data);
                 if (!result.success) throw new Error(result.error || 'Erro desconhecido');
-                const addRow = document.getElementById('nm-ext-add-row');
-                if (addRow) {
-                    const tr = document.createElement('tr');
-                    tr.id = 'nm-ext-row-' + result.id;
-                    tr.className = 'tab_bg_1';
-                    tr.innerHTML = `
-                        <td>${data.number}</td>
-                        <td>••••••</td>
-                        <td>${data.device_ip}</td>
-                        <td>${data.user_name}</td>
-                        <td>${parseInt(data.records_calls, 10) ? 'Sim' : 'Não'}</td>
-                        <td>${data.department}</td>
-                        <td>${nmDelBtn('delete_extension', result.id, 'nm-ext-row-' + result.id, getCompaniesId(btnExt), getBtnUrl(btnExt), 'Remover ramal?')}</td>`;
-                    addRow.parentNode.insertBefore(tr, addRow);
-                }
-                nmClear(['nm-ext-number', 'nm-ext-password', 'nm-ext-device_ip', 'nm-ext-user_name', 'nm-ext-department']);
-                const sel = document.getElementById('nm-ext-records_calls'); if (sel) sel.value = '0';
+
+                // Linha de leitura com lixeira (DELETE real)
+                const tr = document.createElement('tr');
+                tr.id = 'nm-ext-row-' + result.id;
+                tr.className = 'tab_bg_1';
+                tr.innerHTML = `
+                    <td>${nmEsc(number)}</td>
+                    <td>••••••</td>
+                    <td>${nmEsc(device_ip)}</td>
+                    <td>${nmEsc(user_name)}</td>
+                    <td>${parseInt(records_calls, 10) ? 'Sim' : 'Não'}</td>
+                    <td>${nmEsc(department)}</td>
+                    <td>${nmDelBtn('delete_extension', result.id, 'nm-ext-row-' + result.id, getCompaniesId(btnExt), getBtnUrl(btnExt), 'Remover ramal?')}</td>`;
+                nmInsertReadRow('nm-ext-add-row', tr);
+
+                // Limpa campos da linha base
+                nmClearRow('nm-ext-add-row', ['nm-ext-number','nm-ext-password','nm-ext-device_ip','nm-ext-user_name','nm-ext-department','nm-ext-records_calls']);
+
+                // Remove mensagem "nenhum cadastrado" se existir
+                document.getElementById('nm-ext-empty')?.remove();
+
             } catch (error) {
+                console.error('[NM] Erro ao adicionar ramal:', error.message);
                 alert('Erro ao adicionar ramal: ' + error.message);
+            } finally {
+                btnExt.innerHTML = originalHtml;
+                btnExt.disabled = false;
             }
         });
     }
@@ -464,34 +484,53 @@ function nmInitIpbxButtons() {
         btnDev._nmBound = true;
         btnDev.addEventListener('click', async () => {
             if (!checkIpbxSaved(btnDev)) return;
+
+            const device_type = nmVal('nm-dev-device_type');
+            const ip_address  = nmVal('nm-dev-ip_address');
+            const login       = nmVal('nm-dev-login');
+            const password    = nmVal('nm-dev-password');
+
+            if (!device_type.trim()) {
+                alert('Informe o tipo do dispositivo.');
+                document.getElementById('nm-dev-device_type')?.focus();
+                return;
+            }
+
             const data = {
                 action:       btnDev.dataset.action,
                 ipbx_id:      btnDev.dataset.ipbxId,
                 companies_id: getCompaniesId(btnDev),
-                device_type:  nmVal('nm-dev-device_type'),
-                ip_address:   nmVal('nm-dev-ip_address'),
-                login:        nmVal('nm-dev-login'),
-                password:     nmVal('nm-dev-password'),
+                device_type, ip_address, login, password,
             };
+
+            const originalHtml = btnDev.innerHTML;
+            btnDev.disabled = true;
+            btnDev.innerHTML = '<span class="nm-spinner"></span>';
+
             try {
                 const result = await nmPost(getBtnUrl(btnDev), data);
                 if (!result.success) throw new Error(result.error || 'Erro desconhecido');
-                const addRow = document.getElementById('nm-dev-add-row');
-                if (addRow) {
-                    const tr = document.createElement('tr');
-                    tr.id = 'nm-dev-row-' + result.id;
-                    tr.className = 'tab_bg_1';
-                    tr.innerHTML = `
-                        <td>${data.device_type}</td>
-                        <td>${data.ip_address}</td>
-                        <td>${data.login}</td>
-                        <td>••••••</td>
-                        <td>${nmDelBtn('delete_device', result.id, 'nm-dev-row-' + result.id, getCompaniesId(btnDev), getBtnUrl(btnDev), 'Remover dispositivo?')}</td>`;
-                    addRow.parentNode.insertBefore(tr, addRow);
-                }
-                nmClear(['nm-dev-device_type', 'nm-dev-ip_address', 'nm-dev-login', 'nm-dev-password']);
+
+                const tr = document.createElement('tr');
+                tr.id = 'nm-dev-row-' + result.id;
+                tr.className = 'tab_bg_1';
+                tr.innerHTML = `
+                    <td>${nmEsc(device_type)}</td>
+                    <td>${nmEsc(ip_address)}</td>
+                    <td>${nmEsc(login)}</td>
+                    <td>••••••</td>
+                    <td>${nmDelBtn('delete_device', result.id, 'nm-dev-row-' + result.id, getCompaniesId(btnDev), getBtnUrl(btnDev), 'Remover dispositivo?')}</td>`;
+                nmInsertReadRow('nm-dev-add-row', tr);
+
+                nmClearRow('nm-dev-add-row', ['nm-dev-device_type','nm-dev-ip_address','nm-dev-login','nm-dev-password']);
+                document.getElementById('nm-dev-empty')?.remove();
+
             } catch (error) {
+                console.error('[NM] Erro ao adicionar dispositivo:', error.message);
                 alert('Erro ao adicionar dispositivo: ' + error.message);
+            } finally {
+                btnDev.innerHTML = originalHtml;
+                btnDev.disabled = false;
             }
         });
     }
@@ -502,46 +541,66 @@ function nmInitIpbxButtons() {
         btnNet._nmBound = true;
         btnNet.addEventListener('click', async () => {
             if (!checkIpbxSaved(btnNet)) return;
+
+            const ip_network    = nmVal('nm-net-ip_network');
+            const netmask       = nmVal('nm-net-netmask');
+            const gateway       = nmVal('nm-net-gateway');
+            const dns_primary   = nmVal('nm-net-dns_primary');
+            const dns_secondary = nmVal('nm-net-dns_secondary');
+            const supplier      = nmVal('nm-net-supplier');
+
+            if (!ip_network.trim()) {
+                alert('Informe o IP da rede.');
+                document.getElementById('nm-net-ip_network')?.focus();
+                return;
+            }
+
             const data = {
                 action:        btnNet.dataset.action,
                 ipbx_id:       btnNet.dataset.ipbxId,
                 companies_id:  getCompaniesId(btnNet),
-                ip_network:    nmVal('nm-net-ip_network'),
-                netmask:       nmVal('nm-net-netmask'),
-                gateway:       nmVal('nm-net-gateway'),
-                dns_primary:   nmVal('nm-net-dns_primary'),
-                dns_secondary: nmVal('nm-net-dns_secondary'),
-                supplier:      nmVal('nm-net-supplier'),
+                ip_network, netmask, gateway, dns_primary, dns_secondary, supplier,
             };
+
+            const originalHtml = btnNet.innerHTML;
+            btnNet.disabled = true;
+            btnNet.innerHTML = '<span class="nm-spinner"></span>';
+
             try {
                 const result = await nmPost(getBtnUrl(btnNet), data);
                 if (!result.success) throw new Error(result.error || 'Erro desconhecido');
-                const addRow = document.getElementById('nm-net-add-row');
-                if (addRow) {
-                    const tr = document.createElement('tr');
-                    tr.id = 'nm-net-row-' + result.id;
-                    tr.className = 'tab_bg_1';
-                    tr.innerHTML = `
-                        <td>${data.ip_network}</td>
-                        <td>${data.netmask}</td>
-                        <td>${data.gateway}</td>
-                        <td>${data.dns_primary}</td>
-                        <td>${data.dns_secondary}</td>
-                        <td>${data.supplier}</td>
-                        <td>${nmDelBtn('delete_network', result.id, 'nm-net-row-' + result.id, getCompaniesId(btnNet), getBtnUrl(btnNet), 'Remover rede?')}</td>`;
-                    addRow.parentNode.insertBefore(tr, addRow);
-                }
-                nmClear(['nm-net-ip_network', 'nm-net-netmask', 'nm-net-gateway', 'nm-net-dns_primary', 'nm-net-dns_secondary', 'nm-net-supplier']);
+
+                const tr = document.createElement('tr');
+                tr.id = 'nm-net-row-' + result.id;
+                tr.className = 'tab_bg_1';
+                tr.innerHTML = `
+                    <td>${nmEsc(ip_network)}</td>
+                    <td>${nmEsc(netmask)}</td>
+                    <td>${nmEsc(gateway)}</td>
+                    <td>${nmEsc(dns_primary)}</td>
+                    <td>${nmEsc(dns_secondary)}</td>
+                    <td>${nmEsc(supplier)}</td>
+                    <td>${nmDelBtn('delete_network', result.id, 'nm-net-row-' + result.id, getCompaniesId(btnNet), getBtnUrl(btnNet), 'Remover rede?')}</td>`;
+                nmInsertReadRow('nm-net-add-row', tr);
+
+                nmClearRow('nm-net-add-row', ['nm-net-ip_network','nm-net-netmask','nm-net-gateway','nm-net-dns_primary','nm-net-dns_secondary','nm-net-supplier']);
+                document.getElementById('nm-net-empty')?.remove();
+
             } catch (error) {
+                console.error('[NM] Erro ao adicionar rede:', error.message);
                 alert('Erro ao adicionar rede: ' + error.message);
+            } finally {
+                btnNet.innerHTML = originalHtml;
+                btnNet.disabled = false;
             }
         });
     }
 
-    // --- Listeners delegados no document (delete + eye + toggle) ---
+    // --- Listeners delegados (delete + eye + toggle + nm-row-del-btn) ---
     if (!nmDelegatedListenersRegistered) {
         nmDelegatedListenersRegistered = true;
 
+        // Recolher/Expandir seções
         document.addEventListener('click', function(e) {
             const btn = e.target.closest('.nm-toggle-section');
             if (!btn) return;
@@ -552,11 +611,26 @@ function nmInitIpbxButtons() {
             tbody.style.display = isExpanded ? 'none' : '';
             btn.setAttribute('aria-expanded', String(!isExpanded));
             const icon = btn.querySelector('i');
-            if (icon) {
-                icon.className = isExpanded ? 'ti ti-chevron-down' : 'ti ti-chevron-up';
-            }
+            if (icon) icon.className = isExpanded ? 'ti ti-chevron-down' : 'ti ti-chevron-up';
         });
 
+        // Lixeira linha de input (sem id salvo) — remove somente do DOM
+        document.addEventListener('click', function(e) {
+            const btn = e.target.closest('.nm-row-del-btn');
+            if (!btn) return;
+            const row = btn.closest('tr');
+            if (!row) return;
+            // Não remove a linha base (que tem id nm-*-add-row)
+            if (row.id && row.id.match(/^nm-(ext|dev|net)-add-row$/)) {
+                // Apenas limpa os campos em vez de remover a linha base
+                row.querySelectorAll('input').forEach(el => el.value = '');
+                row.querySelectorAll('select').forEach(el => el.selectedIndex = 0);
+                return;
+            }
+            row.remove();
+        });
+
+        // Delete real (linhas salvas) + toggle olho senha
         document.addEventListener('click', async (e) => {
             const btn = e.target.closest('.nm-del-btn, .nm-btn-eye');
             if (!btn) return;
@@ -590,7 +664,20 @@ function nmInitIpbxButtons() {
 }
 
 // ---------------------------------------------------------------------------
-// Chatbot — todos os handlers via delegação no document
+// Escape HTML — previne XSS ao inserir dados do usuário via innerHTML
+// ---------------------------------------------------------------------------
+function nmEsc(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+// ---------------------------------------------------------------------------
+// Chatbot — handlers via delegação
 // ---------------------------------------------------------------------------
 
 function nmInitChatbotButtons() {

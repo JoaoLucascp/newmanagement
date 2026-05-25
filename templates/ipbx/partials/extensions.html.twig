@@ -1,5 +1,6 @@
 {#
-  Partial: Tabela de Ramais — padrão visual idêntico ao Chatbot.
+  Partial: Tabela de Ramais
+  fix(UI-01): linha de input pré-adicionada + botão + Adicionar clona linha + lixeira por linha
 #}
 {% set ext_pages = ext_page_size > 0 ? max(1, (ext_total / ext_page_size)|round(0, 'ceil')) : 1 %}
 
@@ -39,14 +40,16 @@
     </thead>
 
     <tbody id="nm-ext-tbody">
+
+      {# Linhas salvas #}
       {% for row in extensions %}
         <tr class="tab_bg_1" id="nm-ext-row-{{ row.id }}">
-          <td>{{ row.number }}</td>
+          <td>{{ row.number|e }}</td>
           <td>••••••</td>
-          <td>{{ row.device_ip }}</td>
-          <td>{{ row.user_name }}</td>
+          <td>{{ row.device_ip|default('')|e }}</td>
+          <td>{{ row.user_name|default('')|e }}</td>
           <td>{{ row.records_calls ? __('Sim', 'newmanagement') : __('Não', 'newmanagement') }}</td>
-          <td>{{ row.department }}</td>
+          <td>{{ row.department|default('')|e }}</td>
           <td>
             {% if can_delete %}
             <button type="button"
@@ -64,16 +67,43 @@
             {% endif %}
           </td>
         </tr>
-      {% else %}
+      {% endfor %}
+
+      {# Linha de input pré-adicionada — template base para clonagem #}
+      {% if can_write and ipbx_id > 0 %}
+      <tr class="tab_bg_1 nm-input-row" id="nm-ext-add-row">
+        <td><input type="text"   id="nm-ext-number"        name="nm-ext-number"        class="form-control form-control-sm" placeholder="{{ __('Ramal', 'newmanagement') }}"></td>
+        <td><input type="password" id="nm-ext-password"    name="nm-ext-password"      class="form-control form-control-sm" placeholder="{{ __('Senha', 'newmanagement') }}" autocomplete="new-password"></td>
+        <td><input type="text"   id="nm-ext-device_ip"     name="nm-ext-device_ip"     class="form-control form-control-sm" placeholder="192.168.x.x"></td>
+        <td><input type="text"   id="nm-ext-user_name"     name="nm-ext-user_name"     class="form-control form-control-sm" placeholder="{{ __('Usuário', 'newmanagement') }}"></td>
+        <td>
+          <select id="nm-ext-records_calls" name="nm-ext-records_calls" class="form-select form-select-sm">
+            <option value="0">{{ __('Não', 'newmanagement') }}</option>
+            <option value="1">{{ __('Sim', 'newmanagement') }}</option>
+          </select>
+        </td>
+        <td><input type="text"   id="nm-ext-department"    name="nm-ext-department"    class="form-control form-control-sm" placeholder="{{ __('Departamento', 'newmanagement') }}"></td>
+        <td>
+          <button type="button" class="btn btn-sm btn-icon nm-row-del-btn" title="{{ __('Remover linha', 'newmanagement') }}">
+            <i class="ti ti-trash text-danger"></i>
+          </button>
+        </td>
+      </tr>
+      {% endif %}
+
+      {# Mensagem vazia — exibida apenas quando não há linhas salvas E nenhuma linha de input #}
+      {% if extensions is empty and (not can_write or ipbx_id <= 0) %}
         <tr id="nm-ext-empty">
           <td colspan="7" class="text-center text-muted py-3">
             {{ __('Nenhum ramal cadastrado.', 'newmanagement') }}
           </td>
         </tr>
-      {% endfor %}
+      {% endif %}
+
     </tbody>
   </table>
 
+  {# Paginação #}
   <div id="nm-ext-pagination"
        class="d-flex align-items-center justify-content-between mt-2"
        {% if ext_pages <= 1 %}style="display:none!important"{% endif %}>
