@@ -2,7 +2,7 @@
     "name": "glpi-project/newmanagement",
     "description": "Plugin GLPI para gerenciamento de empresas, IPBX, chatbots e linhas fixas",
     "type": "glpi-plugin",
-    "license": "GPL-2.0-or-later",
+    "license": "MIT",
     "authors": [
         {
             "name": "JoaoLucascp",
