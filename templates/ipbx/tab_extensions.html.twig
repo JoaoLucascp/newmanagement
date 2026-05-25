@@ -69,7 +69,6 @@
       <strong>{{ 'Adicionar Ramal'|trans({}, 'newmanagement') }}</strong>
     </div>
     <div class="card-body">
-      <input type="hidden" id="nm-ext-csrf"         value="{{ csrf|e('html_attr') }}">
       <input type="hidden" id="nm-ext-ipbx-id"      value="{{ ipbx_id }}">
       <input type="hidden" id="nm-ext-companies-id" value="{{ companies_id }}">
 
@@ -122,17 +121,40 @@
   const ipbxId      = tab.dataset.ipbxId;
   const companiesId = tab.dataset.companiesId;
 
+  /** Lê a meta tag do GLPI — fonte canônica do CSRF no GLPI 11 */
+  function nmCsrf() {
+    const meta = document.querySelector('meta[property="glpi:csrf_token"]');
+    if (meta && meta.getAttribute('content')) return meta.getAttribute('content');
+    const h = document.querySelector('input[name="_glpi_csrf_token"]');
+    return h ? h.value : '';
+  }
+
   function get(id) {
     const el = document.getElementById('nm-ext-' + id);
     return el ? el.value : '';
   }
 
   async function nmPost(body) {
+    const csrf = nmCsrf();
     const fd = new FormData();
-    for (const [k, v] of Object.entries(body)) fd.append(k, v ?? '');
-    const r = await fetch(actionUrl, { method: 'POST', body: fd, signal: AbortSignal.timeout(10000) });
+    fd.append('_glpi_csrf_token', csrf);
+    for (const [k, v] of Object.entries(body)) {
+      if (k !== '_glpi_csrf_token') fd.append(k, v ?? '');
+    }
+    const r = await fetch(actionUrl, {
+      method : 'POST',
+      headers: { 'X-Glpi-Csrf-Token': csrf },
+      body   : fd,
+      signal : AbortSignal.timeout(10000),
+    });
     if (!r.ok) throw new Error('HTTP ' + r.status);
-    return r.json();
+    const json = await r.json();
+    // Atualiza o token para o próximo request
+    if (json && json.csrf) {
+      const meta = document.querySelector('meta[property="glpi:csrf_token"]');
+      if (meta) meta.setAttribute('content', json.csrf);
+    }
+    return json;
   }
 
   function setIcon(btn, icon, spin) {
@@ -152,21 +174,19 @@
       setIcon(saveBtn, 'ti-loader-2', true);
       try {
         const data = await nmPost({
-          _glpi_csrf_token : get('csrf'),
-          action           : 'add_extension',
-          ipbx_id          : ipbxId,
-          companies_id     : companiesId,
-          number           : number,
-          password         : get('password'),
-          user_name        : get('user_name'),
-          device_ip        : get('device_ip'),
-          department       : get('department'),
-          records_calls    : get('records_calls'),
+          action        : 'add_extension',
+          ipbx_id       : ipbxId,
+          companies_id  : companiesId,
+          number        : number,
+          password      : get('password'),
+          user_name     : get('user_name'),
+          device_ip     : get('device_ip'),
+          department    : get('department'),
+          records_calls : get('records_calls'),
         });
 
         if (!data.success) throw new Error(data.error || 'Erro');
 
-        // Adiciona linha na tabela
         const tbody = document.getElementById('nm-ext-rows');
         const empty = document.getElementById('nm-ext-empty');
         if (empty) empty.remove();
@@ -175,7 +195,6 @@
           bindDeleteButtons();
         }
 
-        // Limpa formulário
         ['number','password','user_name','device_ip','department'].forEach(f => {
           const el = document.getElementById('nm-ext-' + f);
           if (el) el.value = '';
@@ -186,6 +205,7 @@
         setTimeout(() => setIcon(saveBtn, 'ti-plus', false), 2000);
 
       } catch (err) {
+        console.error('[NM-ext] Erro:', err.message);
         setIcon(saveBtn, 'ti-x', false);
         setTimeout(() => setIcon(saveBtn, 'ti-plus', false), 3000);
       }
@@ -202,22 +222,18 @@
         btn.disabled = true;
         try {
           const data = await nmPost({
-            _glpi_csrf_token : btn.dataset.csrf,
-            action           : 'delete_extension',
-            id               : btn.dataset.id,
-            companies_id     : companiesId,
+            action       : 'delete_extension',
+            id           : btn.dataset.id,
+            companies_id : companiesId,
           });
           if (!data.success) throw new Error(data.error || 'Erro');
           document.getElementById('nm-ext-row-' + btn.dataset.id)?.remove();
-        } catch (err) {
-          btn.disabled = false;
-        }
+        } catch (err) { btn.disabled = false; }
       });
     });
   }
   bindDeleteButtons();
 
-  // CSS spin
   if (!document.getElementById('nm-spin-style')) {
     const s = document.createElement('style');
     s.id = 'nm-spin-style';
