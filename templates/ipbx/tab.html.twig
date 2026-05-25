@@ -14,6 +14,9 @@
     extensions        — array de rows da tabela de ramais
     devices           — array de rows da tabela de dispositivos
     network           — array de rows da tabela de rede
+    ext_total         — int: total de ramais
+    dev_total         — int: total de dispositivos
+    net_total         — int: total de redes
 #}
 <div class="nm-ipbx-tab"
      data-action-url="{{ action_url|e('html_attr') }}"
@@ -130,65 +133,64 @@
     </table>
   </div>{# /#nm-ipbx-form #}
 
-  {# === Ramais === #}
-  <div class="nm-subsection mt-3">
-    <div class="d-flex align-items-center mb-2">
-      <i class="ti ti-phone-call me-2 fs-5 text-muted"></i>
-      <span class="fw-bold text-muted text-uppercase" style="font-size:0.75rem;letter-spacing:.05em">
-        {{ __('Ramais', 'newmanagement') }}
-      </span>
+  {# === Sub-seções em abas ─────────────────────────────── #}
+  <div class="nm-tabs-wrapper" style="margin-top: 1.5rem;">
+
+    {# Barra de abas #}
+    <div class="nm-tab-bar" role="tablist" aria-label="{{ __('Recursos do IPBX', 'newmanagement') }}">
+
       <button type="button"
-              class="btn btn-sm btn-icon ms-auto nm-toggle-section"
-              data-target="nm-ext-tbody"
-              aria-expanded="true"
-              title="Recolher/Expandir">
-        <i class="ti ti-chevron-up"></i>
+              class="nm-tab active"
+              role="tab"
+              aria-selected="true"
+              aria-controls="nm-panel-ext"
+              id="nm-tab-ext"
+              data-panel="nm-panel-ext">
+        <i class="ti ti-phone-call" aria-hidden="true"></i>
+        {{ __('Ramais', 'newmanagement') }}
+        <span class="nm-tab-count" id="nm-count-ext">{{ ext_total }}</span>
       </button>
-    </div>
-    <div class="nm-subsection-body">
+
+      <button type="button"
+              class="nm-tab"
+              role="tab"
+              aria-selected="false"
+              aria-controls="nm-panel-dev"
+              id="nm-tab-dev"
+              data-panel="nm-panel-dev">
+        <i class="ti ti-device-desktop" aria-hidden="true"></i>
+        {{ __('Dispositivos', 'newmanagement') }}
+        <span class="nm-tab-count" id="nm-count-dev">{{ dev_total }}</span>
+      </button>
+
+      <button type="button"
+              class="nm-tab"
+              role="tab"
+              aria-selected="false"
+              aria-controls="nm-panel-net"
+              id="nm-tab-net"
+              data-panel="nm-panel-net">
+        <i class="ti ti-network" aria-hidden="true"></i>
+        {{ __('Rede da Empresa', 'newmanagement') }}
+        <span class="nm-tab-count" id="nm-count-net">{{ net_total }}</span>
+      </button>
+
+    </div>{# /.nm-tab-bar #}
+
+    {# Painéis #}
+    <div class="nm-tab-panel active" id="nm-panel-ext" role="tabpanel" aria-labelledby="nm-tab-ext">
       {% include '@newmanagement/ipbx/partials/extensions.html.twig' %}
     </div>
-  </div>
 
-  {# === Dispositivos === #}
-  <div class="nm-subsection mt-3">
-    <div class="d-flex align-items-center mb-2">
-      <i class="ti ti-device-desktop me-2 fs-5 text-muted"></i>
-      <span class="fw-bold text-muted text-uppercase" style="font-size:0.75rem;letter-spacing:.05em">
-        {{ __('Dispositivos', 'newmanagement') }}
-      </span>
-      <button type="button"
-              class="btn btn-sm btn-icon ms-auto nm-toggle-section"
-              data-target="nm-dev-tbody"
-              aria-expanded="true"
-              title="Recolher/Expandir">
-        <i class="ti ti-chevron-up"></i>
-      </button>
-    </div>
-    <div class="nm-subsection-body">
+    <div class="nm-tab-panel" id="nm-panel-dev" role="tabpanel" aria-labelledby="nm-tab-dev" hidden>
       {% include '@newmanagement/ipbx/partials/devices.html.twig' %}
     </div>
-  </div>
 
-  {# === Rede da Empresa === #}
-  <div class="nm-subsection mt-3">
-    <div class="d-flex align-items-center mb-2">
-      <i class="ti ti-network me-2 fs-5 text-muted"></i>
-      <span class="fw-bold text-muted text-uppercase" style="font-size:0.75rem;letter-spacing:.05em">
-        {{ __('Rede da Empresa', 'newmanagement') }}
-      </span>
-      <button type="button"
-              class="btn btn-sm btn-icon ms-auto nm-toggle-section"
-              data-target="nm-net-tbody"
-              aria-expanded="true"
-              title="Recolher/Expandir">
-        <i class="ti ti-chevron-up"></i>
-      </button>
-    </div>
-    <div class="nm-subsection-body">
+    <div class="nm-tab-panel" id="nm-panel-net" role="tabpanel" aria-labelledby="nm-tab-net" hidden>
       {% include '@newmanagement/ipbx/partials/network.html.twig' %}
     </div>
-  </div>
+
+  </div>{# /.nm-tabs-wrapper #}
 
   {# === Botão Salvar === #}
   {% if can_write %}
