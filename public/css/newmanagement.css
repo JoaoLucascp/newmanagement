@@ -152,11 +152,19 @@
     color: #fff;
 }
 
+/*
+ * fix(UI-02): painéis visíveis recebem display:block explícito.
+ * Necessário porque o Tabler/GLPI pode ter regras herdadas que
+ * sobrescrevem o comportamento padrão de div após remoção de [hidden].
+ * [hidden] continua sendo a fonte de verdade para ocultar painéis.
+ */
 .nm-tab-panel {
+    display: none;   /* oculto por padrão — JS/HTML controlam visibilidade */
     padding: 1rem;
 }
 
-.nm-tab-panel[hidden] {
-    display: none;
+.nm-tab-panel.active,
+.nm-tab-panel:not([hidden]) {
+    display: block !important;  /* garante visibilidade independente de herança */
 }
 /* ───────────────────────────────────────────────────────── */
