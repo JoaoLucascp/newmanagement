@@ -216,9 +216,13 @@
       setButtonLoading(true);
 
       try {
+        // fix(C3/SE-01): X-Glpi-Csrf-Token obrigatório pelo CheckCsrfListener do Symfony (GLPI 11)
         const res  = await fetch(AJAX_URL, {
           method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type':      'application/json',
+            'X-Glpi-Csrf-Token': csrfToken,
+          },
           body:    JSON.stringify(buildPayload(action)),
           signal:  AbortSignal.timeout(10000),
         });
@@ -251,9 +255,13 @@
 
       btnDelete.disabled = true;
       try {
+        // fix(C3/SE-01): X-Glpi-Csrf-Token obrigatório pelo CheckCsrfListener do Symfony (GLPI 11)
         const res  = await fetch(AJAX_URL, {
           method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type':      'application/json',
+            'X-Glpi-Csrf-Token': csrfToken,
+          },
           body:    JSON.stringify({ action: 'delete_task', _glpi_csrf_token: csrfToken, id: taskId }),
           signal:  AbortSignal.timeout(10000),
         });
