@@ -13,7 +13,7 @@
   <td>{{ __('Nome', 'newmanagement') }} <span class="required">*</span></td>
   <td>
     <input type="text" id="name" name="name"
-           value="{{ item.name|default('')|e }}"
+           value="{{ item.fields.name|default('')|e }}"
            class="form-control" required>
   </td>
   <td>{{ __('ID', 'newmanagement') }}</td>
