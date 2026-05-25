@@ -1,6 +1,6 @@
 {#
   templates/ipbx/tab_extensions.html.twig
-  Aba de Ramais dentro da ficha do IPBX On-Premise.
+  Aba de Ramais — padrão GLPI 11: linha inline criada pelo botão '+ Adicionar'.
 
   Variáveis recebidas de IpbxExtension::showForIpbx():
     rows         — array de registros existentes
@@ -16,62 +16,21 @@
      data-ipbx-id="{{ ipbx_id }}"
      data-companies-id="{{ companies_id }}">
 
-  {# === Formulário de adição (topo) === #}
-  {% if can_write %}
-  <div class="card mb-3">
-    <div class="card-header">
-      <strong>{{ 'Adicionar Ramal'|trans({}, 'newmanagement') }}</strong>
-    </div>
-    <div class="card-body">
-      <input type="hidden" id="nm-ext-ipbx-id"      value="{{ ipbx_id }}">
-      <input type="hidden" id="nm-ext-companies-id" value="{{ companies_id }}">
-
-      <table class="tab_cadre_fixe">
-        <tr class="tab_bg_1">
-          <td>{{ 'Número'|trans({}, 'newmanagement') }} <span class="text-danger">*</span></td>
-          <td><input type="text" id="nm-ext-number"      class="form-control" placeholder="Ex: 1001"></td>
-          <td>{{ 'Senha SIP'|trans({}, 'newmanagement') }}</td>
-          <td><input type="password" id="nm-ext-password" class="form-control" autocomplete="new-password"></td>
-        </tr>
-        <tr class="tab_bg_1">
-          <td>{{ 'Usuário'|trans({}, 'newmanagement') }}</td>
-          <td><input type="text" id="nm-ext-user_name"  class="form-control" placeholder="Nome do usuário"></td>
-          <td>{{ 'IP Dispositivo'|trans({}, 'newmanagement') }}</td>
-          <td><input type="text" id="nm-ext-device_ip"  class="form-control" placeholder="Ex: 192.168.1.x"></td>
-        </tr>
-        <tr class="tab_bg_1">
-          <td>{{ 'Departamento'|trans({}, 'newmanagement') }}</td>
-          <td><input type="text" id="nm-ext-department" class="form-control" placeholder="Ex: Comercial"></td>
-          <td>{{ 'Grava Chamadas?'|trans({}, 'newmanagement') }}</td>
-          <td>
-            <select id="nm-ext-records_calls" class="form-select">
-              <option value="0">{{ 'Não'|trans({}, 'newmanagement') }}</option>
-              <option value="1">{{ 'Sim'|trans({}, 'newmanagement') }}</option>
-            </select>
-          </td>
-        </tr>
-      </table>
-
-      <div class="d-flex justify-content-end mt-3">
-        <button type="button" id="nm-ext-save" class="btn btn-primary">
-          <i class="ti ti-plus"></i>
-          {{ 'Adicionar Ramal'|trans({}, 'newmanagement') }}
-        </button>
-      </div>
-    </div>
-  </div>
-  {% endif %}
-
-  {# === Lista de ramais (abaixo do formulário) === #}
   <table class="tab_cadre_fixe" id="nm-ext-list">
     <thead>
       <tr class="tab_bg_2">
-        <th>{{ 'Ramal'|trans({}, 'newmanagement') }}</th>
+        <th>{{ 'Ramal'|trans({}, 'newmanagement') }} <span class="text-danger">*</span></th>
         <th>{{ 'Usuário'|trans({}, 'newmanagement') }}</th>
         <th>{{ 'IP Dispositivo'|trans({}, 'newmanagement') }}</th>
         <th>{{ 'Departamento'|trans({}, 'newmanagement') }}</th>
         <th>{{ 'Grava?'|trans({}, 'newmanagement') }}</th>
-        {% if can_delete %}<th></th>{% endif %}
+        <th style="width:120px;">
+          {% if can_write %}
+          <button type="button" id="nm-ext-add-btn" class="btn btn-sm btn-primary">
+            <i class="ti ti-plus"></i> {{ '+ Adicionar'|trans({}, 'newmanagement') }}
+          </button>
+          {% endif %}
+        </th>
       </tr>
     </thead>
     <tbody id="nm-ext-rows">
@@ -88,19 +47,19 @@
             <span class="badge bg-secondary">{{ 'Não'|trans({}, 'newmanagement') }}</span>
           {% endif %}
         </td>
-        {% if can_delete %}
         <td>
-          <button type="button" class="btn btn-sm btn-danger nm-ext-delete"
-                  data-id="{{ row.id }}">
+          {% if can_delete %}
+          <button type="button" class="btn btn-sm btn-danger nm-ext-delete" data-id="{{ row.id }}">
             <i class="ti ti-trash"></i>
           </button>
+          {% endif %}
         </td>
-        {% endif %}
       </tr>
       {% else %}
       <tr id="nm-ext-empty">
-        <td colspan="{{ can_delete ? 6 : 5 }}" class="text-center text-muted py-3">
-          {{ 'Nenhum ramal cadastrado.'|trans({}, 'newmanagement') }}
+        <td colspan="6" class="text-center text-muted py-3">
+          <i class="ti ti-phone-off me-1"></i>
+          {{ 'Nenhum ramal cadastrado. Clique em + Adicionar para incluir.'|trans({}, 'newmanagement') }}
         </td>
       </tr>
       {% endfor %}
@@ -120,6 +79,7 @@
   const ipbxId      = tab.dataset.ipbxId;
   const companiesId = tab.dataset.companiesId;
 
+  /* ── CSRF ──────────────────────────────────────────── */
   function nmCsrf() {
     const meta = document.querySelector('meta[property="glpi:csrf_token"]');
     if (meta && meta.getAttribute('content')) return meta.getAttribute('content');
@@ -127,11 +87,7 @@
     return h ? h.value : '';
   }
 
-  function get(id) {
-    const el = document.getElementById('nm-ext-' + id);
-    return el ? el.value : '';
-  }
-
+  /* ── POST via fetch ────────────────────────────────── */
   async function nmPost(body) {
     const csrf = nmCsrf();
     const fd = new FormData();
@@ -156,57 +112,96 @@
 
   function setIcon(btn, icon, spin) {
     const i = btn.querySelector('i');
-    if (i) { i.className = 'ti ' + icon + (spin ? ' nm-spin' : ''); }
+    if (i) i.className = 'ti ' + icon + (spin ? ' nm-spin' : '');
     btn.disabled = spin;
   }
 
-  const saveBtn = document.getElementById('nm-ext-save');
-  if (saveBtn) {
-    saveBtn.addEventListener('click', async () => {
-      const number = get('number');
-      if (!number) { document.getElementById('nm-ext-number').focus(); return; }
+  /* ── Botão '+ Adicionar' — cria linha inline ───────── */
+  const addBtn = document.getElementById('nm-ext-add-btn');
+  if (addBtn) {
+    addBtn.addEventListener('click', () => {
+      const tbody = document.getElementById('nm-ext-rows');
+      const empty = document.getElementById('nm-ext-empty');
+      if (empty) empty.remove();
 
-      setIcon(saveBtn, 'ti-loader-2', true);
-      try {
-        const data = await nmPost({
-          action        : 'add_extension',
-          ipbx_id       : ipbxId,
-          companies_id  : companiesId,
-          number        : number,
-          password      : get('password'),
-          user_name     : get('user_name'),
-          device_ip     : get('device_ip'),
-          department    : get('department'),
-          records_calls : get('records_calls'),
-        });
+      const tr = document.createElement('tr');
+      tr.className = 'nm-ext-new-row';
+      tr.innerHTML = `
+        <td><input type="text"     class="form-control form-control-sm" id="nm-ext-number"        placeholder="Ex: 1001" required></td>
+        <td><input type="text"     class="form-control form-control-sm" id="nm-ext-user_name"     placeholder="Nome do usuário"></td>
+        <td><input type="text"     class="form-control form-control-sm" id="nm-ext-device_ip"     placeholder="192.168.1.x"></td>
+        <td><input type="text"     class="form-control form-control-sm" id="nm-ext-department"    placeholder="Ex: Comercial"></td>
+        <td>
+          <select class="form-select form-select-sm" id="nm-ext-records_calls">
+            <option value="0">Não</option>
+            <option value="1">Sim</option>
+          </select>
+        </td>
+        <td class="d-flex gap-1">
+          <button type="button" class="btn btn-sm btn-success" id="nm-ext-save-inline">
+            <i class="ti ti-device-floppy"></i>
+          </button>
+          <button type="button" class="btn btn-sm btn-secondary" id="nm-ext-cancel-inline">
+            <i class="ti ti-x"></i>
+          </button>
+        </td>`;
+      tbody.appendChild(tr);
+      tr.querySelector('#nm-ext-number').focus();
 
-        if (!data.success) throw new Error(data.error || 'Erro');
-
-        const tbody = document.getElementById('nm-ext-rows');
-        const empty = document.getElementById('nm-ext-empty');
-        if (empty) empty.remove();
-        if (data.html) {
-          tbody.insertAdjacentHTML('beforeend', data.html);
-          bindDeleteButtons();
+      /* Cancelar: remove a linha nova */
+      tr.querySelector('#nm-ext-cancel-inline').addEventListener('click', () => {
+        tr.remove();
+        if (!document.querySelector('#nm-ext-rows tr:not(.nm-ext-new-row)')) {
+          const emptyTr = document.createElement('tr');
+          emptyTr.id = 'nm-ext-empty';
+          emptyTr.innerHTML = `<td colspan="6" class="text-center text-muted py-3"><i class="ti ti-phone-off me-1"></i>Nenhum ramal cadastrado. Clique em + Adicionar para incluir.</td>`;
+          document.getElementById('nm-ext-rows').appendChild(emptyTr);
         }
+      });
 
-        ['number','password','user_name','device_ip','department'].forEach(f => {
-          const el = document.getElementById('nm-ext-' + f);
-          if (el) el.value = '';
-        });
-        document.getElementById('nm-ext-records_calls').value = '0';
+      /* Salvar: envia AJAX e substitui linha de edição por linha de leitura */
+      const saveInline = tr.querySelector('#nm-ext-save-inline');
+      saveInline.addEventListener('click', async () => {
+        const number = tr.querySelector('#nm-ext-number').value.trim();
+        if (!number) { tr.querySelector('#nm-ext-number').focus(); return; }
 
-        setIcon(saveBtn, 'ti-check', false);
-        setTimeout(() => setIcon(saveBtn, 'ti-plus', false), 2000);
+        setIcon(saveInline, 'ti-loader-2', true);
+        try {
+          const data = await nmPost({
+            action        : 'add_extension',
+            ipbx_id       : ipbxId,
+            companies_id  : companiesId,
+            number        : number,
+            user_name     : tr.querySelector('#nm-ext-user_name').value,
+            device_ip     : tr.querySelector('#nm-ext-device_ip').value,
+            department    : tr.querySelector('#nm-ext-department').value,
+            records_calls : tr.querySelector('#nm-ext-records_calls').value,
+          });
 
-      } catch (err) {
-        console.error('[NM-ext] Erro:', err.message);
-        setIcon(saveBtn, 'ti-x', false);
-        setTimeout(() => setIcon(saveBtn, 'ti-plus', false), 3000);
-      }
+          if (!data.success) throw new Error(data.error || 'Erro ao salvar');
+
+          /* Substitui linha de edição pelo HTML retornado pelo servidor */
+          if (data.html) {
+            tr.outerHTML = data.html;
+            bindDeleteButtons();
+          } else {
+            tr.remove();
+          }
+        } catch (err) {
+          console.error('[NM-ext] Erro:', err.message);
+          setIcon(saveInline, 'ti-alert-circle', false);
+          setTimeout(() => setIcon(saveInline, 'ti-device-floppy', false), 3000);
+        }
+      });
+
+      /* Salvar ao pressionar Enter no campo ramal */
+      tr.querySelector('#nm-ext-number').addEventListener('keydown', e => {
+        if (e.key === 'Enter') saveInline.click();
+      });
     });
   }
 
+  /* ── Botões de exclusão (existentes + futuros) ──────── */
   function bindDeleteButtons() {
     document.querySelectorAll('.nm-ext-delete').forEach(btn => {
       if (btn.dataset.bound) return;
@@ -221,13 +216,21 @@
             companies_id : companiesId,
           });
           if (!data.success) throw new Error(data.error || 'Erro');
-          document.getElementById('nm-ext-row-' + btn.dataset.id)?.remove();
+          const row = document.getElementById('nm-ext-row-' + btn.dataset.id);
+          if (row) row.remove();
+          if (!document.querySelector('#nm-ext-rows tr')) {
+            const emptyTr = document.createElement('tr');
+            emptyTr.id = 'nm-ext-empty';
+            emptyTr.innerHTML = `<td colspan="6" class="text-center text-muted py-3"><i class="ti ti-phone-off me-1"></i>Nenhum ramal cadastrado. Clique em + Adicionar para incluir.</td>`;
+            document.getElementById('nm-ext-rows').appendChild(emptyTr);
+          }
         } catch (err) { btn.disabled = false; }
       });
     });
   }
   bindDeleteButtons();
 
+  /* ── Spinner CSS ────────────────────────────────────── */
   if (!document.getElementById('nm-spin-style')) {
     const s = document.createElement('style');
     s.id = 'nm-spin-style';
