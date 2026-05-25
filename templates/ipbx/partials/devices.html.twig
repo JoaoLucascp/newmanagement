@@ -1,6 +1,7 @@
 {#
   Partial: Tabela de Dispositivos
   fix(UI-01): linha de input pré-adicionada + botão + Adicionar clona linha + lixeira por linha
+  fix(UI-02): data-fixed="true" impede que a lixeira remova a linha de input fixa
 #}
 {% set dev_pages = dev_page_size > 0 ? max(1, (dev_total / dev_page_size)|round(0, 'ceil')) : 1 %}
 
@@ -65,15 +66,16 @@
         </tr>
       {% endfor %}
 
-      {# Linha de input pré-adicionada — template base para clonagem #}
+      {# Linha de input pré-adicionada — template base para clonagem
+         data-fixed="true" impede que o handler nm-row-del-btn a remova #}
       {% if can_write and ipbx_id > 0 %}
-      <tr class="tab_bg_1 nm-input-row" id="nm-dev-add-row">
+      <tr class="tab_bg_1 nm-input-row" id="nm-dev-add-row" data-fixed="true">
         <td><input type="text"     id="nm-dev-device_type" name="nm-dev-device_type" class="form-control form-control-sm" placeholder="{{ __('Tipo', 'newmanagement') }}"></td>
         <td><input type="text"     id="nm-dev-ip_address"  name="nm-dev-ip_address"  class="form-control form-control-sm" placeholder="192.168.x.x"></td>
         <td><input type="text"     id="nm-dev-login"       name="nm-dev-login"       class="form-control form-control-sm" placeholder="{{ __('Login', 'newmanagement') }}"></td>
         <td><input type="password" id="nm-dev-password"    name="nm-dev-password"    class="form-control form-control-sm" placeholder="{{ __('Senha', 'newmanagement') }}" autocomplete="new-password"></td>
         <td>
-          <button type="button" class="btn btn-sm btn-icon nm-row-del-btn" title="{{ __('Remover linha', 'newmanagement') }}">
+          <button type="button" class="btn btn-sm btn-icon nm-row-del-btn" title="{{ __('Limpar linha', 'newmanagement') }}">
             <i class="ti ti-trash text-danger"></i>
           </button>
         </td>

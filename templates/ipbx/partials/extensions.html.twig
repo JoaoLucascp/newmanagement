@@ -1,6 +1,7 @@
 {#
   Partial: Tabela de Ramais
   fix(UI-01): linha de input pré-adicionada + botão + Adicionar clona linha + lixeira por linha
+  fix(UI-02): data-fixed="true" impede que a lixeira remova a linha de input fixa
 #}
 {% set ext_pages = ext_page_size > 0 ? max(1, (ext_total / ext_page_size)|round(0, 'ceil')) : 1 %}
 
@@ -69,9 +70,10 @@
         </tr>
       {% endfor %}
 
-      {# Linha de input pré-adicionada — template base para clonagem #}
+      {# Linha de input pré-adicionada — template base para clonagem
+         data-fixed="true" impede que o handler nm-row-del-btn a remova #}
       {% if can_write and ipbx_id > 0 %}
-      <tr class="tab_bg_1 nm-input-row" id="nm-ext-add-row">
+      <tr class="tab_bg_1 nm-input-row" id="nm-ext-add-row" data-fixed="true">
         <td><input type="text"   id="nm-ext-number"        name="nm-ext-number"        class="form-control form-control-sm" placeholder="{{ __('Ramal', 'newmanagement') }}"></td>
         <td><input type="password" id="nm-ext-password"    name="nm-ext-password"      class="form-control form-control-sm" placeholder="{{ __('Senha', 'newmanagement') }}" autocomplete="new-password"></td>
         <td><input type="text"   id="nm-ext-device_ip"     name="nm-ext-device_ip"     class="form-control form-control-sm" placeholder="192.168.x.x"></td>
@@ -84,7 +86,7 @@
         </td>
         <td><input type="text"   id="nm-ext-department"    name="nm-ext-department"    class="form-control form-control-sm" placeholder="{{ __('Departamento', 'newmanagement') }}"></td>
         <td>
-          <button type="button" class="btn btn-sm btn-icon nm-row-del-btn" title="{{ __('Remover linha', 'newmanagement') }}">
+          <button type="button" class="btn btn-sm btn-icon nm-row-del-btn" title="{{ __('Limpar linha', 'newmanagement') }}">
             <i class="ti ti-trash text-danger"></i>
           </button>
         </td>

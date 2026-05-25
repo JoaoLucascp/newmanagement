@@ -1,6 +1,7 @@
 {#
   Partial: Tabela de Rede da Empresa
   fix(UI-01): linha de input pré-adicionada + botão + Adicionar clona linha + lixeira por linha
+  fix(UI-02): data-fixed="true" impede que a lixeira remova a linha de input fixa
 #}
 {% set net_pages = net_page_size > 0 ? max(1, (net_total / net_page_size)|round(0, 'ceil')) : 1 %}
 
@@ -69,9 +70,10 @@
         </tr>
       {% endfor %}
 
-      {# Linha de input pré-adicionada — template base para clonagem #}
+      {# Linha de input pré-adicionada — template base para clonagem
+         data-fixed="true" impede que o handler nm-row-del-btn a remova #}
       {% if can_write and ipbx_id > 0 %}
-      <tr class="tab_bg_1 nm-input-row" id="nm-net-add-row">
+      <tr class="tab_bg_1 nm-input-row" id="nm-net-add-row" data-fixed="true">
         <td><input type="text" id="nm-net-ip_network"    name="nm-net-ip_network"    class="form-control form-control-sm" placeholder="192.168.0.0/24"></td>
         <td><input type="text" id="nm-net-netmask"       name="nm-net-netmask"       class="form-control form-control-sm" placeholder="255.255.255.0"></td>
         <td><input type="text" id="nm-net-gateway"       name="nm-net-gateway"       class="form-control form-control-sm" placeholder="192.168.0.1"></td>
@@ -79,7 +81,7 @@
         <td><input type="text" id="nm-net-dns_secondary" name="nm-net-dns_secondary" class="form-control form-control-sm" placeholder="8.8.4.4"></td>
         <td><input type="text" id="nm-net-supplier"      name="nm-net-supplier"      class="form-control form-control-sm" placeholder="{{ __('Fornecedor', 'newmanagement') }}"></td>
         <td>
-          <button type="button" class="btn btn-sm btn-icon nm-row-del-btn" title="{{ __('Remover linha', 'newmanagement') }}">
+          <button type="button" class="btn btn-sm btn-icon nm-row-del-btn" title="{{ __('Limpar linha', 'newmanagement') }}">
             <i class="ti ti-trash text-danger"></i>
           </button>
         </td>

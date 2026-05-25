@@ -20,6 +20,10 @@
  * fix(DELEGATE-01): nmEnsureIpbxDelegated() + MutationObserver garante que
  *   os handlers sejam registrados mesmo quando o GLPI recarrega a aba via
  *   AJAX em um novo frame/contexto, zerando window._nmIpbxDelegated.
+ *
+ * fix(UI-02): handler nm-row-del-btn verifica data-fixed na <tr>.
+ *   Linhas fixas (data-fixed="true") são apenas limpas (nmClearRow).
+ *   Linhas clonadas (sem data-fixed) continuam sendo removidas do DOM.
  */
 
 console.log('Newmanagement Plugin carregado.');
@@ -256,6 +260,16 @@ function nmDelBtn(action, id, rowId, companiesId, url, confirmMsg, title) {
 }
 
 // ---------------------------------------------------------------------------
+// Mapa de campos por seção — usado pelo handler nm-row-del-btn para limpar
+// a linha fixa sem precisar de lógica espalhada
+// ---------------------------------------------------------------------------
+const NM_FIXED_ROW_FIELDS = {
+    'nm-ext-add-row': ['nm-ext-number', 'nm-ext-password', 'nm-ext-device_ip', 'nm-ext-user_name', 'nm-ext-department', 'nm-ext-records_calls'],
+    'nm-dev-add-row': ['nm-dev-device_type', 'nm-dev-ip_address', 'nm-dev-login', 'nm-dev-password'],
+    'nm-net-add-row': ['nm-net-ip_network', 'nm-net-netmask', 'nm-net-gateway', 'nm-net-dns_primary', 'nm-net-dns_secondary', 'nm-net-supplier'],
+};
+
+// ---------------------------------------------------------------------------
 // Paginação AJAX — delegação de eventos (já funcionava)
 // ---------------------------------------------------------------------------
 
@@ -454,13 +468,28 @@ function nmEnsureIpbxDelegated() {
     });
 
     // -----------------------------------------------------------------------
-    // Lixeira de linha não salva (nm-row-del-btn) — remove linha direto
+    // Lixeira de linha não salva (nm-row-del-btn)
+    //
+    // fix(UI-02): verifica data-fixed na <tr>.
+    //   - Linha fixa  (data-fixed="true") → limpa os campos, NÃO remove a linha
+    //   - Linha clonada (sem data-fixed)  → remove do DOM normalmente
     // -----------------------------------------------------------------------
     document.addEventListener('click', (e) => {
         const btn = e.target.closest('.nm-row-del-btn');
         if (!btn) return;
+
         const row = btn.closest('tr');
-        if (row) row.remove();
+        if (!row) return;
+
+        if (row.dataset.fixed === 'true') {
+            // Linha fixa — apenas limpa os campos
+            const fields = NM_FIXED_ROW_FIELDS[row.id] || [];
+            nmClearRow(row.id, fields);
+            return;
+        }
+
+        // Linha clonada — remove do DOM
+        row.remove();
     });
 
     // -----------------------------------------------------------------------
@@ -552,7 +581,7 @@ function nmEnsureIpbxDelegated() {
             const addRow = document.getElementById('nm-ext-add-row');
             if (addRow) addRow.parentNode.insertBefore(tr, addRow);
 
-            nmClearRow('nm-ext-add-row', ['nm-ext-number','nm-ext-password','nm-ext-device_ip','nm-ext-user_name','nm-ext-department','nm-ext-records_calls']);
+            nmClearRow('nm-ext-add-row', NM_FIXED_ROW_FIELDS['nm-ext-add-row']);
             document.getElementById('nm-ext-empty')?.remove();
 
         } catch (error) {
@@ -617,7 +646,7 @@ function nmEnsureIpbxDelegated() {
             const addRow = document.getElementById('nm-dev-add-row');
             if (addRow) addRow.parentNode.insertBefore(tr, addRow);
 
-            nmClearRow('nm-dev-add-row', ['nm-dev-device_type','nm-dev-ip_address','nm-dev-login','nm-dev-password']);
+            nmClearRow('nm-dev-add-row', NM_FIXED_ROW_FIELDS['nm-dev-add-row']);
             document.getElementById('nm-dev-empty')?.remove();
 
         } catch (error) {
@@ -686,7 +715,7 @@ function nmEnsureIpbxDelegated() {
             const addRow = document.getElementById('nm-net-add-row');
             if (addRow) addRow.parentNode.insertBefore(tr, addRow);
 
-            nmClearRow('nm-net-add-row', ['nm-net-ip_network','nm-net-netmask','nm-net-gateway','nm-net-dns_primary','nm-net-dns_secondary','nm-net-supplier']);
+            nmClearRow('nm-net-add-row', NM_FIXED_ROW_FIELDS['nm-net-add-row']);
             document.getElementById('nm-net-empty')?.remove();
 
         } catch (error) {
