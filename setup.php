@@ -52,8 +52,12 @@ function plugin_init_newmanagement()
     $PLUGIN_HOOKS['use_massive_action']['newmanagement'] = 1;
 
     // CSS e JS — assets servidos a partir de public/ no GLPI 11
+    // fix(A5): company-form.js registrado separadamente (AbortController + busca CNPJ/CEP)
     $PLUGIN_HOOKS['add_css']['newmanagement']        = 'public/css/newmanagement.css';
-    $PLUGIN_HOOKS['add_javascript']['newmanagement'] = 'public/js/newmanagement.js';
+    $PLUGIN_HOOKS['add_javascript']['newmanagement'] = [
+        'public/js/newmanagement.js',
+        'public/js/company-form.js',
+    ];
 
     // Página de configuração
     $PLUGIN_HOOKS['config_page']['newmanagement'] = 'front/config.php';
