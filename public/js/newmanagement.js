@@ -20,6 +20,10 @@
  * fix(DELEGATE-01): nmEnsureIpbxDelegated() + MutationObserver garante que
  *   os handlers sejam registrados mesmo quando o GLPI recarrega a aba via
  *   AJAX em um novo frame/contexto, zerando window._nmIpbxDelegated.
+ *
+ * refactor(UI-02): abas horizontais substituem nm-toggle-section (Opção B).
+ *   nmInitIpbxTabs() ativa troca de painéis sem reload.
+ *   nmCounterIncrement/Decrement mantém os badges das abas sincronizados.
  */
 
 console.log('Newmanagement Plugin carregado.');
@@ -256,6 +260,57 @@ function nmDelBtn(action, id, rowId, companiesId, url, confirmMsg, title) {
 }
 
 // ---------------------------------------------------------------------------
+// Contadores das abas IPBX
+// refactor(UI-02): atualiza o badge numérico de cada aba após operações AJAX.
+// ---------------------------------------------------------------------------
+
+function nmCounterIncrement(elId) {
+    const el = document.getElementById(elId);
+    if (el) el.textContent = parseInt(el.textContent || '0', 10) + 1;
+}
+
+function nmCounterDecrement(elId) {
+    const el = document.getElementById(elId);
+    if (el) el.textContent = Math.max(0, parseInt(el.textContent || '0', 10) - 1);
+}
+
+// ---------------------------------------------------------------------------
+// Abas horizontais IPBX
+// refactor(UI-02): troca de painéis sem reload; delegação no tabBar.
+// Usa flag _nmTabsInit para evitar double-bind em reloads de aba.
+// ---------------------------------------------------------------------------
+
+function nmInitIpbxTabs() {
+    const tabBar = document.querySelector('.nm-tab-bar');
+    if (!tabBar || tabBar._nmTabsInit) return;
+    tabBar._nmTabsInit = true;
+
+    tabBar.addEventListener('click', (e) => {
+        const tab = e.target.closest('.nm-tab');
+        if (!tab) return;
+
+        // Desativa todas as abas e painéis
+        tabBar.querySelectorAll('.nm-tab').forEach(t => {
+            t.classList.remove('active');
+            t.setAttribute('aria-selected', 'false');
+        });
+        document.querySelectorAll('.nm-tab-panel').forEach(p => {
+            p.classList.remove('active');
+            p.hidden = true;
+        });
+
+        // Ativa aba e painel clicados
+        tab.classList.add('active');
+        tab.setAttribute('aria-selected', 'true');
+        const panel = document.getElementById(tab.dataset.panel);
+        if (panel) {
+            panel.classList.add('active');
+            panel.hidden = false;
+        }
+    });
+}
+
+// ---------------------------------------------------------------------------
 // Paginação AJAX — delegação de eventos (já funcionava)
 // ---------------------------------------------------------------------------
 
@@ -373,6 +428,9 @@ function nmEnsureIpbxDelegated() {
     // Compatibilidade com código legado que cheque window._nmIpbxDelegated
     window._nmIpbxDelegated = true;
 
+    // Inicializa abas horizontais assim que o DOM da aba estiver presente
+    nmInitIpbxTabs();
+
     // -----------------------------------------------------------------------
     // Mostrar/ocultar senha (olho)
     // -----------------------------------------------------------------------
@@ -438,7 +496,7 @@ function nmEnsureIpbxDelegated() {
     });
 
     // -----------------------------------------------------------------------
-    // Recolher/expandir seções
+    // Recolher/expandir seções (mantido para compatibilidade com outras áreas)
     // -----------------------------------------------------------------------
     document.addEventListener('click', (e) => {
         const btn = e.target.closest('.nm-toggle-section');
@@ -465,6 +523,7 @@ function nmEnsureIpbxDelegated() {
 
     // -----------------------------------------------------------------------
     // Lixeira de linha salva (nm-del-btn) — DELETE real no servidor
+    // refactor(UI-02): decrementa contador da aba correspondente após remoção.
     // -----------------------------------------------------------------------
     document.addEventListener('click', async (e) => {
         const btn = e.target.closest('.nm-del-btn');
@@ -487,6 +546,12 @@ function nmEnsureIpbxDelegated() {
             if (!result.success) throw new Error(result.error || 'Erro ao remover');
             const row = document.getElementById(rowId);
             if (row) row.remove();
+
+            // Decrementa badge da aba correspondente
+            if (action === 'delete_extension') nmCounterDecrement('nm-count-ext');
+            else if (action === 'delete_device')    nmCounterDecrement('nm-count-dev');
+            else if (action === 'delete_network')   nmCounterDecrement('nm-count-net');
+
         } catch (error) {
             console.error('[NM] Erro ao remover:', error.message);
             alert('Erro ao remover: ' + error.message);
@@ -497,6 +562,7 @@ function nmEnsureIpbxDelegated() {
 
     // -----------------------------------------------------------------------
     // + Adicionar Ramal (nm-ext-add-btn)
+    // refactor(UI-02): incrementa badge da aba Ramais após inserção.
     // -----------------------------------------------------------------------
     document.addEventListener('click', async (e) => {
         const btn = e.target.closest('#nm-ext-add-btn');
@@ -555,6 +621,9 @@ function nmEnsureIpbxDelegated() {
             nmClearRow('nm-ext-add-row', ['nm-ext-number','nm-ext-password','nm-ext-device_ip','nm-ext-user_name','nm-ext-department','nm-ext-records_calls']);
             document.getElementById('nm-ext-empty')?.remove();
 
+            // Incrementa badge da aba Ramais
+            nmCounterIncrement('nm-count-ext');
+
         } catch (error) {
             console.error('[NM] Erro ao adicionar ramal:', error.message);
             alert('Erro ao adicionar ramal: ' + error.message);
@@ -566,6 +635,7 @@ function nmEnsureIpbxDelegated() {
 
     // -----------------------------------------------------------------------
     // + Adicionar Dispositivo (nm-dev-add-btn)
+    // refactor(UI-02): incrementa badge da aba Dispositivos após inserção.
     // -----------------------------------------------------------------------
     document.addEventListener('click', async (e) => {
         const btn = e.target.closest('#nm-dev-add-btn');
@@ -620,6 +690,9 @@ function nmEnsureIpbxDelegated() {
             nmClearRow('nm-dev-add-row', ['nm-dev-device_type','nm-dev-ip_address','nm-dev-login','nm-dev-password']);
             document.getElementById('nm-dev-empty')?.remove();
 
+            // Incrementa badge da aba Dispositivos
+            nmCounterIncrement('nm-count-dev');
+
         } catch (error) {
             console.error('[NM] Erro ao adicionar dispositivo:', error.message);
             alert('Erro ao adicionar dispositivo: ' + error.message);
@@ -631,6 +704,7 @@ function nmEnsureIpbxDelegated() {
 
     // -----------------------------------------------------------------------
     // + Adicionar Rede (nm-net-add-btn)
+    // refactor(UI-02): incrementa badge da aba Rede após inserção.
     // -----------------------------------------------------------------------
     document.addEventListener('click', async (e) => {
         const btn = e.target.closest('#nm-net-add-btn');
@@ -689,6 +763,9 @@ function nmEnsureIpbxDelegated() {
             nmClearRow('nm-net-add-row', ['nm-net-ip_network','nm-net-netmask','nm-net-gateway','nm-net-dns_primary','nm-net-dns_secondary','nm-net-supplier']);
             document.getElementById('nm-net-empty')?.remove();
 
+            // Incrementa badge da aba Rede
+            nmCounterIncrement('nm-count-net');
+
         } catch (error) {
             console.error('[NM] Erro ao adicionar rede:', error.message);
             alert('Erro ao adicionar rede: ' + error.message);
@@ -704,16 +781,21 @@ function nmEnsureIpbxDelegated() {
 // a aba IPBX via AJAX (o conteúdo da aba é injetado no DOM após o load).
 // fix(DELEGATE-01): observa inserções de .nm-ipbx-tab no document e chama
 // nmEnsureIpbxDelegated() para registrar os handlers no document atual.
+// refactor(UI-02): também chama nmInitIpbxTabs() quando .nm-tab-bar aparece.
 // ---------------------------------------------------------------------------
 
 (function nmWatchForIpbxTab() {
     // Registra imediatamente (caso o script seja carregado depois da aba)
     nmEnsureIpbxDelegated();
+    nmInitIpbxTabs();
 
     // Observa mutações futuras (aba injetada pelo GLPI via AJAX)
     const observer = new MutationObserver(() => {
         if (document.querySelector('.nm-ipbx-tab')) {
             nmEnsureIpbxDelegated();
+        }
+        if (document.querySelector('.nm-tab-bar')) {
+            nmInitIpbxTabs();
         }
     });
     observer.observe(document.body || document.documentElement, {
