@@ -52,6 +52,10 @@
     <input type="email" id="email" name="email"
            value="{{ item.fields.email|default('')|e }}"
            class="form-control">
+    <small class="text-muted">
+      <i class="ti ti-info-circle"></i>
+      {{ __('A Receita Federal pode não disponibilizar este dado. Preencha manualmente se necessário.', 'newmanagement') }}
+    </small>
   </td>
   <td>{{ __('Telefone', 'newmanagement') }}</td>
   <td>
