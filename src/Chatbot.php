@@ -184,11 +184,42 @@ class Chatbot extends \CommonDBTM
         );
     }
 
+    /**
+     * Exibe o formulário standalone de Chatbot (front/chatbot.php).
+     *
+     * Implementado seguindo o mesmo padrão de Task::showForm():
+     * - Carrega lista de empresas para o <select>
+     * - Passa csrf_token via Session::getNewCSRFToken()
+     * - Renderiza @newmanagement/chatbot/form.html.twig
+     * - Verifica permissões de escrita e exclusão
+     */
     public function showForm($ID, array $options = []): bool
     {
         $this->initForm($ID, $options);
-        $this->showFormHeader($options);
-        $this->showFormButtons($options);
+
+        $can_write  = \Session::haveRight(self::$rightname, UPDATE);
+        $can_delete = \Session::haveRight(self::$rightname, DELETE);
+
+        $companies = getAllDataFromTable(
+            Company::getTable(),
+            ['is_deleted' => 0],
+            false,
+            'name'
+        );
+
+        TemplateRenderer::getInstance()->display(
+            '@newmanagement/chatbot/form.html.twig',
+            [
+                'item'        => $this->fields + ['id' => $this->fields['id'] ?? 0],
+                'companies'   => array_values($companies),
+                'can_write'   => $can_write,
+                'can_delete'  => $can_delete,
+                'csrf_token'  => \Session::getNewCSRFToken(),
+                'form_url'    => self::getFormURL(),
+                'search_url'  => self::getSearchURL(),
+            ]
+        );
+
         return true;
     }
 }
