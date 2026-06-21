@@ -1,6 +1,6 @@
 {#
   Partial: Tabela de Ramais
-  fix(UI-01): linha de input pré-adicionada + botão + Adicionar clona linha + lixeira por linha
+  Colunas: Ramal | Senha | Usuário | IP Dispositivo | Departamento | Grava | LOF | LOC | DDF | DDC | DDI | SRV | [Ações]
 #}
 {% set ext_pages = ext_page_size > 0 ? max(1, (ext_total / ext_page_size)|round(0, 'ceil')) : 1 %}
 
@@ -19,10 +19,16 @@
       <tr class="headerRow noHover">
         <th>{{ __('Ramal', 'newmanagement') }}</th>
         <th>{{ __('Senha', 'newmanagement') }}</th>
-        <th>{{ __('IP Dispositivo', 'newmanagement') }}</th>
         <th>{{ __('Usuário', 'newmanagement') }}</th>
-        <th>{{ __('Grava', 'newmanagement') }}</th>
+        <th>{{ __('IP Dispositivo', 'newmanagement') }}</th>
         <th>{{ __('Departamento', 'newmanagement') }}</th>
+        <th class="text-center">{{ __('Grava', 'newmanagement') }}</th>
+        <th class="text-center" title="Liga Ocupado Frente">LOF</th>
+        <th class="text-center" title="Liga Ocupado Congestionado">LOC</th>
+        <th class="text-center" title="Discagem Direta para Fixo">DDF</th>
+        <th class="text-center" title="Discagem Direta para Celular">DDC</th>
+        <th class="text-center" title="Discagem Direta Internacional">DDI</th>
+        <th class="text-center" title="Serviço">SRV</th>
         <th style="text-align:right">
           {% if can_write and ipbx_id > 0 %}
             <button type="button" id="nm-ext-add-btn"
@@ -43,25 +49,40 @@
 
       {# Linhas salvas #}
       {% for row in extensions %}
-        <tr class="tab_bg_1" id="nm-ext-row-{{ row.id }}">
+        <tr class="tab_bg_1 nm-ext-saved-row" id="nm-ext-row-{{ row.id }}">
           <td>{{ row.number|e }}</td>
-          <td>••••••</td>
-          <td>{{ row.device_ip|default('')|e }}</td>
+          <td><code>{{ row.password|default('')|e }}</code></td>
           <td>{{ row.user_name|default('')|e }}</td>
-          <td>{{ row.records_calls ? __('Sim', 'newmanagement') : __('Não', 'newmanagement') }}</td>
+          <td>{{ row.device_ip|default('')|e }}</td>
           <td>{{ row.department|default('')|e }}</td>
+          <td class="text-center">
+            <span class="badge {{ row.records_calls ? 'bg-success' : 'bg-secondary' }}">
+              {{ row.records_calls ? __('Sim', 'newmanagement') : __('Não', 'newmanagement') }}
+            </span>
+          </td>
+          {% for field in ['lof','loc','ddf','ddc','ddi','srv'] %}
+          <td class="text-center" style="min-width:52px">
+            <div class="form-check form-switch d-flex justify-content-center m-0 p-0">
+              <input class="form-check-input nm-toggle-bool" type="checkbox" role="switch"
+                     data-row-id="{{ row.id }}"
+                     data-field="{{ field }}"
+                     data-action-url="{{ action_url|e('html_attr') }}"
+                     data-companies-id="{{ companies_id }}"
+                     data-csrf="{{ csrf|e('html_attr') }}"
+                     {{ attribute(row, field) ? 'checked' }}
+                     style="cursor:pointer">
+            </div>
+          </td>
+          {% endfor %}
           <td>
             {% if can_delete %}
             <button type="button"
-                    class="btn btn-sm btn-icon nm-del-btn"
-                    data-action="delete_extension"
+                    class="btn btn-sm btn-icon nm-ext-delete"
                     data-id="{{ row.id }}"
-                    data-row="nm-ext-row-{{ row.id }}"
+                    data-action-url="{{ action_url|e('html_attr') }}"
                     data-companies-id="{{ companies_id }}"
                     data-csrf="{{ csrf|e('html_attr') }}"
-                    data-url="{{ action_url|e('html_attr') }}"
-                    data-confirm="{{ __('Remover ramal?', 'newmanagement') }}"
-                    title="{{ __('Remover', 'newmanagement') }}">
+                    title="{{ __('Remover ramal', 'newmanagement') }}">
               <i class="ti ti-trash text-danger"></i>
             </button>
             {% endif %}
@@ -69,20 +90,27 @@
         </tr>
       {% endfor %}
 
-      {# Linha de input pré-adicionada — template base para clonagem #}
+      {# Linha de input — template para novo ramal #}
       {% if can_write and ipbx_id > 0 %}
       <tr class="tab_bg_1 nm-input-row" id="nm-ext-add-row">
-        <td><input type="text"   id="nm-ext-number"        name="nm-ext-number"        class="form-control form-control-sm" placeholder="{{ __('Ramal', 'newmanagement') }}"></td>
-        <td><input type="password" id="nm-ext-password"    name="nm-ext-password"      class="form-control form-control-sm" placeholder="{{ __('Senha', 'newmanagement') }}" autocomplete="new-password"></td>
-        <td><input type="text"   id="nm-ext-device_ip"     name="nm-ext-device_ip"     class="form-control form-control-sm" placeholder="192.168.x.x"></td>
-        <td><input type="text"   id="nm-ext-user_name"     name="nm-ext-user_name"     class="form-control form-control-sm" placeholder="{{ __('Usuário', 'newmanagement') }}"></td>
-        <td>
+        <td><input type="text"     id="nm-ext-number"       name="nm-ext-number"       class="form-control form-control-sm" placeholder="{{ __('Ramal', 'newmanagement') }}"></td>
+        <td><input type="password" id="nm-ext-password"     name="nm-ext-password"     class="form-control form-control-sm" placeholder="{{ __('Senha', 'newmanagement') }}" autocomplete="new-password"></td>
+        <td><input type="text"     id="nm-ext-user_name"    name="nm-ext-user_name"    class="form-control form-control-sm" placeholder="{{ __('Usuário', 'newmanagement') }}"></td>
+        <td><input type="text"     id="nm-ext-device_ip"    name="nm-ext-device_ip"    class="form-control form-control-sm" placeholder="192.168.x.x"></td>
+        <td><input type="text"     id="nm-ext-department"   name="nm-ext-department"   class="form-control form-control-sm" placeholder="{{ __('Departamento', 'newmanagement') }}"></td>
+        <td class="text-center">
           <select id="nm-ext-records_calls" name="nm-ext-records_calls" class="form-select form-select-sm">
             <option value="0">{{ __('Não', 'newmanagement') }}</option>
             <option value="1">{{ __('Sim', 'newmanagement') }}</option>
           </select>
         </td>
-        <td><input type="text"   id="nm-ext-department"    name="nm-ext-department"    class="form-control form-control-sm" placeholder="{{ __('Departamento', 'newmanagement') }}"></td>
+        {% for field in ['lof','loc','ddf','ddc','ddi','srv'] %}
+        <td class="text-center" style="min-width:52px">
+          <div class="form-check form-switch d-flex justify-content-center m-0 p-0">
+            <input class="form-check-input" type="checkbox" id="nm-ext-{{ field }}" name="nm-ext-{{ field }}" value="1" style="cursor:pointer">
+          </div>
+        </td>
+        {% endfor %}
         <td>
           <button type="button" class="btn btn-sm btn-icon nm-row-del-btn" title="{{ __('Remover linha', 'newmanagement') }}">
             <i class="ti ti-trash text-danger"></i>
@@ -91,10 +119,10 @@
       </tr>
       {% endif %}
 
-      {# Mensagem vazia — exibida apenas quando não há linhas salvas E nenhuma linha de input #}
+      {# Mensagem vazia #}
       {% if extensions is empty and (not can_write or ipbx_id <= 0) %}
         <tr id="nm-ext-empty">
-          <td colspan="7" class="text-center text-muted py-3">
+          <td colspan="13" class="text-center text-muted py-3">
             {{ __('Nenhum ramal cadastrado.', 'newmanagement') }}
           </td>
         </tr>
