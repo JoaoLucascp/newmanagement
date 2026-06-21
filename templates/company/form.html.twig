@@ -47,15 +47,16 @@
 </tr>
 
 <tr class="tab_bg_1">
-  <td>{{ __('E-mail', 'newmanagement') }}</td>
+  <td>
+    {{ __('E-mail', 'newmanagement') }}
+    <i class="ti ti-info-circle ms-1"
+       title="{{ __('A Receita Federal pode não disponibilizar este dado. Preencha manualmente se necessário.', 'newmanagement') }}"
+       style="cursor:help; color:var(--tblr-secondary);"></i>
+  </td>
   <td>
     <input type="email" id="email" name="email"
            value="{{ item.fields.email|default('')|e }}"
            class="form-control">
-    <small class="text-muted">
-      <i class="ti ti-info-circle"></i>
-      {{ __('A Receita Federal pode não disponibilizar este dado. Preencha manualmente se necessário.', 'newmanagement') }}
-    </small>
   </td>
   <td>{{ __('Telefone', 'newmanagement') }}</td>
   <td>
