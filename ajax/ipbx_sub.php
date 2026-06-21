@@ -146,12 +146,19 @@ try {
             $DB->insert(Ipbx::TABLE_EXTENSIONS, [
                 'ipbx_id'       => $ipbx_id,
                 'companies_id'  => $companies_id,
-                'number'        => $_POST['number']       ?? '',
+                'number'        => $_POST['number']        ?? '',
                 'password'      => nmEncryptPassword($_POST['password'] ?? ''),
-                'device_ip'     => $_POST['device_ip']    ?? '',
-                'user_name'     => $_POST['user_name']    ?? '',
+                'device_ip'     => $_POST['device_ip']     ?? '',
+                'user_name'     => $_POST['user_name']     ?? '',
                 'records_calls' => (int) ($_POST['records_calls'] ?? 0),
-                'department'    => $_POST['department']   ?? '',
+                'department'    => $_POST['department']    ?? '',
+                // feat: 6 colunas booleanas
+                'lof'           => (int) ($_POST['lof'] ?? 0),
+                'loc'           => (int) ($_POST['loc'] ?? 0),
+                'ddf'           => (int) ($_POST['ddf'] ?? 0),
+                'ddc'           => (int) ($_POST['ddc'] ?? 0),
+                'ddi'           => (int) ($_POST['ddi'] ?? 0),
+                'srv'           => (int) ($_POST['srv'] ?? 0),
                 'date_creation' => $now,
                 'date_mod'      => $now,
             ]);
@@ -160,7 +167,7 @@ try {
             $csrf      = \Session::getNewCSRFToken();
             $actionUrl = \Plugin::getWebDir('newmanagement') . '/ajax/ipbx_sub.php';
             $html      = Ipbx::renderExtensionRow((int) $rowId, $row, $companies_id, $csrf, $actionUrl, $can_delete);
-            nmJson(true, ['id' => $rowId, 'html' => $html]);
+            nmJson(true, ['id' => $rowId, 'html' => $html, 'number' => $row['number'] ?? '']);
             break;
 
         case 'delete_extension':
@@ -170,6 +177,83 @@ try {
                 'companies_id' => $companies_id,
             ]);
             nmJson(true);
+            break;
+
+        /**
+         * update_extension_field
+         * Chamado pelo toggle switch inline (nm-toggle-bool) via AJAX.
+         * Só aceita campos booleanos conhecidos (whitelist) —
+         * impede injeção de colunas arbitrárias.
+         */
+        case 'update_extension_field':
+            Session::checkRight(Ipbx::$rightname, UPDATE);
+            $id    = (int) ($_POST['id']    ?? 0);
+            $field = $_POST['field'] ?? '';
+            $value = (int) ($_POST['value'] ?? 0);
+
+            // Whitelist: apenas os 7 campos booleanos permitídos
+            $allowed = ['records_calls', 'lof', 'loc', 'ddf', 'ddc', 'ddi', 'srv'];
+            if ($id <= 0 || !in_array($field, $allowed, true)) {
+                nmJson(false, ['error' => 'Parâmetros inválidos']);
+            }
+
+            // Confirma que o ramal pertence à empresa do request
+            $exists = $DB->request([
+                'FROM'  => Ipbx::TABLE_EXTENSIONS,
+                'WHERE' => ['id' => $id, 'companies_id' => $companies_id],
+                'LIMIT' => 1,
+            ])->count();
+            if (!$exists) {
+                nmJson(false, ['error' => 'Ramal não encontrado']);
+            }
+
+            $DB->update(
+                Ipbx::TABLE_EXTENSIONS,
+                [$field => $value ? 1 : 0, 'date_mod' => $now],
+                ['id'   => $id]
+            );
+            nmJson(true);
+            break;
+
+        // ------------------------------------------------------------------
+        // Importação em lote de ramais
+        // ------------------------------------------------------------------
+        case 'import_extensions':
+            Session::checkRight(Ipbx::$rightname, CREATE);
+            $ipbx_id = (int) ($_POST['ipbx_id'] ?? 0);
+            if ($ipbx_id <= 0) {
+                nmJson(false, ['error' => 'ipbx_id inválido']);
+            }
+            $payload = json_decode($_POST['rows'] ?? '[]', true);
+            if (!is_array($payload) || empty($payload)) {
+                nmJson(false, ['error' => 'Nenhum dado para importar']);
+            }
+            $boolNorm = static fn($v): int => in_array(strtolower((string) $v), ['1','sim','yes','true'], true) ? 1 : 0;
+            $inserted = 0;
+            foreach ($payload as $r) {
+                $number = trim((string) ($r['number'] ?? ''));
+                if ($number === '') continue;
+                $DB->insert(Ipbx::TABLE_EXTENSIONS, [
+                    'ipbx_id'       => $ipbx_id,
+                    'companies_id'  => $companies_id,
+                    'number'        => $number,
+                    'password'      => nmEncryptPassword(trim((string) ($r['password'] ?? ''))),
+                    'device_ip'     => trim((string) ($r['device_ip']  ?? '')),
+                    'user_name'     => trim((string) ($r['user_name']  ?? '')),
+                    'department'    => trim((string) ($r['department'] ?? '')),
+                    'records_calls' => $boolNorm($r['records_calls'] ?? 0),
+                    'lof'           => $boolNorm($r['lof'] ?? 0),
+                    'loc'           => $boolNorm($r['loc'] ?? 0),
+                    'ddf'           => $boolNorm($r['ddf'] ?? 0),
+                    'ddc'           => $boolNorm($r['ddc'] ?? 0),
+                    'ddi'           => $boolNorm($r['ddi'] ?? 0),
+                    'srv'           => $boolNorm($r['srv'] ?? 0),
+                    'date_creation' => $now,
+                    'date_mod'      => $now,
+                ]);
+                $inserted++;
+            }
+            nmJson(true, ['inserted' => $inserted]);
             break;
 
         // ------------------------------------------------------------------
