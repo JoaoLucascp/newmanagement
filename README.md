@@ -132,6 +132,7 @@ newmanagement/
 - [x] Botão submit condicional `add`/`update` nos templates
 - [x] Colunas booleanas LOF/LOC/DDF/DDC/DDI/SRV nos ramais IPBX
 - [x] Action `update_extension_field` no `ipbx_sub.php` (toggle inline)
+- [x] Flag `document._nmToggleBoolDelegated` padronizada em `newmanagement.js` e `tab_extensions.html.twig`
 - [ ] Suporte a traduções (gettext / `.po`)
 - [ ] Geolocalização nas tarefas
 - [ ] Assinatura digital
@@ -146,6 +147,11 @@ newmanagement/
 - No GLPI 11+, o `CheckCsrfListener` do Symfony valida o header `X-Glpi-Csrf-Token` antes do PHP executar.
 - Tokens são **single-use**: cada resposta JSON de `ipbx_sub.php` retorna novo token em `csrf`.
 - O JS deve atualizar o campo hidden após cada request AJAX.
+
+**Toggle Booleano (`.nm-toggle-bool`)**
+- O listener `change` é registrado **uma única vez** no `document`, via flag `document._nmToggleBoolDelegated`.
+- Tanto `newmanagement.js` quanto `tab_extensions.html.twig` checam e escrevem **na mesma flag** (`document._nmToggleBoolDelegated`).
+- Usar `window._nmToggleBoolDelegated` em um e `document._nmToggleBoolDelegated` no outro causava registro duplicado do listener, disparando o toggle duas vezes por clique.
 
 **Namespace Twig**
 - Registrado em `setup.php` como `@newmanagement`.
@@ -176,6 +182,10 @@ Senhas são criptografadas via `GLPIKey::encrypt()` (GLPI 11) com fallback para 
 ---
 
 ## 📝 Changelog
+
+### 2026-06-21
+
+- **fix(toggle-bool):** `public/js/newmanagement.js` — flag `window._nmToggleBoolDelegated` renomeada para `document._nmToggleBoolDelegated`, padronizando com `tab_extensions.html.twig`; evita registro duplicado do listener `change` que disparava o toggle duas vezes por clique — [bb08983](https://github.com/JoaoLucascp/newmanagement/commit/bb089838b6b05d7d3abb6a4a7c914fb4dc6570b4)
 
 ### 2025-06-21
 
