@@ -7,6 +7,7 @@
  * fix(DELEGATE-01): handlers registrados UMA VEZ via nmEnsureIpbxDelegated().
  * fix(UI-02): abas horizontais — clique delegado no document.
  * fix(UI-03): handlers de ramal REMOVIDOS — lógica já existe em tab_extensions.html.twig.
+ * fix(TOGGLE-01): flag padronizada para document._nmToggleBoolDelegated.
  */
 
 console.log('Newmanagement Plugin carregado.');
@@ -564,11 +565,11 @@ function nmEnsureIpbxDelegated() {
 
     // -----------------------------------------------------------------------
     // Toggle booleano inline (nm-toggle-bool)
-    // Nota: tab_extensions.html.twig também registra este handler via
-    // document._nmToggleBoolDelegated — a flag garante registro único.
+    // Flag padronizada: document._nmToggleBoolDelegated
+    // Compartilhada com tab_extensions.html.twig — garante registro único.
     // -----------------------------------------------------------------------
-    if (!window._nmToggleBoolDelegated) {
-        window._nmToggleBoolDelegated = true;
+    if (!document._nmToggleBoolDelegated) {
+        document._nmToggleBoolDelegated = true;
         document.addEventListener('change', async (e) => {
             const cb = e.target.closest('.nm-toggle-bool');
             if (!cb) return;
