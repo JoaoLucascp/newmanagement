@@ -3,11 +3,10 @@
  * Máscaras, busca CNPJ e CEP via BrasilAPI
  * Botões AJAX do formulário IPBX e Chatbot (com token CSRF do GLPI 11)
  *
- * fix(UI-01): TODOS os listeners usam delegação de eventos no `document`.
  * fix(CSRF-01): nmGetCsrfToken() lê meta[property="glpi:csrf_token"].
  * fix(DELEGATE-01): handlers registrados UMA VEZ via nmEnsureIpbxDelegated().
  * fix(UI-02): abas horizontais — clique delegado no document.
- * fix(UI-03): + Adicionar clona template oculto; cada linha tem próprio botão salvar.
+ * fix(UI-03): handlers de ramal REMOVIDOS — lógica já existe em tab_extensions.html.twig.
  */
 
 console.log('Newmanagement Plugin carregado.');
@@ -346,7 +345,7 @@ function nmInitPagination() {
 }
 
 // ---------------------------------------------------------------------------
-// IPBX — Delegação de eventos (registrada UMA Única VEZ no document)
+// IPBX — Delegação de eventos (registrada UMA ÚNICA VEZ no document)
 // ---------------------------------------------------------------------------
 
 const NM_IPBX_BOUND_KEY = '__nmIpbxHandlersBound__';
@@ -455,33 +454,18 @@ function nmEnsureIpbxDelegated() {
     });
 
     // -----------------------------------------------------------------------
-    // Lixeira de linha não salva (.nm-row-del-btn)
-    // -----------------------------------------------------------------------
-    document.addEventListener('click', (e) => {
-        const btn = e.target.closest('.nm-row-del-btn');
-        if (!btn) return;
-        btn.closest('tr')?.remove();
-    });
-
-    // -----------------------------------------------------------------------
-    // Lixeira de linha salva — DELETE no servidor (.nm-del-btn e .nm-ext-delete)
+    // Lixeira AJAX — linhas salvas (.nm-del-btn)
     // -----------------------------------------------------------------------
     document.addEventListener('click', async (e) => {
-        const btn = e.target.closest('.nm-del-btn, .nm-ext-delete');
+        const btn = e.target.closest('.nm-del-btn');
         if (!btn) return;
 
-        const id         = btn.dataset.id;
-        const url        = btn.dataset.actionUrl || btn.dataset.url || nmGetIpbxActionUrl(btn);
+        const id          = btn.dataset.id;
+        const url         = btn.dataset.actionUrl || btn.dataset.url || nmGetIpbxActionUrl(btn);
         const companiesId = btn.dataset.companiesId || nmGetIpbxCompaniesId(btn);
-        const confirmMsg = btn.dataset.confirm || 'Remover item?';
-
-        // Determina action e rowId
-        let action = btn.dataset.action || 'delete_extension';
-        let rowId  = btn.dataset.row || ('nm-ext-row-' + id);
-        if (btn.classList.contains('nm-ext-delete')) {
-            action = 'delete_extension';
-            rowId  = 'nm-ext-row-' + id;
-        }
+        const confirmMsg  = btn.dataset.confirm || 'Remover item?';
+        const action      = btn.dataset.action || 'delete_extension';
+        const rowId       = btn.dataset.row || ('nm-ext-row-' + id);
 
         if (!confirm(confirmMsg)) return;
 
@@ -501,153 +485,6 @@ function nmEnsureIpbxDelegated() {
         } catch (error) {
             console.error('[NM] Erro ao remover:', error.message);
             alert('Erro ao remover: ' + error.message);
-            btn.innerHTML = originalHtml;
-            btn.disabled = false;
-        }
-    });
-
-    // -----------------------------------------------------------------------
-    // + Adicionar Ramal — clona template oculto, insere linha vazia
-    // -----------------------------------------------------------------------
-    document.addEventListener('click', (e) => {
-        const btn = e.target.closest('#nm-ext-add-btn');
-        if (!btn) return;
-
-        const ipbxId = parseInt(btn.dataset.ipbxId || '0', 10);
-        if (ipbxId <= 0) {
-            alert('Salve o Servidor IPBX primeiro antes de adicionar ramais.');
-            return;
-        }
-
-        const template = document.getElementById('nm-ext-add-row');
-        if (!template) return;
-
-        // Clona o template
-        const clone = template.cloneNode(true);
-        clone.removeAttribute('id');
-        clone.removeAttribute('hidden');
-        clone.style.display = '';
-        clone.classList.add('nm-ext-pending-row');
-
-        // Herda contexto do section
-        const section = document.getElementById('nm-ext-section');
-        const actionUrl   = section?.dataset.actionUrl   || nmGetIpbxActionUrl(btn);
-        const companiesId = section?.dataset.companiesId || nmGetIpbxCompaniesId(btn);
-        const csrf        = section?.dataset.csrf        || '';
-
-        clone.dataset.ipbxId      = ipbxId;
-        clone.dataset.actionUrl   = actionUrl;
-        clone.dataset.companiesId = companiesId;
-        clone.dataset.csrf        = csrf;
-
-        // Insere antes do template (no fim do tbody, antes da linha oculta)
-        template.parentNode.insertBefore(clone, template);
-
-        // Foca no campo Ramal da nova linha
-        clone.querySelector('.nm-f-number')?.focus();
-
-        // Oculta mensagem "nenhum ramal"
-        document.getElementById('nm-ext-empty')?.remove();
-    });
-
-    // -----------------------------------------------------------------------
-    // Salvar linha pendente de ramal (.nm-ext-save-row)
-    // -----------------------------------------------------------------------
-    document.addEventListener('click', async (e) => {
-        const btn = e.target.closest('.nm-ext-save-row');
-        if (!btn) return;
-
-        const tr = btn.closest('tr');
-        if (!tr) return;
-
-        const number        = (tr.querySelector('.nm-f-number')?.value        || '').trim();
-        const password      =  tr.querySelector('.nm-f-password')?.value      || '';
-        const user_name     = (tr.querySelector('.nm-f-user_name')?.value     || '').trim();
-        const device_ip     = (tr.querySelector('.nm-f-device_ip')?.value     || '').trim();
-        const department    = (tr.querySelector('.nm-f-department')?.value    || '').trim();
-        const records_calls =  tr.querySelector('.nm-f-records_calls')?.value || '0';
-
-        if (!number) {
-            alert('Informe o número do ramal.');
-            tr.querySelector('.nm-f-number')?.focus();
-            return;
-        }
-
-        // Lê os 6 booleanos
-        const boolFields = ['lof','loc','ddf','ddc','ddi','srv'];
-        const boolValues = {};
-        tr.querySelectorAll('.nm-f-bool').forEach(cb => {
-            const field = cb.dataset.field;
-            if (field) boolValues[field] = cb.checked ? '1' : '0';
-        });
-
-        const ipbxId      = tr.dataset.ipbxId      || document.querySelector('#nm-ext-section')?.dataset.ipbxId || '0';
-        const companiesId = tr.dataset.companiesId || nmGetIpbxCompaniesId(btn);
-        const actionUrl   = tr.dataset.actionUrl   || nmGetIpbxActionUrl(btn);
-
-        btn.disabled = true;
-        const originalHtml = btn.innerHTML;
-        btn.innerHTML = '<span class="nm-spinner"></span>';
-
-        try {
-            const result = await nmPost(actionUrl, {
-                action: 'add_extension',
-                ipbx_id: ipbxId,
-                companies_id: companiesId,
-                number, password, user_name, device_ip, department, records_calls,
-                ...boolValues,
-            });
-
-            if (!result.success) throw new Error(result.error || 'Erro desconhecido');
-
-            // Substitui linha pendente por linha salva
-            const savedTr = document.createElement('tr');
-            savedTr.id        = 'nm-ext-row-' + result.id;
-            savedTr.className = 'tab_bg_1 nm-ext-saved-row';
-
-            const gravaBadge = parseInt(records_calls, 10)
-                ? '<span class="badge bg-success">Sim</span>'
-                : '<span class="badge bg-secondary">Não</span>';
-
-            let boolTds = '';
-            boolFields.forEach(field => {
-                const isOn = boolValues[field] === '1';
-                boolTds += `<td class="text-center" style="min-width:52px">
-                    <div class="form-check form-switch d-flex justify-content-center m-0 p-0">
-                        <input class="form-check-input nm-toggle-bool" type="checkbox" role="switch"
-                               data-row-id="${result.id}" data-field="${field}"
-                               data-action-url="${nmEsc(actionUrl)}"
-                               data-companies-id="${nmEsc(companiesId)}"
-                               data-csrf="${nmEsc(nmGetCsrfToken())}"
-                               ${isOn ? 'checked' : ''} style="cursor:pointer">
-                    </div></td>`;
-            });
-
-            savedTr.innerHTML = `
-                <td>${nmEsc(number)}</td>
-                <td><code>${nmEsc(password)}</code></td>
-                <td>${nmEsc(user_name)}</td>
-                <td>${nmEsc(device_ip)}</td>
-                <td>${nmEsc(department)}</td>
-                <td class="text-center">${gravaBadge}</td>
-                ${boolTds}
-                <td class="text-end">
-                    <button type="button" class="btn btn-sm btn-icon nm-ext-delete"
-                            data-id="${result.id}"
-                            data-action-url="${nmEsc(actionUrl)}"
-                            data-companies-id="${nmEsc(companiesId)}"
-                            data-csrf="${nmEsc(nmGetCsrfToken())}"
-                            title="Remover ramal">
-                        <i class="ti ti-trash text-danger"></i>
-                    </button>
-                </td>`;
-
-            tr.replaceWith(savedTr);
-            nmCounterIncrement('nm-count-ext');
-
-        } catch (error) {
-            console.error('[NM] Erro ao salvar ramal:', error.message);
-            alert('Erro ao salvar ramal: ' + error.message);
             btn.innerHTML = originalHtml;
             btn.disabled = false;
         }
@@ -727,6 +564,8 @@ function nmEnsureIpbxDelegated() {
 
     // -----------------------------------------------------------------------
     // Toggle booleano inline (nm-toggle-bool)
+    // Nota: tab_extensions.html.twig também registra este handler via
+    // document._nmToggleBoolDelegated — a flag garante registro único.
     // -----------------------------------------------------------------------
     if (!window._nmToggleBoolDelegated) {
         window._nmToggleBoolDelegated = true;
@@ -740,14 +579,14 @@ function nmEnsureIpbxDelegated() {
             const companiesId = cb.dataset.companiesId || nmGetIpbxCompaniesId(cb);
             try {
                 const result = await nmPost(url, {
-                    action: 'toggle_extension_bool',
+                    action: 'update_extension_field',
                     id: rowId, field, value, companies_id: companiesId,
                 });
                 if (!result.success) throw new Error(result.error || 'Erro ao atualizar');
                 if (result.csrf) nmRefreshCsrfToken(result.csrf);
             } catch (err) {
                 console.error('[NM] Toggle bool falhou:', err.message);
-                cb.checked = !cb.checked; // reverte visualmente
+                cb.checked = !cb.checked;
             }
         });
     }
