@@ -100,7 +100,6 @@
       </tr>
     </thead>
     <tbody id="nm-ext-rows">
-      {# Linhas de registros existentes — PHP deve ordenar por number ASC #}
       {% for row in rows %}
       <tr id="nm-ext-row-{{ row.id }}" class="nm-ext-saved-row">
         <td>{{ row.number|e }}</td>
@@ -113,7 +112,6 @@
             {{ row.records_calls ? 'Sim' : 'Não' }}
           </span>
         </td>
-        {# Toggles compactos para os 6 campos booleanos — read-only, padrão GLPI 11 #}
         {% for field in ['lof','loc','ddf','ddc','ddi','srv'] %}
         <td class="text-center">
           <div class="form-check form-switch d-flex justify-content-center m-0 p-0">
@@ -121,6 +119,8 @@
                    role="switch"
                    data-row-id="{{ row.id }}"
                    data-field="{{ field }}"
+                   data-action-url="{{ action_url|e('html_attr') }}"
+                   data-companies-id="{{ companies_id }}"
                    {{ attribute(row, field) ? 'checked' : '' }}
                    style="cursor:pointer">
           </div>
@@ -130,6 +130,8 @@
         <td>
           <button type="button" class="btn btn-sm btn-danger nm-ext-delete"
                   data-id="{{ row.id }}"
+                  data-action-url="{{ action_url|e('html_attr') }}"
+                  data-companies-id="{{ companies_id }}"
                   title="{{ 'Excluir ramal'|trans({}, 'newmanagement') }}">
             <i class="ti ti-trash"></i>
           </button>
@@ -202,44 +204,22 @@
 (function () {
   'use strict';
 
-  const tab         = document.querySelector('.nm-ext-tab');
-  if (!tab) return;
+  /*
+   * fix(toggle): Removido `if (!tab) return` que abortava o script quando
+   * o GLPI injetava o HTML antes do .nm-ext-tab existir no DOM.
+   * Todos os data-* agora são lidos de forma lazy no momento do evento,
+   * via event.target.closest() — seguro mesmo com reinjeção de DOM pelo GLPI.
+   *
+   * nmPost() e nmGetCsrfToken() são globais (newmanagement.js) — não
+   * redefinidos aqui para evitar conflito.
+   */
 
-  const actionUrl   = tab.dataset.actionUrl;
-  const exportUrl   = tab.dataset.exportUrl;
-  const ipbxId      = tab.dataset.ipbxId;
-  const companiesId = tab.dataset.companiesId;
-
-  /* ── CSRF ──────────────────────────────────────────────────── */
-  function nmCsrf() {
-    const meta = document.querySelector('meta[property="glpi:csrf_token"]');
-    if (meta && meta.getAttribute('content')) return meta.getAttribute('content');
-    const h = document.querySelector('input[name="_glpi_csrf_token"]');
-    return h ? h.value : '';
-  }
-
-  /* ── POST via fetch ────────────────────────────────────────── */
-  async function nmPost(body) {
-    const csrf = nmCsrf();
-    const fd   = new FormData();
-    fd.append('_glpi_csrf_token', csrf);
-    for (const [k, v] of Object.entries(body)) {
-      if (k !== '_glpi_csrf_token') fd.append(k, v ?? '');
-    }
-    const r = await fetch(actionUrl, {
-      method : 'POST',
-      headers: { 'X-Glpi-Csrf-Token': csrf },
-      body   : fd,
-      signal : AbortSignal.timeout(15000),
-    });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const json = await r.json();
-    if (json && json.csrf) {
-      const meta = document.querySelector('meta[property="glpi:csrf_token"]');
-      if (meta) meta.setAttribute('content', json.csrf);
-    }
-    return json;
-  }
+  /* Helpers locais ─────────────────────────────────────────── */
+  function nmExtTab()        { return document.querySelector('.nm-ext-tab'); }
+  function nmExtActionUrl()  { return nmExtTab()?.dataset.actionUrl  || ''; }
+  function nmExtExportUrl()  { return nmExtTab()?.dataset.exportUrl  || ''; }
+  function nmExtIpbxId()     { return nmExtTab()?.dataset.ipbxId     || '0'; }
+  function nmExtCompaniesId(){ return nmExtTab()?.dataset.companiesId || '0'; }
 
   function setIcon(btn, icon, spin) {
     const i = btn.querySelector('i');
@@ -247,7 +227,6 @@
     btn.disabled = spin;
   }
 
-  /* ── Spinner CSS ──────────────────────────────────────────── */
   if (!document.getElementById('nm-spin-style')) {
     const s = document.createElement('style');
     s.id = 'nm-spin-style';
@@ -256,13 +235,48 @@
   }
 
   /* ════════════════════════════════════════════════════════════
-     PONTO 1 — Botão + Adicionar: nova linha aparece NO TOPO
-     da tbody, acima dos registros salvos
+     Toggle switch — DELEGAÇÃO no document
+     Usa nmPost() global (newmanagement.js) que já tem CSRF + refresh.
+     data-action-url e data-companies-id ficam no próprio <input>
+     para não depender do .nm-ext-tab no momento do clique.
+  ════════════════════════════════════════════════════════════ */
+  if (!document._nmToggleBoolDelegated) {
+    document._nmToggleBoolDelegated = true;
+
+    document.addEventListener('change', async (e) => {
+      const chk = e.target.closest('.nm-toggle-bool');
+      if (!chk) return;
+
+      const prev       = !chk.checked;
+      const actionUrl  = chk.dataset.actionUrl  || nmExtActionUrl();
+      const companiesId= chk.dataset.companiesId|| nmExtCompaniesId();
+
+      chk.disabled = true;
+      try {
+        const data = await nmPost(actionUrl, {
+          action      : 'update_extension_field',
+          id          : chk.dataset.rowId,
+          field       : chk.dataset.field,
+          value       : chk.checked ? '1' : '0',
+          companies_id: companiesId,
+        });
+        if (!data.success) throw new Error(data.error || 'Erro ao atualizar campo');
+      } catch (err) {
+        chk.checked = prev;
+        console.error('[NM-toggle]', err.message);
+        alert('Erro ao salvar toggle: ' + err.message);
+      } finally {
+        chk.disabled = false;
+      }
+    });
+  }
+
+  /* ════════════════════════════════════════════════════════════
+     Botão + Adicionar — linha inline no topo da tabela
   ════════════════════════════════════════════════════════════ */
   const addBtn = document.getElementById('nm-ext-add-btn');
   if (addBtn) {
     addBtn.addEventListener('click', () => {
-      /* Evita múltiplas linhas de edição abertas ao mesmo tempo */
       if (document.querySelector('.nm-ext-new-row')) {
         document.querySelector('.nm-ext-new-row input')?.focus();
         return;
@@ -307,7 +321,6 @@
           </button>
         </td>`;
 
-      /* Insere NO TOPO (antes do primeiro filho) */
       tbody.insertBefore(tr, tbody.firstChild);
       tr.querySelector('[name="nm_number"]').focus();
 
@@ -322,17 +335,20 @@
         }
       });
 
-      /* Salvar inline → AJAX → insere linha na posição correta (ordenação ASC) */
+      /* Salvar inline */
       const saveInline = tr.querySelector('#nm-ext-save-inline');
       const doSave = async () => {
         const number = tr.querySelector('[name="nm_number"]').value.trim();
-        /* número vazio → apenas remove a linha sem erro */
         if (!number) { tr.remove(); return; }
 
         setIcon(saveInline, 'ti-loader-2', true);
+        const actionUrl   = nmExtActionUrl();
+        const companiesId = nmExtCompaniesId();
+        const ipbxId      = nmExtIpbxId();
+
         try {
           const boolVal = field => tr.querySelector(`[name="nm_${field}"]`).checked ? '1' : '0';
-          const data = await nmPost({
+          const data = await nmPost(actionUrl, {
             action        : 'add_extension',
             ipbx_id       : ipbxId,
             companies_id  : companiesId,
@@ -351,7 +367,6 @@
           tr.remove();
 
           if (data.html) {
-            /* Insere o novo registro na posição correta (ordem ASC por número) */
             const tmp = document.createElement('tbody');
             tmp.innerHTML = data.html;
             const newTr = tmp.firstElementChild;
@@ -369,8 +384,7 @@
                 }
               }
               if (!inserted) tbody.appendChild(newTr);
-              bindDeleteButtons();
-              bindToggleButtons();
+              /* nm-toggle-bool da linha nova já tem data-action-url — delegação cuida do resto */
             }
           }
         } catch (err) {
@@ -388,68 +402,47 @@
   }
 
   /* ════════════════════════════════════════════════════════════
-     Toggle switch dos 6 campos booleanos (inline AJAX)
+     Botões de exclusão — delegação no document
   ════════════════════════════════════════════════════════════ */
-  function bindToggleButtons() {
-    document.querySelectorAll('.nm-toggle-bool').forEach(chk => {
-      if (chk.dataset.bound) return;
-      chk.dataset.bound = '1';
-      chk.addEventListener('change', async () => {
-        const prev = !chk.checked;
-        try {
-          const data = await nmPost({
-            action : 'update_extension_field',
-            id     : chk.dataset.rowId,
-            field  : chk.dataset.field,
-            value  : chk.checked ? '1' : '0',
-            companies_id: companiesId,
-          });
-          if (!data.success) throw new Error(data.error || 'Erro');
-        } catch (err) {
-          chk.checked = prev; /* reverte em caso de erro */
-          console.error('[NM-ext toggle]', err.message);
+  if (!document._nmExtDeleteDelegated) {
+    document._nmExtDeleteDelegated = true;
+
+    document.addEventListener('click', async (e) => {
+      const btn = e.target.closest('.nm-ext-delete');
+      if (!btn) return;
+
+      if (!confirm('Excluir este ramal?')) return;
+      btn.disabled = true;
+
+      const actionUrl   = btn.dataset.actionUrl   || nmExtActionUrl();
+      const companiesId = btn.dataset.companiesId  || nmExtCompaniesId();
+
+      try {
+        const data = await nmPost(actionUrl, {
+          action      : 'delete_extension',
+          id          : btn.dataset.id,
+          companies_id: companiesId,
+        });
+        if (!data.success) throw new Error(data.error || 'Erro');
+        const row = document.getElementById('nm-ext-row-' + btn.dataset.id);
+        if (row) row.remove();
+        const tbody = document.getElementById('nm-ext-rows');
+        if (tbody && !tbody.querySelector('.nm-ext-saved-row')) {
+          const emptyTr = document.createElement('tr');
+          emptyTr.id = 'nm-ext-empty';
+          emptyTr.innerHTML = `<td colspan="13" class="text-center text-muted py-3"><i class="ti ti-phone-off me-1"></i>Nenhum ramal cadastrado. Clique em + Adicionar para incluir.</td>`;
+          tbody.appendChild(emptyTr);
         }
-      });
+      } catch (err) {
+        console.error('[NM-ext-delete]', err.message);
+        btn.disabled = false;
+      }
     });
   }
-  bindToggleButtons();
 
   /* ════════════════════════════════════════════════════════════
-     Botões de exclusão
+     EXPORTAÇÃO
   ════════════════════════════════════════════════════════════ */
-  function bindDeleteButtons() {
-    document.querySelectorAll('.nm-ext-delete').forEach(btn => {
-      if (btn.dataset.bound) return;
-      btn.dataset.bound = '1';
-      btn.addEventListener('click', async () => {
-        if (!confirm('Excluir este ramal?')) return;
-        btn.disabled = true;
-        try {
-          const data = await nmPost({
-            action      : 'delete_extension',
-            id          : btn.dataset.id,
-            companies_id: companiesId,
-          });
-          if (!data.success) throw new Error(data.error || 'Erro');
-          const row = document.getElementById('nm-ext-row-' + btn.dataset.id);
-          if (row) row.remove();
-          if (!document.querySelector('#nm-ext-rows .nm-ext-saved-row')) {
-            const emptyTr = document.createElement('tr');
-            emptyTr.id = 'nm-ext-empty';
-            emptyTr.innerHTML = `<td colspan="13" class="text-center text-muted py-3"><i class="ti ti-phone-off me-1"></i>Nenhum ramal cadastrado. Clique em + Adicionar para incluir.</td>`;
-            document.getElementById('nm-ext-rows').appendChild(emptyTr);
-          }
-        } catch (err) { btn.disabled = false; }
-      });
-    });
-  }
-  bindDeleteButtons();
-
-  /* ════════════════════════════════════════════════════════════
-     PONTO 3 — EXPORTAÇÃO
-  ════════════════════════════════════════════════════════════ */
-
-  /* Coleta dados da tabela atual para export client-side */
   function collectTableData() {
     const headers = ['Ramal','Senha','Usuário','IP Dispositivo','Departamento',
                      'Grava','LOF','LOC','DDF','DDC','DDI','SRV'];
@@ -471,7 +464,6 @@
     return { headers, rows };
   }
 
-  /* Export Excel via SheetJS */
   document.getElementById('nm-ext-export-excel')?.addEventListener('click', e => {
     e.preventDefault();
     const { headers, rows } = collectTableData();
@@ -481,38 +473,33 @@
     XLSX.writeFile(wb, 'ramais_ipbx.xlsx');
   });
 
-  /* Export PDF via endpoint PHP (TCPDF do GLPI) */
   document.getElementById('nm-ext-export-pdf')?.addEventListener('click', e => {
     e.preventDefault();
-    const csrf = nmCsrf();
+    const csrf = nmGetCsrfToken();
     window.open(
-      exportUrl + '?format=pdf&ipbx_id=' + encodeURIComponent(ipbxId)
-        + '&companies_id=' + encodeURIComponent(companiesId)
+      nmExtExportUrl() + '?format=pdf&ipbx_id=' + encodeURIComponent(nmExtIpbxId())
+        + '&companies_id=' + encodeURIComponent(nmExtCompaniesId())
         + '&_glpi_csrf_token=' + encodeURIComponent(csrf),
       '_blank'
     );
   });
 
   /* ════════════════════════════════════════════════════════════
-     PONTO 2 — IMPORTAÇÃO via modal
+     IMPORTAÇÃO via modal
   ════════════════════════════════════════════════════════════ */
   const importBtn   = document.getElementById('nm-ext-import-btn');
   const importModal = document.getElementById('nm-ext-import-modal');
-
   let parsedImportRows = [];
 
-  /* Abre o modal ao clicar no botão Importar */
   importBtn?.addEventListener('click', () => {
     document.getElementById('nm-ext-import-file-modal').value = '';
     document.getElementById('nm-ext-import-preview').classList.add('d-none');
     document.getElementById('nm-ext-import-error').classList.add('d-none');
     document.getElementById('nm-ext-import-confirm').disabled = true;
     parsedImportRows = [];
-    const modal = bootstrap.Modal.getOrCreateInstance(importModal);
-    modal.show();
+    bootstrap.Modal.getOrCreateInstance(importModal).show();
   });
 
-  /* Lê o arquivo ao selecionar */
   document.getElementById('nm-ext-import-file-modal')?.addEventListener('change', function () {
     const file = this.files[0];
     if (!file) return;
@@ -532,11 +519,11 @@
         const ws   = wb.Sheets[wb.SheetNames[0]];
         const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
 
-        /* Descarta linhas de cabeçalho até encontrar 'ramal' */
         let startIdx = 0;
         for (let i = 0; i < data.length; i++) {
-          const first = String(data[i][0] || '').toLowerCase().trim();
-          if (first === 'ramal') { startIdx = i + 1; break; }
+          if (String(data[i][0] || '').toLowerCase().trim() === 'ramal') {
+            startIdx = i + 1; break;
+          }
         }
 
         parsedImportRows = data.slice(startIdx).filter(r =>
@@ -545,7 +532,6 @@
 
         if (!parsedImportRows.length) throw new Error('Nenhuma linha de dados encontrada.');
 
-        /* Pré-visualização das primeiras 5 linhas */
         const cols = ['Ramal','Senha','IP Disp.','Usuário','Depto','Grava','LOF','LOC','DDF','DDC','DDI','SRV'];
         const tbl  = document.getElementById('nm-ext-preview-table');
         tbl.innerHTML = '<thead><tr>' + cols.map(c => `<th>${c}</th>`).join('') + '</tr></thead>'
@@ -565,7 +551,6 @@
     reader.readAsArrayBuffer(file);
   });
 
-  /* Confirmar importação — envia lote ao servidor */
   document.getElementById('nm-ext-import-confirm')?.addEventListener('click', async () => {
     const confirmBtn = document.getElementById('nm-ext-import-confirm');
     setIcon(confirmBtn, 'ti-loader-2', true);
@@ -583,24 +568,19 @@
         user_name    : String(r[3]  ?? '').trim(),
         department   : String(r[4]  ?? '').trim(),
         records_calls: boolNorm(r[5]),
-        lof          : boolNorm(r[6]),
-        loc          : boolNorm(r[7]),
-        ddf          : boolNorm(r[8]),
-        ddc          : boolNorm(r[9]),
-        ddi          : boolNorm(r[10]),
-        srv          : boolNorm(r[11]),
+        lof: boolNorm(r[6]), loc: boolNorm(r[7]), ddf: boolNorm(r[8]),
+        ddc: boolNorm(r[9]), ddi: boolNorm(r[10]), srv: boolNorm(r[11]),
       })).filter(r => r.number !== '');
 
-      const data = await nmPost({
+      const data = await nmPost(nmExtActionUrl(), {
         action      : 'import_extensions',
-        ipbx_id     : ipbxId,
-        companies_id: companiesId,
+        ipbx_id     : nmExtIpbxId(),
+        companies_id: nmExtCompaniesId(),
         rows        : JSON.stringify(payload),
       });
 
       if (!data.success) throw new Error(data.error || 'Erro na importação');
 
-      /* Fecha modal e recarrega a aba */
       bootstrap.Modal.getInstance(importModal)?.hide();
       location.reload();
 
