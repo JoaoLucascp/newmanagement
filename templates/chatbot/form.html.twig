@@ -16,7 +16,7 @@
 
   <div class="card mt-3">
     <div class="card-body">
-      <form method="POST" action="">
+      <form method="POST" action="{{ form_url }}">
         <input type="hidden" name="id" value="{{ item.id|default('') }}">
         {# fix(csrf): usar variável csrf_token passada pelo PHP, não função Twig #}
         <input type="hidden" name="_glpi_csrf_token" value="{{ csrf_token|e }}">
@@ -69,11 +69,19 @@
         </div>
 
         <div class="mt-4 d-flex gap-2">
-          <button type="submit" name="update" class="btn btn-primary">
+          {# fix: name condicional — aciona bloco 'add' ou 'update' no front/chatbot.php #}
+          <button type="submit" name="{{ item.id ? 'update' : 'add' }}" class="btn btn-primary">
             <i class="ti ti-device-floppy"></i>
             {{ 'Salvar'|__('newmanagement') }}
           </button>
-          <a href="{{ path('GlpiPlugin\\Newmanagement\\Chatbot') }}" class="btn btn-secondary">
+          {% if item.id and can_delete %}
+          <button type="submit" name="delete" class="btn btn-danger"
+                  onclick="return confirm('{{ 'Confirma exclusão?'|__('newmanagement') }}')">
+            <i class="ti ti-trash"></i>
+            {{ 'Excluir'|__('newmanagement') }}
+          </button>
+          {% endif %}
+          <a href="{{ search_url }}" class="btn btn-secondary">
             {{ 'Cancelar'|__('newmanagement') }}
           </a>
         </div>
