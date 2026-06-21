@@ -27,7 +27,7 @@
 
   {# Campos ocultos de controle #}
   <div id="nm-chatbot-form-wrapper">
-    <input type="hidden" id="nm-chatbot-csrf"         name="_glpi_csrf_token" value="{{ csrf }}">
+    <input type="hidden" id="nm-chatbot-csrf"         name="_glpi_csrf_token" value="{{ csrf|e }}">
     <input type="hidden" id="nm-chatbot-action"        value="{{ form_action }}">
     <input type="hidden" id="nm-chatbot-id"            value="{{ chatbot_id }}">
     <input type="hidden" id="nm-chatbot-companies-id" value="{{ companies_id }}">
