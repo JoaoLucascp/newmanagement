@@ -81,9 +81,13 @@
                     setFeedback('cnpj-feedback', data.message || 'CNPJ n\u00e3o encontrado.', 'error');
                     return;
                 }
+
+                // fix: 'name' = Nome Fantasia; usa Razão Social como fallback
+                // pois muitos CNPJs não possuem Nome Fantasia cadastrado na Receita.
+                set('name',        data.nome_fantasia || data.razao_social);
                 set('razao_social', data.razao_social);
-                set('email',  data.email);
-                set('phone',  data.ddd_telefone_1
+                set('email',       data.email || '');
+                set('phone',       data.ddd_telefone_1
                     ? '(' + data.ddd_telefone_1.slice(0, 2) + ') ' + data.ddd_telefone_1.slice(2)
                     : '');
 
