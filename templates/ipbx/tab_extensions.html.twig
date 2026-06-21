@@ -1,63 +1,144 @@
 {#
   templates/ipbx/tab_extensions.html.twig
-  Aba de Ramais — padrão GLPI 11: linha inline criada pelo botão '+ Adicionar'.
+  Aba de Ramais — GLPI 11
 
   Variáveis recebidas de IpbxExtension::showForIpbx():
-    rows         — array de registros existentes
+    rows         — array de registros existentes (ordenados por number ASC no PHP)
     ipbx_id      — int
     companies_id — int
     can_write    — bool
     can_delete   — bool
     csrf         — string
     action_url   — string
+    export_url   — string  (URL do endpoint de export PHP)
 #}
 <div class="nm-ext-tab"
      data-action-url="{{ action_url|e('html_attr') }}"
+     data-export-url="{{ export_url|e('html_attr') }}"
      data-ipbx-id="{{ ipbx_id }}"
      data-companies-id="{{ companies_id }}">
 
+  {# ── Barra de ações (Import / Export) ─────────────────────── #}
+  <div class="d-flex gap-2 mb-2 align-items-center flex-wrap">
+
+    {% if can_write %}
+    {# Importar #}
+    <button type="button" class="btn btn-sm btn-outline-secondary" id="nm-ext-import-btn"
+            title="{{ 'Importar ramais de planilha (.xlsx / .csv)'|trans({}, 'newmanagement') }}">
+      <i class="ti ti-file-import"></i> {{ 'Importar'|trans({}, 'newmanagement') }}
+    </button>
+    <input type="file" id="nm-ext-import-file" accept=".xlsx,.csv" class="d-none">
+    {% endif %}
+
+    {# Exportar — dropdown Bootstrap nativo (padrão GLPI 11) #}
+    <div class="btn-group">
+      <button type="button"
+              class="btn btn-sm btn-outline-secondary dropdown-toggle"
+              data-bs-toggle="dropdown" aria-expanded="false"
+              title="{{ 'Exportar ramais'|trans({}, 'newmanagement') }}">
+        <i class="ti ti-file-export"></i> {{ 'Exportar'|trans({}, 'newmanagement') }}
+      </button>
+      <ul class="dropdown-menu">
+        <li>
+          <a class="dropdown-item" href="#" id="nm-ext-export-excel">
+            <i class="ti ti-file-spreadsheet me-1"></i> Excel (.xlsx)
+          </a>
+        </li>
+        <li>
+          <a class="dropdown-item" href="#" id="nm-ext-export-pdf">
+            <i class="ti ti-file-type-pdf me-1"></i> PDF
+          </a>
+        </li>
+      </ul>
+    </div>
+
+    {% if can_write %}
+    {# Botão principal + Adicionar #}
+    <button type="button" class="btn btn-sm btn-primary ms-auto" id="nm-ext-add-btn">
+      <i class="ti ti-plus"></i> {{ '+ Adicionar'|trans({}, 'newmanagement') }}
+    </button>
+    {% endif %}
+
+  </div>
+
+  {# ── Tabela ────────────────────────────────────────────────── #}
+  <div class="table-responsive">
   <table class="tab_cadre_fixe" id="nm-ext-list">
     <thead>
       <tr class="tab_bg_2">
-        <th>{{ 'Ramal'|trans({}, 'newmanagement') }} <span class="text-danger">*</span></th>
+        <th>{{ 'Ramal'|trans({}, 'newmanagement') }}</th>
+        <th>{{ 'Senha'|trans({}, 'newmanagement') }}</th>
         <th>{{ 'Usuário'|trans({}, 'newmanagement') }}</th>
         <th>{{ 'IP Dispositivo'|trans({}, 'newmanagement') }}</th>
         <th>{{ 'Departamento'|trans({}, 'newmanagement') }}</th>
-        <th>{{ 'Grava?'|trans({}, 'newmanagement') }}</th>
-        <th style="width:120px;">
-          {% if can_write %}
-          <button type="button" id="nm-ext-add-btn" class="btn btn-sm btn-primary">
-            <i class="ti ti-plus"></i> {{ '+ Adicionar'|trans({}, 'newmanagement') }}
-          </button>
-          {% endif %}
+        <th class="text-center" style="min-width:56px">{{ 'Grava'|trans({}, 'newmanagement') }}</th>
+        <th class="text-center" style="min-width:52px">LOF
+          <i class="ti ti-info-circle ms-1" style="cursor:help;font-size:.75rem"
+             title="Liga para fora"></i>
         </th>
+        <th class="text-center" style="min-width:52px">LOC
+          <i class="ti ti-info-circle ms-1" style="cursor:help;font-size:.75rem"
+             title="Liga para outros ramais"></i>
+        </th>
+        <th class="text-center" style="min-width:52px">DDF
+          <i class="ti ti-info-circle ms-1" style="cursor:help;font-size:.75rem"
+             title="Desvia chamada de fora"></i>
+        </th>
+        <th class="text-center" style="min-width:52px">DDC
+          <i class="ti ti-info-circle ms-1" style="cursor:help;font-size:.75rem"
+             title="Desvia chamada de celular"></i>
+        </th>
+        <th class="text-center" style="min-width:52px">DDI
+          <i class="ti ti-info-circle ms-1" style="cursor:help;font-size:.75rem"
+             title="Permite DDI"></i>
+        </th>
+        <th class="text-center" style="min-width:52px">SRV
+          <i class="ti ti-info-circle ms-1" style="cursor:help;font-size:.75rem"
+             title="Acessa serviço IPBX"></i>
+        </th>
+        {% if can_delete %}<th style="width:56px"></th>{% endif %}
       </tr>
     </thead>
     <tbody id="nm-ext-rows">
+      {# Linhas de registros existentes — PHP deve ordenar por number ASC #}
       {% for row in rows %}
-      <tr id="nm-ext-row-{{ row.id }}">
+      <tr id="nm-ext-row-{{ row.id }}" class="nm-ext-saved-row">
         <td>{{ row.number|e }}</td>
+        <td><code>{{ row.password|default('-')|e }}</code></td>
         <td>{{ row.user_name|default('-')|e }}</td>
         <td>{{ row.device_ip|default('-')|e }}</td>
         <td>{{ row.department|default('-')|e }}</td>
-        <td>
-          {% if row.records_calls %}
-            <span class="badge bg-success">{{ 'Sim'|trans({}, 'newmanagement') }}</span>
-          {% else %}
-            <span class="badge bg-secondary">{{ 'Não'|trans({}, 'newmanagement') }}</span>
-          {% endif %}
+        <td class="text-center">
+          <span class="badge {{ row.records_calls ? 'bg-success' : 'bg-secondary' }}">
+            {{ row.records_calls ? 'Sim' : 'Não' }}
+          </span>
         </td>
+        {# Toggles compactos para os 6 campos booleanos — read-only, padrão GLPI 11 #}
+        {% for field in ['lof','loc','ddf','ddc','ddi','srv'] %}
+        <td class="text-center">
+          <div class="form-check form-switch d-flex justify-content-center m-0 p-0">
+            <input class="form-check-input nm-toggle-bool" type="checkbox"
+                   role="switch"
+                   data-row-id="{{ row.id }}"
+                   data-field="{{ field }}"
+                   {{ attribute(row, field) ? 'checked' : '' }}
+                   style="cursor:pointer">
+          </div>
+        </td>
+        {% endfor %}
+        {% if can_delete %}
         <td>
-          {% if can_delete %}
-          <button type="button" class="btn btn-sm btn-danger nm-ext-delete" data-id="{{ row.id }}">
+          <button type="button" class="btn btn-sm btn-danger nm-ext-delete"
+                  data-id="{{ row.id }}"
+                  title="{{ 'Excluir ramal'|trans({}, 'newmanagement') }}">
             <i class="ti ti-trash"></i>
           </button>
-          {% endif %}
         </td>
+        {% endif %}
       </tr>
       {% else %}
       <tr id="nm-ext-empty">
-        <td colspan="6" class="text-center text-muted py-3">
+        <td colspan="13" class="text-center text-muted py-3">
           <i class="ti ti-phone-off me-1"></i>
           {{ 'Nenhum ramal cadastrado. Clique em + Adicionar para incluir.'|trans({}, 'newmanagement') }}
         </td>
@@ -65,21 +146,71 @@
       {% endfor %}
     </tbody>
   </table>
+  </div>
 
-</div>
+  {# ── Modal de Importação ──────────────────────────────────── #}
+  <div class="modal fade" id="nm-ext-import-modal" tabindex="-1"
+       aria-labelledby="nm-ext-import-modal-label" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="nm-ext-import-modal-label">
+            <i class="ti ti-file-import me-1"></i>
+            {{ 'Importar Ramais'|trans({}, 'newmanagement') }}
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-muted small mb-3">
+            {{ 'Selecione um arquivo .xlsx ou .csv. As colunas esperadas são:'|trans({}, 'newmanagement') }}
+            <br>
+            <code>ramal, senha, ip dispositivo, usuário, departamento, grava, LOF, LOC, DDF, DDC, DDI, SRV</code>
+          </p>
+          <div class="mb-3">
+            <label class="form-label" for="nm-ext-import-file-modal">
+              {{ 'Arquivo (.xlsx ou .csv)'|trans({}, 'newmanagement') }}
+            </label>
+            <input type="file" class="form-control" id="nm-ext-import-file-modal" accept=".xlsx,.csv">
+          </div>
+          <div id="nm-ext-import-preview" class="d-none">
+            <p class="fw-semibold mb-1">{{ 'Pré-visualização (primeiras 5 linhas):'|trans({}, 'newmanagement') }}</p>
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered" id="nm-ext-preview-table"></table>
+            </div>
+            <p id="nm-ext-import-count" class="text-muted small mt-1"></p>
+          </div>
+          <div id="nm-ext-import-error" class="alert alert-danger d-none"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            {{ 'Cancelar'|trans({}, 'newmanagement') }}
+          </button>
+          <button type="button" class="btn btn-primary" id="nm-ext-import-confirm" disabled>
+            <i class="ti ti-upload me-1"></i> {{ 'Importar'|trans({}, 'newmanagement') }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>{# fim .nm-ext-tab #}
+
+{# ── SheetJS (para leitura xlsx no browser + export Excel) ── #}
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 
 <script>
 (function () {
   'use strict';
 
-  const tab = document.querySelector('.nm-ext-tab');
+  const tab         = document.querySelector('.nm-ext-tab');
   if (!tab) return;
 
   const actionUrl   = tab.dataset.actionUrl;
+  const exportUrl   = tab.dataset.exportUrl;
   const ipbxId      = tab.dataset.ipbxId;
   const companiesId = tab.dataset.companiesId;
 
-  /* ── CSRF ──────────────────────────────────────────── */
+  /* ── CSRF ──────────────────────────────────────────────────── */
   function nmCsrf() {
     const meta = document.querySelector('meta[property="glpi:csrf_token"]');
     if (meta && meta.getAttribute('content')) return meta.getAttribute('content');
@@ -87,10 +218,10 @@
     return h ? h.value : '';
   }
 
-  /* ── POST via fetch ────────────────────────────────── */
+  /* ── POST via fetch ────────────────────────────────────────── */
   async function nmPost(body) {
     const csrf = nmCsrf();
-    const fd = new FormData();
+    const fd   = new FormData();
     fd.append('_glpi_csrf_token', csrf);
     for (const [k, v] of Object.entries(body)) {
       if (k !== '_glpi_csrf_token') fd.append(k, v ?? '');
@@ -99,7 +230,7 @@
       method : 'POST',
       headers: { 'X-Glpi-Csrf-Token': csrf },
       body   : fd,
-      signal : AbortSignal.timeout(10000),
+      signal : AbortSignal.timeout(15000),
     });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const json = await r.json();
@@ -116,112 +247,196 @@
     btn.disabled = spin;
   }
 
-  /* ── Botão '+ Adicionar' — cria linha inline ───────── */
+  /* ── Spinner CSS ──────────────────────────────────────────── */
+  if (!document.getElementById('nm-spin-style')) {
+    const s = document.createElement('style');
+    s.id = 'nm-spin-style';
+    s.textContent = '@keyframes nm-spin{to{transform:rotate(360deg)}}.nm-spin{animation:nm-spin .8s linear infinite}';
+    document.head.appendChild(s);
+  }
+
+  /* ════════════════════════════════════════════════════════════
+     PONTO 1 — Botão + Adicionar: nova linha aparece NO TOPO
+     da tbody, acima dos registros salvos
+  ════════════════════════════════════════════════════════════ */
   const addBtn = document.getElementById('nm-ext-add-btn');
   if (addBtn) {
     addBtn.addEventListener('click', () => {
+      /* Evita múltiplas linhas de edição abertas ao mesmo tempo */
+      if (document.querySelector('.nm-ext-new-row')) {
+        document.querySelector('.nm-ext-new-row input')?.focus();
+        return;
+      }
+
       const tbody = document.getElementById('nm-ext-rows');
       const empty = document.getElementById('nm-ext-empty');
       if (empty) empty.remove();
 
       const tr = document.createElement('tr');
-      tr.className = 'nm-ext-new-row';
+      tr.className = 'nm-ext-new-row table-info';
       tr.innerHTML = `
-        <td><input type="text"     class="form-control form-control-sm" id="nm-ext-number"        placeholder="Ex: 1001" required></td>
-        <td><input type="text"     class="form-control form-control-sm" id="nm-ext-user_name"     placeholder="Nome do usuário"></td>
-        <td><input type="text"     class="form-control form-control-sm" id="nm-ext-device_ip"     placeholder="192.168.1.x"></td>
-        <td><input type="text"     class="form-control form-control-sm" id="nm-ext-department"    placeholder="Ex: Comercial"></td>
-        <td>
-          <select class="form-select form-select-sm" id="nm-ext-records_calls">
-            <option value="0">Não</option>
-            <option value="1">Sim</option>
-          </select>
+        <td><input type="text" class="form-control form-control-sm" name="nm_number"
+                   placeholder="Ex: 2001" style="min-width:72px"></td>
+        <td><input type="text" class="form-control form-control-sm" name="nm_password"
+                   placeholder="Senha" style="min-width:90px"></td>
+        <td><input type="text" class="form-control form-control-sm" name="nm_user_name"
+                   placeholder="Nome do usuário" style="min-width:110px"></td>
+        <td><input type="text" class="form-control form-control-sm" name="nm_device_ip"
+                   placeholder="192.168.x.x" style="min-width:110px"></td>
+        <td><input type="text" class="form-control form-control-sm" name="nm_department"
+                   placeholder="Departamento" style="min-width:100px"></td>
+        <td class="text-center">
+          <div class="form-check form-switch d-flex justify-content-center m-0 p-0">
+            <input class="form-check-input" type="checkbox" role="switch" name="nm_records_calls">
+          </div>
         </td>
+        ${['lof','loc','ddf','ddc','ddi','srv'].map(f => `
+        <td class="text-center">
+          <div class="form-check form-switch d-flex justify-content-center m-0 p-0">
+            <input class="form-check-input" type="checkbox" role="switch" name="nm_${f}">
+          </div>
+        </td>`).join('')}
         <td class="d-flex gap-1">
-          <button type="button" class="btn btn-sm btn-success" id="nm-ext-save-inline">
+          <button type="button" class="btn btn-sm btn-success" id="nm-ext-save-inline"
+                  title="Salvar ramal">
             <i class="ti ti-device-floppy"></i>
           </button>
-          <button type="button" class="btn btn-sm btn-secondary" id="nm-ext-cancel-inline">
+          <button type="button" class="btn btn-sm btn-secondary" id="nm-ext-cancel-inline"
+                  title="Cancelar">
             <i class="ti ti-x"></i>
           </button>
         </td>`;
-      tbody.appendChild(tr);
-      tr.querySelector('#nm-ext-number').focus();
 
-      /* Cancelar: remove a linha nova */
+      /* Insere NO TOPO (antes do primeiro filho) */
+      tbody.insertBefore(tr, tbody.firstChild);
+      tr.querySelector('[name="nm_number"]').focus();
+
+      /* Cancelar */
       tr.querySelector('#nm-ext-cancel-inline').addEventListener('click', () => {
         tr.remove();
-        if (!document.querySelector('#nm-ext-rows tr:not(.nm-ext-new-row)')) {
+        if (!tbody.querySelector('.nm-ext-saved-row')) {
           const emptyTr = document.createElement('tr');
           emptyTr.id = 'nm-ext-empty';
-          emptyTr.innerHTML = `<td colspan="6" class="text-center text-muted py-3"><i class="ti ti-phone-off me-1"></i>Nenhum ramal cadastrado. Clique em + Adicionar para incluir.</td>`;
-          document.getElementById('nm-ext-rows').appendChild(emptyTr);
+          emptyTr.innerHTML = `<td colspan="13" class="text-center text-muted py-3"><i class="ti ti-phone-off me-1"></i>Nenhum ramal cadastrado. Clique em + Adicionar para incluir.</td>`;
+          tbody.appendChild(emptyTr);
         }
       });
 
-      /* Salvar: envia AJAX e substitui linha de edição por linha de leitura */
+      /* Salvar inline → AJAX → insere linha na posição correta (ordenação ASC) */
       const saveInline = tr.querySelector('#nm-ext-save-inline');
-      saveInline.addEventListener('click', async () => {
-        const number = tr.querySelector('#nm-ext-number').value.trim();
-        if (!number) { tr.querySelector('#nm-ext-number').focus(); return; }
+      const doSave = async () => {
+        const number = tr.querySelector('[name="nm_number"]').value.trim();
+        /* número vazio → apenas remove a linha sem erro */
+        if (!number) { tr.remove(); return; }
 
         setIcon(saveInline, 'ti-loader-2', true);
         try {
+          const boolVal = field => tr.querySelector(`[name="nm_${field}"]`).checked ? '1' : '0';
           const data = await nmPost({
             action        : 'add_extension',
             ipbx_id       : ipbxId,
             companies_id  : companiesId,
-            number        : number,
-            user_name     : tr.querySelector('#nm-ext-user_name').value,
-            device_ip     : tr.querySelector('#nm-ext-device_ip').value,
-            department    : tr.querySelector('#nm-ext-department').value,
-            records_calls : tr.querySelector('#nm-ext-records_calls').value,
+            number,
+            password      : tr.querySelector('[name="nm_password"]').value,
+            user_name     : tr.querySelector('[name="nm_user_name"]').value,
+            device_ip     : tr.querySelector('[name="nm_device_ip"]').value,
+            department    : tr.querySelector('[name="nm_department"]').value,
+            records_calls : boolVal('records_calls'),
+            lof: boolVal('lof'), loc: boolVal('loc'), ddf: boolVal('ddf'),
+            ddc: boolVal('ddc'), ddi: boolVal('ddi'), srv: boolVal('srv'),
           });
 
           if (!data.success) throw new Error(data.error || 'Erro ao salvar');
 
-          /* Substitui linha de edição pelo HTML retornado pelo servidor */
+          tr.remove();
+
           if (data.html) {
-            tr.outerHTML = data.html;
-            bindDeleteButtons();
-          } else {
-            tr.remove();
+            /* Insere o novo registro na posição correta (ordem ASC por número) */
+            const tmp = document.createElement('tbody');
+            tmp.innerHTML = data.html;
+            const newTr = tmp.firstElementChild;
+            if (newTr) {
+              newTr.classList.add('nm-ext-saved-row');
+              const newNum = parseInt(data.number || number, 10);
+              const saved  = tbody.querySelectorAll('.nm-ext-saved-row');
+              let inserted = false;
+              for (const row of saved) {
+                const rowNum = parseInt(row.querySelector('td')?.textContent?.trim() || '0', 10);
+                if (newNum < rowNum) {
+                  tbody.insertBefore(newTr, row);
+                  inserted = true;
+                  break;
+                }
+              }
+              if (!inserted) tbody.appendChild(newTr);
+              bindDeleteButtons();
+              bindToggleButtons();
+            }
           }
         } catch (err) {
           console.error('[NM-ext] Erro:', err.message);
           setIcon(saveInline, 'ti-alert-circle', false);
           setTimeout(() => setIcon(saveInline, 'ti-device-floppy', false), 3000);
         }
-      });
+      };
 
-      /* Salvar ao pressionar Enter no campo ramal */
-      tr.querySelector('#nm-ext-number').addEventListener('keydown', e => {
-        if (e.key === 'Enter') saveInline.click();
+      saveInline.addEventListener('click', doSave);
+      tr.querySelector('[name="nm_number"]').addEventListener('keydown', e => {
+        if (e.key === 'Enter') doSave();
       });
     });
   }
 
-  /* ── Botões de exclusão (existentes + futuros) ──────── */
+  /* ════════════════════════════════════════════════════════════
+     Toggle switch dos 6 campos booleanos (inline AJAX)
+  ════════════════════════════════════════════════════════════ */
+  function bindToggleButtons() {
+    document.querySelectorAll('.nm-toggle-bool').forEach(chk => {
+      if (chk.dataset.bound) return;
+      chk.dataset.bound = '1';
+      chk.addEventListener('change', async () => {
+        const prev = !chk.checked;
+        try {
+          const data = await nmPost({
+            action : 'update_extension_field',
+            id     : chk.dataset.rowId,
+            field  : chk.dataset.field,
+            value  : chk.checked ? '1' : '0',
+            companies_id: companiesId,
+          });
+          if (!data.success) throw new Error(data.error || 'Erro');
+        } catch (err) {
+          chk.checked = prev; /* reverte em caso de erro */
+          console.error('[NM-ext toggle]', err.message);
+        }
+      });
+    });
+  }
+  bindToggleButtons();
+
+  /* ════════════════════════════════════════════════════════════
+     Botões de exclusão
+  ════════════════════════════════════════════════════════════ */
   function bindDeleteButtons() {
     document.querySelectorAll('.nm-ext-delete').forEach(btn => {
       if (btn.dataset.bound) return;
       btn.dataset.bound = '1';
       btn.addEventListener('click', async () => {
-        if (!confirm('{{ 'Excluir este ramal?'|trans({}, 'newmanagement') }}')) return;
+        if (!confirm('Excluir este ramal?')) return;
         btn.disabled = true;
         try {
           const data = await nmPost({
-            action       : 'delete_extension',
-            id           : btn.dataset.id,
-            companies_id : companiesId,
+            action      : 'delete_extension',
+            id          : btn.dataset.id,
+            companies_id: companiesId,
           });
           if (!data.success) throw new Error(data.error || 'Erro');
           const row = document.getElementById('nm-ext-row-' + btn.dataset.id);
           if (row) row.remove();
-          if (!document.querySelector('#nm-ext-rows tr')) {
+          if (!document.querySelector('#nm-ext-rows .nm-ext-saved-row')) {
             const emptyTr = document.createElement('tr');
             emptyTr.id = 'nm-ext-empty';
-            emptyTr.innerHTML = `<td colspan="6" class="text-center text-muted py-3"><i class="ti ti-phone-off me-1"></i>Nenhum ramal cadastrado. Clique em + Adicionar para incluir.</td>`;
+            emptyTr.innerHTML = `<td colspan="13" class="text-center text-muted py-3"><i class="ti ti-phone-off me-1"></i>Nenhum ramal cadastrado. Clique em + Adicionar para incluir.</td>`;
             document.getElementById('nm-ext-rows').appendChild(emptyTr);
           }
         } catch (err) { btn.disabled = false; }
@@ -230,13 +445,173 @@
   }
   bindDeleteButtons();
 
-  /* ── Spinner CSS ────────────────────────────────────── */
-  if (!document.getElementById('nm-spin-style')) {
-    const s = document.createElement('style');
-    s.id = 'nm-spin-style';
-    s.textContent = '@keyframes nm-spin{to{transform:rotate(360deg)}}.nm-spin{animation:nm-spin .8s linear infinite}';
-    document.head.appendChild(s);
+  /* ════════════════════════════════════════════════════════════
+     PONTO 3 — EXPORTAÇÃO
+  ════════════════════════════════════════════════════════════ */
+
+  /* Coleta dados da tabela atual para export client-side */
+  function collectTableData() {
+    const headers = ['Ramal','Senha','Usuário','IP Dispositivo','Departamento',
+                     'Grava','LOF','LOC','DDF','DDC','DDI','SRV'];
+    const rows = [];
+    document.querySelectorAll('#nm-ext-rows .nm-ext-saved-row').forEach(tr => {
+      const cells = tr.querySelectorAll('td');
+      const boolCols = tr.querySelectorAll('.nm-toggle-bool');
+      const row = [
+        cells[0]?.textContent.trim(),
+        cells[1]?.textContent.trim(),
+        cells[2]?.textContent.trim(),
+        cells[3]?.textContent.trim(),
+        cells[4]?.textContent.trim(),
+        cells[5]?.textContent.trim(),
+      ];
+      boolCols.forEach(chk => row.push(chk.checked ? 'Sim' : 'Não'));
+      rows.push(row);
+    });
+    return { headers, rows };
   }
+
+  /* Export Excel via SheetJS */
+  document.getElementById('nm-ext-export-excel')?.addEventListener('click', e => {
+    e.preventDefault();
+    const { headers, rows } = collectTableData();
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Ramais');
+    XLSX.writeFile(wb, 'ramais_ipbx.xlsx');
+  });
+
+  /* Export PDF via endpoint PHP (TCPDF do GLPI) */
+  document.getElementById('nm-ext-export-pdf')?.addEventListener('click', e => {
+    e.preventDefault();
+    const csrf = nmCsrf();
+    window.open(
+      exportUrl + '?format=pdf&ipbx_id=' + encodeURIComponent(ipbxId)
+        + '&companies_id=' + encodeURIComponent(companiesId)
+        + '&_glpi_csrf_token=' + encodeURIComponent(csrf),
+      '_blank'
+    );
+  });
+
+  /* ════════════════════════════════════════════════════════════
+     PONTO 2 — IMPORTAÇÃO via modal
+  ════════════════════════════════════════════════════════════ */
+  const importBtn   = document.getElementById('nm-ext-import-btn');
+  const importModal = document.getElementById('nm-ext-import-modal');
+
+  let parsedImportRows = [];
+
+  /* Abre o modal ao clicar no botão Importar */
+  importBtn?.addEventListener('click', () => {
+    document.getElementById('nm-ext-import-file-modal').value = '';
+    document.getElementById('nm-ext-import-preview').classList.add('d-none');
+    document.getElementById('nm-ext-import-error').classList.add('d-none');
+    document.getElementById('nm-ext-import-confirm').disabled = true;
+    parsedImportRows = [];
+    const modal = bootstrap.Modal.getOrCreateInstance(importModal);
+    modal.show();
+  });
+
+  /* Lê o arquivo ao selecionar */
+  document.getElementById('nm-ext-import-file-modal')?.addEventListener('change', function () {
+    const file = this.files[0];
+    if (!file) return;
+
+    const errEl   = document.getElementById('nm-ext-import-error');
+    const prevEl  = document.getElementById('nm-ext-import-preview');
+    const countEl = document.getElementById('nm-ext-import-count');
+    errEl.classList.add('d-none');
+    prevEl.classList.add('d-none');
+    parsedImportRows = [];
+    document.getElementById('nm-ext-import-confirm').disabled = true;
+
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const wb   = XLSX.read(ev.target.result, { type: 'array' });
+        const ws   = wb.Sheets[wb.SheetNames[0]];
+        const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+        /* Descarta linhas de cabeçalho até encontrar 'ramal' */
+        let startIdx = 0;
+        for (let i = 0; i < data.length; i++) {
+          const first = String(data[i][0] || '').toLowerCase().trim();
+          if (first === 'ramal') { startIdx = i + 1; break; }
+        }
+
+        parsedImportRows = data.slice(startIdx).filter(r =>
+          r.some(c => String(c).trim() !== '')
+        );
+
+        if (!parsedImportRows.length) throw new Error('Nenhuma linha de dados encontrada.');
+
+        /* Pré-visualização das primeiras 5 linhas */
+        const cols = ['Ramal','Senha','IP Disp.','Usuário','Depto','Grava','LOF','LOC','DDF','DDC','DDI','SRV'];
+        const tbl  = document.getElementById('nm-ext-preview-table');
+        tbl.innerHTML = '<thead><tr>' + cols.map(c => `<th>${c}</th>`).join('') + '</tr></thead>'
+          + '<tbody>' + parsedImportRows.slice(0,5).map(r =>
+            '<tr>' + cols.map((_, i) => `<td>${String(r[i] ?? '').trim()}</td>`).join('') + '</tr>'
+          ).join('') + '</tbody>';
+
+        countEl.textContent = `Total: ${parsedImportRows.length} linha(s) encontrada(s).`;
+        prevEl.classList.remove('d-none');
+        document.getElementById('nm-ext-import-confirm').disabled = false;
+
+      } catch (err) {
+        errEl.textContent = 'Erro ao ler o arquivo: ' + err.message;
+        errEl.classList.remove('d-none');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  });
+
+  /* Confirmar importação — envia lote ao servidor */
+  document.getElementById('nm-ext-import-confirm')?.addEventListener('click', async () => {
+    const confirmBtn = document.getElementById('nm-ext-import-confirm');
+    setIcon(confirmBtn, 'ti-loader-2', true);
+
+    try {
+      const boolNorm = v => {
+        const s = String(v).trim().toLowerCase();
+        return (s === '1' || s === 'sim' || s === 'yes' || s === 'true') ? '1' : '0';
+      };
+
+      const payload = parsedImportRows.map(r => ({
+        number       : String(r[0]  ?? '').trim(),
+        password     : String(r[1]  ?? '').trim(),
+        device_ip    : String(r[2]  ?? '').trim(),
+        user_name    : String(r[3]  ?? '').trim(),
+        department   : String(r[4]  ?? '').trim(),
+        records_calls: boolNorm(r[5]),
+        lof          : boolNorm(r[6]),
+        loc          : boolNorm(r[7]),
+        ddf          : boolNorm(r[8]),
+        ddc          : boolNorm(r[9]),
+        ddi          : boolNorm(r[10]),
+        srv          : boolNorm(r[11]),
+      })).filter(r => r.number !== '');
+
+      const data = await nmPost({
+        action      : 'import_extensions',
+        ipbx_id     : ipbxId,
+        companies_id: companiesId,
+        rows        : JSON.stringify(payload),
+      });
+
+      if (!data.success) throw new Error(data.error || 'Erro na importação');
+
+      /* Fecha modal e recarrega a aba */
+      bootstrap.Modal.getInstance(importModal)?.hide();
+      location.reload();
+
+    } catch (err) {
+      const errEl = document.getElementById('nm-ext-import-error');
+      errEl.textContent = err.message;
+      errEl.classList.remove('d-none');
+      setIcon(confirmBtn, 'ti-upload', false);
+      confirmBtn.disabled = false;
+    }
+  });
 
 }());
 </script>

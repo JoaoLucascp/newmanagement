@@ -114,6 +114,7 @@ function plugin_newmanagement_install_tables(): bool
 
         // -------------------------------------------------------
         // Ramais do IPBX
+        // feat: adiciona 6 colunas booleanas LOF/LOC/DDF/DDC/DDI/SRV
         // -------------------------------------------------------
         if (!$DB->tableExists('glpi_plugin_newmanagement_ipbx_extensions')) {
             $DB->doQueryOrDie("CREATE TABLE `glpi_plugin_newmanagement_ipbx_extensions` (
@@ -126,12 +127,19 @@ function plugin_newmanagement_install_tables(): bool
                 `user_name`     varchar(255) DEFAULT NULL,
                 `records_calls` tinyint(1)   NOT NULL DEFAULT 0 COMMENT '0=Nao,1=Sim',
                 `department`    varchar(255) DEFAULT NULL,
+                `lof`           tinyint(1)   NOT NULL DEFAULT 0 COMMENT 'LOF: Liga para fora',
+                `loc`           tinyint(1)   NOT NULL DEFAULT 0 COMMENT 'LOC: Liga para outros ramais',
+                `ddf`           tinyint(1)   NOT NULL DEFAULT 0 COMMENT 'DDF: Desvia chamada de fora',
+                `ddc`           tinyint(1)   NOT NULL DEFAULT 0 COMMENT 'DDC: Desvia chamada de celular',
+                `ddi`           tinyint(1)   NOT NULL DEFAULT 0 COMMENT 'DDI: Permite DDI',
+                `srv`           tinyint(1)   NOT NULL DEFAULT 0 COMMENT 'SRV: Acessa servico IPBX',
                 `date_creation` timestamp    DEFAULT NULL,
                 `date_mod`      timestamp    DEFAULT NULL,
                 `is_deleted`    tinyint(1)   NOT NULL DEFAULT 0,
                 PRIMARY KEY (`id`),
                 KEY `ipbx_id` (`ipbx_id`),
-                KEY `companies_id` (`companies_id`)
+                KEY `companies_id` (`companies_id`),
+                KEY `number` (`number`)
             ) ENGINE=InnoDB DEFAULT CHARSET={$cs} COLLATE={$col} ROW_FORMAT=DYNAMIC");
         } else {
             $cols = $DB->listFields('glpi_plugin_newmanagement_ipbx_extensions');
@@ -141,6 +149,26 @@ function plugin_newmanagement_install_tables(): bool
             if (isset($cols['password']) && $cols['password']['Type'] === 'varchar(255)')
                 $migration->changeField('glpi_plugin_newmanagement_ipbx_extensions',
                     'password', 'password', 'text DEFAULT NULL');
+            // feat: migração idempotente das 6 colunas booleanas
+            $bool_cols = [
+                'lof' => ["tinyint(1) NOT NULL DEFAULT 0 COMMENT 'LOF: Liga para fora'",           'department'],
+                'loc' => ["tinyint(1) NOT NULL DEFAULT 0 COMMENT 'LOC: Liga para outros ramais'",   'lof'],
+                'ddf' => ["tinyint(1) NOT NULL DEFAULT 0 COMMENT 'DDF: Desvia chamada de fora'",    'loc'],
+                'ddc' => ["tinyint(1) NOT NULL DEFAULT 0 COMMENT 'DDC: Desvia chamada de celular'", 'ddf'],
+                'ddi' => ["tinyint(1) NOT NULL DEFAULT 0 COMMENT 'DDI: Permite DDI'",               'ddc'],
+                'srv' => ["tinyint(1) NOT NULL DEFAULT 0 COMMENT 'SRV: Acessa servico IPBX'",       'ddi'],
+            ];
+            foreach ($bool_cols as $field => [$def, $after]) {
+                if (!isset($cols[$field]))
+                    $migration->addField(
+                        'glpi_plugin_newmanagement_ipbx_extensions',
+                        $field,
+                        $def,
+                        ['after' => $after]
+                    );
+            }
+            if (!isset($cols['number']) || !array_key_exists('number', array_flip(array_column($DB->listIndexes('glpi_plugin_newmanagement_ipbx_extensions') ?? [], 'Key_name'))))
+                $migration->addKey('glpi_plugin_newmanagement_ipbx_extensions', 'number');
         }
 
         // -------------------------------------------------------
@@ -264,8 +292,6 @@ function plugin_newmanagement_install_tables(): bool
 
         // -------------------------------------------------------
         // Tasks
-        // fix(DB-01): adiciona assigned_user_id (FK para glpi_users)
-        // fix(DB-02): adiciona digital_signature (texto da assinatura)
         // -------------------------------------------------------
         if (!$DB->tableExists('glpi_plugin_newmanagement_tasks')) {
             $DB->doQueryOrDie("CREATE TABLE `glpi_plugin_newmanagement_tasks` (
@@ -297,7 +323,6 @@ function plugin_newmanagement_install_tables(): bool
             if (isset($cols['date_due']) && strtolower($cols['date_due']['Type']) === 'datetime')
                 $migration->changeField('glpi_plugin_newmanagement_tasks',
                     'date_due', 'date_due', 'timestamp DEFAULT NULL');
-            // fix(DB-01): migração idempotente para assigned_user_id
             if (!isset($cols['assigned_user_id'])) {
                 $migration->addField(
                     'glpi_plugin_newmanagement_tasks',
@@ -307,7 +332,6 @@ function plugin_newmanagement_install_tables(): bool
                 );
                 $migration->addKey('glpi_plugin_newmanagement_tasks', 'assigned_user_id');
             }
-            // fix(DB-02): migração idempotente para digital_signature
             if (!isset($cols['digital_signature'])) {
                 $migration->addField(
                     'glpi_plugin_newmanagement_tasks',
