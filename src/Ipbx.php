@@ -234,27 +234,61 @@ class Ipbx extends \CommonDBTM
         return [$rows, (int) $total];
     }
 
+    /**
+     * Renderiza uma linha <tr> de ramal para a lista de ramais.
+     *
+     * Colunas (12 + ação):
+     *   Ramal | Senha (plain text) | Usuário | IP Dispositivo | Departamento
+     *   | Grava | LOF | LOC | DDF | DDC | DDI | SRV | [Excluir]
+     */
     public static function renderExtensionRow(int $id, array $row, int $companies_id, string $csrf, string $action, bool $can_delete = true): string
     {
         $h = fn($v) => htmlspecialchars((string) ($v ?? ''), ENT_QUOTES);
+
+        // Senha em texto visível (plain text)
+        $password_cell = '<code>' . $h($row['password'] ?? '') . '</code>';
+
+        // Badge para o campo "Grava"
+        $grava = (int) ($row['records_calls'] ?? 0);
+        $grava_badge = '<span class="badge ' . ($grava ? 'bg-success' : 'bg-secondary') . '">
+            ' . ($grava ? __('Sim', 'newmanagement') : __('Não', 'newmanagement')) . '
+        </span>';
+
+        // Campos booleanos compactos: toggle switch read-only (AJAX on change via JS)
+        $bool_cols = ['lof', 'loc', 'ddf', 'ddc', 'ddi', 'srv'];
+        $bool_tds  = '';
+        foreach ($bool_cols as $field) {
+            $checked = !empty($row[$field]) ? ' checked' : '';
+            $bool_tds .= '<td class="text-center" style="min-width:52px">'
+                . '<div class="form-check form-switch d-flex justify-content-center m-0 p-0">'
+                . '<input class="form-check-input nm-toggle-bool" type="checkbox" role="switch"'
+                . ' data-row-id="' . $id . '"'
+                . ' data-field="' . $field . '"'
+                . $checked
+                . ' style="cursor:pointer">'
+                . '</div>'
+                . '</td>';
+        }
+
+        // Botão excluir
         $delete_btn = '';
         if ($can_delete) {
-            $delete_btn = '<button type="button" class="btn btn-sm btn-icon nm-del-btn"'
-                . ' data-action="delete_extension" data-id="' . $id . '"'
-                . ' data-row="nm-ext-row-' . $id . '" data-companies-id="' . $companies_id . '"'
-                . ' data-csrf="' . $h($csrf) . '" data-url="' . $h($action) . '"'
-                . ' data-confirm="' . __('Remover ramal?', 'newmanagement') . '"'
-                . ' title="' . __('Remover', 'newmanagement') . '">'
-                . '<i class="ti ti-trash text-danger"></i></button>';
+            $delete_btn = '<button type="button" class="btn btn-sm btn-danger nm-ext-delete"'
+                . ' data-id="' . $id . '"'
+                . ' title="' . __('Excluir ramal', 'newmanagement') . '">'
+                . '<i class="ti ti-trash"></i></button>';
         }
-        return '<tr class="tab_bg_1" id="nm-ext-row-' . $id . '">'
-            . '<td>' . $h($row['number'])   . '</td>'
-            . '<td>••••••</td>'              // senha mascarada — fix CO-02
-            . '<td>' . $h($row['device_ip']) . '</td>'
-            . '<td>' . $h($row['user_name']) . '</td>'
-            . '<td>' . ($row['records_calls'] ? __('Sim', 'newmanagement') : __('Não', 'newmanagement')) . '</td>'
+
+        return '<tr class="tab_bg_1 nm-ext-saved-row" id="nm-ext-row-' . $id . '">'
+            . '<td>' . $h($row['number'])     . '</td>'
+            . '<td>' . $password_cell         . '</td>'
+            . '<td>' . $h($row['user_name'])  . '</td>'
+            . '<td>' . $h($row['device_ip'])  . '</td>'
             . '<td>' . $h($row['department']) . '</td>'
-            . '<td>' . $delete_btn . '</td></tr>';
+            . '<td class="text-center">' . $grava_badge . '</td>'
+            . $bool_tds
+            . ($can_delete ? '<td>' . $delete_btn . '</td>' : '')
+            . '</tr>';
     }
 
     public static function renderDeviceRow(int $id, array $row, int $companies_id, string $csrf, string $action, bool $can_delete = true): string
@@ -274,7 +308,7 @@ class Ipbx extends \CommonDBTM
             . '<td>' . $h($row['device_type']) . '</td>'
             . '<td>' . $h($row['ip_address']) . '</td>'
             . '<td>' . $h($row['login'] ?? '') . '</td>'
-            . '<td>••••••</td>'              // senha mascarada — fix CO-02
+            . '<td>••••••</td>'
             . '<td>' . $delete_btn . '</td></tr>';
     }
 
