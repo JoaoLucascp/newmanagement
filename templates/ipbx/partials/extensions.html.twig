@@ -112,11 +112,11 @@
       #}
       {% if can_write and ipbx_id > 0 %}
       <tr class="nm-ext-input-template" id="nm-ext-add-row" hidden style="display:none">
-        <td><input type="text"     class="nm-f-number"       form="_none" autocomplete="off"       class="form-control form-control-sm" placeholder="{{ __('Ramal', 'newmanagement') }}"></td>
-        <td><input type="password" class="nm-f-password"     form="_none" autocomplete="new-password" class="form-control form-control-sm" placeholder="{{ __('Senha', 'newmanagement') }}"></td>
-        <td><input type="text"     class="nm-f-user_name"    form="_none" autocomplete="off"       class="form-control form-control-sm" placeholder="{{ __('Usuário', 'newmanagement') }}"></td>
-        <td><input type="text"     class="nm-f-device_ip"    form="_none" autocomplete="off"       class="form-control form-control-sm" placeholder="192.168.x.x"></td>
-        <td><input type="text"     class="nm-f-department"   form="_none" autocomplete="off"       class="form-control form-control-sm" placeholder="{{ __('Departamento', 'newmanagement') }}"></td>
+        <td><input type="text"     class="nm-f-number form-control form-control-sm"     form="_none" autocomplete="off"             placeholder="{{ __('Ramal', 'newmanagement') }}"></td>
+        <td><input type="password" class="nm-f-password form-control form-control-sm"   form="_none" autocomplete="new-password"    placeholder="{{ __('Senha', 'newmanagement') }}"></td>
+        <td><input type="text"     class="nm-f-user_name form-control form-control-sm"  form="_none" autocomplete="off"             placeholder="{{ __('Usuário', 'newmanagement') }}"></td>
+        <td><input type="text"     class="nm-f-device_ip form-control form-control-sm"  form="_none" autocomplete="off"             placeholder="192.168.x.x"></td>
+        <td><input type="text"     class="nm-f-department form-control form-control-sm" form="_none" autocomplete="off"             placeholder="{{ __('Departamento', 'newmanagement') }}"></td>
         <td class="text-center">
           <select class="nm-f-records_calls form-select form-select-sm">
             <option value="0">{{ __('Não', 'newmanagement') }}</option>

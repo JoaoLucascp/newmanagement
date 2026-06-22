@@ -6,7 +6,7 @@
  * fix(CSRF-01): nmGetCsrfToken() lê meta[property="glpi:csrf_token"].
  * fix(DELEGATE-01): handlers registrados UMA VEZ via nmEnsureIpbxDelegated().
  * fix(UI-02): abas horizontais — clique delegado no document.
- * fix(UI-03): handlers de ramal REMOVIDOS — lógica já existe em tab_extensions.html.twig.
+ * fix(UI-03): ramais usam linha pendente clonada antes de salvar via AJAX.
  * fix(TOGGLE-01): flag padronizada para document._nmToggleBoolDelegated.
  */
 
@@ -482,7 +482,10 @@ function nmEnsureIpbxDelegated() {
             if (!result.success) throw new Error(result.error || 'Erro ao remover');
             document.getElementById(rowId)?.remove();
 
-            if (action === 'delete_extension') nmCounterDecrement('nm-count-ext');
+            if (action === 'delete_extension') {
+                nmCounterDecrement('nm-count-ext');
+                nmExtSyncEmptyState(btn.closest('#nm-ext-section'));
+            }
             else if (action === 'delete_device')  nmCounterDecrement('nm-count-dev');
             else if (action === 'delete_network') nmCounterDecrement('nm-count-net');
 
@@ -497,78 +500,151 @@ function nmEnsureIpbxDelegated() {
     // -----------------------------------------------------------------------
     // + Adicionar Ramal
     // -----------------------------------------------------------------------
-    document.addEventListener('click', async (e) => {
+    function nmExtSyncEmptyState(section) {
+        const root = section || document.getElementById('nm-ext-section');
+        const tbody = root?.querySelector('#nm-ext-tbody') || document.getElementById('nm-ext-tbody');
+        if (!tbody) return;
+
+        const hasRows = tbody.querySelector('.nm-ext-saved-row, .nm-ext-pending-row');
+        const emptyRow = tbody.querySelector('#nm-ext-empty');
+        if (hasRows) {
+            emptyRow?.remove();
+            return;
+        }
+        if (emptyRow) return;
+
+        const tr = document.createElement('tr');
+        tr.id = 'nm-ext-empty';
+        tr.innerHTML = '<td colspan="13" class="text-center text-muted py-3">Nenhum ramal cadastrado.</td>';
+        const template = tbody.querySelector('#nm-ext-add-row');
+        if (template) tbody.insertBefore(tr, template);
+        else tbody.appendChild(tr);
+    }
+
+    function nmExtRowValue(row, selector) {
+        return row.querySelector(selector)?.value || '';
+    }
+
+    function nmExtBoolValue(row, field) {
+        return row.querySelector(`.nm-f-bool[data-field="${field}"]`)?.checked ? '1' : '0';
+    }
+
+    document.addEventListener('click', (e) => {
         const btn = e.target.closest('#nm-ext-add-btn');
         if (!btn) return;
 
         const ipbxId = parseInt(btn.dataset.ipbxId || '0', 10);
         if (ipbxId <= 0) { alert('Salve o Servidor IPBX primeiro.'); return; }
 
-        const number        = nmVal('nm-ext-number');
-        const password      = nmVal('nm-ext-password');
-        const device_ip     = nmVal('nm-ext-device_ip');
-        const user_name     = nmVal('nm-ext-user_name');
-        const department    = nmVal('nm-ext-department');
-        const records_calls = nmVal('nm-ext-records_calls') || '0';
-
-        if (!number.trim()) {
-            alert('Informe o numero do ramal.');
-            document.getElementById('nm-ext-number')?.focus();
+        const section = btn.closest('#nm-ext-section') || document.getElementById('nm-ext-section');
+        const tbody = section?.querySelector('#nm-ext-tbody') || document.getElementById('nm-ext-tbody');
+        const template = tbody?.querySelector('#nm-ext-add-row') || document.getElementById('nm-ext-add-row');
+        if (!tbody || !template) {
+            alert('Nao foi possivel localizar a linha de cadastro de ramal.');
             return;
         }
 
-        const boolValue = (field) => document.getElementById('nm-ext-' + field)?.checked ? '1' : '0';
-        const url         = btn.dataset.url || nmGetIpbxActionUrl(btn);
-        const companiesId = btn.dataset.companiesId || nmGetIpbxCompaniesId(btn);
+        const row = template.cloneNode(true);
+        row.removeAttribute('id');
+        row.hidden = false;
+        row.style.display = '';
+        row.classList.remove('nm-ext-input-template');
+        row.classList.add('tab_bg_1', 'nm-ext-pending-row');
+        row.dataset.ipbxId = String(ipbxId);
+        row.dataset.companiesId = btn.dataset.companiesId || nmGetIpbxCompaniesId(btn);
+
+        row.querySelectorAll('input[type="text"], input[type="password"]').forEach(input => {
+            input.value = '';
+        });
+        row.querySelectorAll('input[type="checkbox"]').forEach(input => {
+            input.checked = false;
+        });
+        row.querySelectorAll('select').forEach(select => {
+            select.selectedIndex = 0;
+        });
+
+        document.getElementById('nm-ext-empty')?.remove();
+        tbody.insertBefore(row, template);
+        row.querySelector('.nm-f-number')?.focus();
+    });
+
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('.nm-row-del-btn');
+        if (!btn) return;
+        const row = btn.closest('.nm-ext-pending-row');
+        if (!row) return;
+        const section = row.closest('#nm-ext-section');
+        row.remove();
+        nmExtSyncEmptyState(section);
+    });
+
+    document.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.nm-ext-save-row');
+        if (!btn) return;
+
+        const row = btn.closest('.nm-ext-pending-row');
+        if (!row) return;
+
+        const section = row.closest('#nm-ext-section') || document.getElementById('nm-ext-section');
+        const ipbxId = parseInt(row.dataset.ipbxId || section?.dataset.ipbxId || '0', 10);
+        if (ipbxId <= 0) { alert('Salve o Servidor IPBX primeiro.'); return; }
+
+        const number = nmExtRowValue(row, '.nm-f-number').trim();
+        if (!number) {
+            alert('Informe o numero do ramal.');
+            row.querySelector('.nm-f-number')?.focus();
+            return;
+        }
+
+        const url = section?.dataset.actionUrl || nmGetIpbxActionUrl(btn);
+        const companiesId = row.dataset.companiesId || section?.dataset.companiesId || nmGetIpbxCompaniesId(btn);
         const originalHtml = btn.innerHTML;
         btn.disabled = true;
         btn.innerHTML = '<span class="nm-spinner"></span>';
 
         try {
             const result = await nmPost(url, {
-                action: btn.dataset.action,
+                action: 'add_extension',
                 ipbx_id: ipbxId,
                 companies_id: companiesId,
                 number,
-                password,
-                device_ip,
-                user_name,
-                records_calls,
-                department,
-                lof: boolValue('lof'),
-                loc: boolValue('loc'),
-                ddf: boolValue('ddf'),
-                ddc: boolValue('ddc'),
-                ddi: boolValue('ddi'),
-                srv: boolValue('srv'),
+                password: nmExtRowValue(row, '.nm-f-password'),
+                device_ip: nmExtRowValue(row, '.nm-f-device_ip'),
+                user_name: nmExtRowValue(row, '.nm-f-user_name'),
+                records_calls: nmExtRowValue(row, '.nm-f-records_calls') || '0',
+                department: nmExtRowValue(row, '.nm-f-department'),
+                lof: nmExtBoolValue(row, 'lof'),
+                loc: nmExtBoolValue(row, 'loc'),
+                ddf: nmExtBoolValue(row, 'ddf'),
+                ddc: nmExtBoolValue(row, 'ddc'),
+                ddi: nmExtBoolValue(row, 'ddi'),
+                srv: nmExtBoolValue(row, 'srv'),
             });
             if (!result.success) throw new Error(result.error || 'Erro desconhecido');
-
-            const addRow = document.getElementById('nm-ext-add-row');
-            if (addRow && result.html) {
-                addRow.insertAdjacentHTML('beforebegin', result.html);
-            }
-            nmClearRow('nm-ext-add-row', [
-                'nm-ext-number',
-                'nm-ext-password',
-                'nm-ext-device_ip',
-                'nm-ext-user_name',
-                'nm-ext-department',
-                'nm-ext-records_calls',
-            ]);
-            ['lof', 'loc', 'ddf', 'ddc', 'ddi', 'srv'].forEach(field => {
-                const el = document.getElementById('nm-ext-' + field);
-                if (el) el.checked = false;
-            });
-            document.getElementById('nm-ext-empty')?.remove();
+            if (result.html) row.outerHTML = result.html;
+            else row.remove();
             nmCounterIncrement('nm-count-ext');
         } catch (error) {
-            console.error('[NM] Erro ao adicionar ramal:', error.message);
-            alert('Erro ao adicionar ramal: ' + error.message);
-        } finally {
+            console.error('[NM] Erro ao salvar ramal:', error.message);
+            alert('Erro ao salvar ramal: ' + error.message);
             btn.innerHTML = originalHtml;
             btn.disabled = false;
+            return;
         }
+
+        const total = parseInt(section?.dataset.total || '0', 10);
+        if (section) section.dataset.total = String(total + 1);
+        nmExtSyncEmptyState(section);
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        const row = e.target.closest?.('.nm-ext-pending-row');
+        if (!row) return;
+        const tag = e.target.tagName ? e.target.tagName.toLowerCase() : '';
+        if (tag === 'textarea') return;
+        e.preventDefault();
+        row.querySelector('.nm-ext-save-row')?.click();
     });
 
     // -----------------------------------------------------------------------
