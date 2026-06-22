@@ -84,6 +84,25 @@ $d = function (string $key): ?string {
     return ($val !== '' && $val !== '0000-00-00') ? $val : null;
 };
 
+function nmChatbotBelongsToCompany(int $chatbot_id, int $companies_id): bool
+{
+    global $DB;
+
+    if ($chatbot_id <= 0 || $companies_id <= 0) {
+        return false;
+    }
+
+    return $DB->request([
+        'FROM'  => 'glpi_plugin_newmanagement_chatbots',
+        'WHERE' => [
+            'id'           => $chatbot_id,
+            'companies_id' => $companies_id,
+            'is_deleted'   => 0,
+        ],
+        'LIMIT' => 1,
+    ])->count() > 0;
+}
+
 /** Insere usuários em lote. */
 $bulkUsers = static function (int $chatbotId, int $companiesId, array $users, string $now) use ($DB): void {
     $names  = $users['user_name'] ?? [];
@@ -297,6 +316,9 @@ try {
             if ($id <= 0) {
                 nmChatbotJson(false, ['error' => 'ID inválido']);
             }
+            if (!nmChatbotBelongsToCompany($id, $companies_id)) {
+                nmChatbotJson(false, ['error' => 'Chatbot nao encontrado para esta empresa']);
+            }
             $DB->update(
                 'glpi_plugin_newmanagement_chatbots',
                 ['is_deleted' => 1, 'date_mod' => $now],
@@ -321,6 +343,9 @@ try {
             $chatbot_id = $n('chatbot_id');
             if ($chatbot_id <= 0) {
                 nmChatbotJson(false, ['error' => 'chatbot_id inválido']);
+            }
+            if (!nmChatbotBelongsToCompany($chatbot_id, $companies_id)) {
+                nmChatbotJson(false, ['error' => 'Chatbot nao encontrado para esta empresa']);
             }
             $DB->insert('glpi_plugin_newmanagement_chatbot_mass_comm', [
                 'chatbot_id'           => $chatbot_id,
@@ -361,6 +386,9 @@ try {
             if ($chatbot_id <= 0) {
                 nmChatbotJson(false, ['error' => 'chatbot_id inválido']);
             }
+            if (!nmChatbotBelongsToCompany($chatbot_id, $companies_id)) {
+                nmChatbotJson(false, ['error' => 'Chatbot nao encontrado para esta empresa']);
+            }
             $DB->insert('glpi_plugin_newmanagement_chatbot_wa_restrictions', [
                 'chatbot_id'       => $chatbot_id,
                 'companies_id'     => $companies_id,
@@ -395,6 +423,9 @@ try {
             $chatbot_id = $n('chatbot_id');
             if ($chatbot_id <= 0) {
                 nmChatbotJson(false, ['error' => 'chatbot_id inválido']);
+            }
+            if (!nmChatbotBelongsToCompany($chatbot_id, $companies_id)) {
+                nmChatbotJson(false, ['error' => 'Chatbot nao encontrado para esta empresa']);
             }
             $DB->insert('glpi_plugin_newmanagement_chatbot_users', [
                 'chatbot_id'    => $chatbot_id,

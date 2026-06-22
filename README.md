@@ -19,7 +19,7 @@ O **Newmanagement** é um plugin para o GLPI que oferece:
 | Item | Versão Mínima |
 |------|---------------|
 | GLPI | 11.0.0        |
-| PHP  | 8.1           |
+| PHP  | 8.2           |
 
 ---
 

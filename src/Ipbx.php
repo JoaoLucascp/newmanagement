@@ -22,6 +22,7 @@ class Ipbx extends \CommonDBTM
     const TABLE_EXTENSIONS = 'glpi_plugin_newmanagement_ipbx_extensions';
     const TABLE_DEVICES    = 'glpi_plugin_newmanagement_ipbx_devices';
     const TABLE_NETWORK    = 'glpi_plugin_newmanagement_ipbx_network';
+    const PASSWORD_MASK    = '******';
 
     public static function getTypeName($nb = 0): string
     {
@@ -99,8 +100,9 @@ class Ipbx extends \CommonDBTM
             return;
         }
 
-        $can_write  = \Session::haveRight(self::$rightname, UPDATE);
-        $can_delete = \Session::haveRight(self::$rightname, DELETE);
+        $can_write         = \Session::haveRight(self::$rightname, UPDATE);
+        $can_delete        = \Session::haveRight(self::$rightname, DELETE);
+        $can_view_password = $can_write;
 
         // Busca registro IPBX existente para a empresa
         $rows = $DB->request([
@@ -165,6 +167,14 @@ class Ipbx extends \CommonDBTM
             'number ASC',
             $ext_page
         );
+        foreach ($extensions as &$extension) {
+            $extension['password_display'] = self::formatCredentialForDisplay(
+                $extension['password'] ?? '',
+                $can_view_password
+            );
+        }
+        unset($extension);
+
         [$devices, $dev_total] = self::fetchPage(
             self::TABLE_DEVICES,
             ['ipbx_id' => $ipbx_id],
@@ -190,6 +200,7 @@ class Ipbx extends \CommonDBTM
                 'csrf'             => \Session::getNewCSRFToken(),
                 'can_write'        => $can_write,
                 'can_delete'       => $can_delete,
+                'can_view_extension_passwords' => $can_view_password,
                 'web_placeholder'  => $has_web_password
                     ? __('(senha salva — deixe em branco para manter)', 'newmanagement')
                     : __('Senha Web', 'newmanagement'),
@@ -234,6 +245,76 @@ class Ipbx extends \CommonDBTM
         return [$rows, (int) $total];
     }
 
+    public static function ipbxBelongsToCompany(int $ipbx_id, int $companies_id): bool
+    {
+        global $DB;
+
+        if ($ipbx_id <= 0 || $companies_id <= 0) {
+            return false;
+        }
+
+        return $DB->request([
+            'FROM'  => self::getTable(),
+            'WHERE' => [
+                'id'           => $ipbx_id,
+                'companies_id' => $companies_id,
+                'is_deleted'   => 0,
+            ],
+            'LIMIT' => 1,
+        ])->count() > 0;
+    }
+
+    public static function decryptCredentialForDisplay(?string $value): string
+    {
+        $value = (string) ($value ?? '');
+        if ($value === '') {
+            return '';
+        }
+
+        if (class_exists('GLPIKey')) {
+            try {
+                $decrypted = (new \GLPIKey())->decrypt($value);
+                if (is_string($decrypted) && $decrypted !== '') {
+                    return $decrypted;
+                }
+            } catch (\Throwable $e) {
+                // Fallback below supports legacy sodium/plaintext values.
+            }
+        }
+
+        try {
+            $decrypted = \Toolbox::sodiumDecrypt($value);
+            if (
+                is_string($decrypted)
+                && $decrypted !== ''
+                && self::isDisplayableCredential($decrypted)
+            ) {
+                return $decrypted;
+            }
+        } catch (\Throwable $e) {
+            // Legacy records may still contain plaintext.
+        }
+
+        return $value;
+    }
+
+    private static function isDisplayableCredential(string $value): bool
+    {
+        return preg_match('/^[\P{C}\t\r\n]*$/u', $value) === 1;
+    }
+
+    public static function formatCredentialForDisplay(?string $value, bool $can_view_password): string
+    {
+        $value = (string) ($value ?? '');
+        if ($value === '') {
+            return '';
+        }
+
+        return $can_view_password
+            ? self::decryptCredentialForDisplay($value)
+            : self::PASSWORD_MASK;
+    }
+
     /**
      * Renderiza uma linha <tr> de ramal para a lista de ramais.
      *
@@ -241,12 +322,22 @@ class Ipbx extends \CommonDBTM
      *   Ramal | Senha (plain text) | Usuário | IP Dispositivo | Departamento
      *   | Grava | LOF | LOC | DDF | DDC | DDI | SRV | [Excluir]
      */
-    public static function renderExtensionRow(int $id, array $row, int $companies_id, string $csrf, string $action, bool $can_delete = true): string
+    public static function renderExtensionRow(
+        int $id,
+        array $row,
+        int $companies_id,
+        string $csrf,
+        string $action,
+        bool $can_delete = true,
+        bool $can_view_password = false
+    ): string
     {
         $h = fn($v) => htmlspecialchars((string) ($v ?? ''), ENT_QUOTES);
 
-        // Senha em texto visível (plain text)
-        $password_cell = '<code>' . $h($row['password'] ?? '') . '</code>';
+        $password_cell = '<code>' . $h(self::formatCredentialForDisplay(
+            $row['password'] ?? '',
+            $can_view_password
+        )) . '</code>';
 
         // Badge para o campo "Grava"
         $grava = (int) ($row['records_calls'] ?? 0);
@@ -273,10 +364,16 @@ class Ipbx extends \CommonDBTM
         // Botão excluir
         $delete_btn = '';
         if ($can_delete) {
-            $delete_btn = '<button type="button" class="btn btn-sm btn-danger nm-ext-delete"'
+            $delete_btn = '<button type="button" class="btn btn-sm btn-icon nm-del-btn"'
+                . ' data-action="delete_extension"'
                 . ' data-id="' . $id . '"'
+                . ' data-row="nm-ext-row-' . $id . '"'
+                . ' data-companies-id="' . $companies_id . '"'
+                . ' data-csrf="' . $h($csrf) . '"'
+                . ' data-url="' . $h($action) . '"'
+                . ' data-confirm="' . __('Remover ramal?', 'newmanagement') . '"'
                 . ' title="' . __('Excluir ramal', 'newmanagement') . '">'
-                . '<i class="ti ti-trash"></i></button>';
+                . '<i class="ti ti-trash text-danger"></i></button>';
         }
 
         return '<tr class="tab_bg_1 nm-ext-saved-row" id="nm-ext-row-' . $id . '">'

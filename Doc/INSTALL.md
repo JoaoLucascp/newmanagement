@@ -3,7 +3,7 @@
 ## Pré-requisitos
 
 - GLPI 11.0.0 ou superior instalado e funcionando
-- PHP 8.1+ com extensões: `sodium`, `pdo_mysql`, `mbstring`
+- PHP 8.2+ com extensões: `sodium`, `pdo_mysql`, `mbstring`
 - Acesso SSH ao servidor ou acesso FTP à pasta `plugins/`
 - Usuário GLPI com perfil **Super-Admin** para instalar plugins
 

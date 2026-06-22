@@ -131,7 +131,11 @@
   async function nmPost(body) {
     const r = await fetch(actionUrl, {
       method  : 'POST',
-      headers : { 'Content-Type': 'application/json' },
+      headers : {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-Glpi-Csrf-Token': body._glpi_csrf_token || '',
+      },
       body    : JSON.stringify(body),
       signal  : AbortSignal.timeout(10000),
     });
@@ -165,6 +169,10 @@
         });
 
         if (!data.success) throw new Error(data.message || 'Erro');
+        if (data.csrf) {
+          const csrfInput = document.getElementById('nm-task-csrf');
+          if (csrfInput) csrfInput.value = data.csrf;
+        }
 
         // Recarrega a aba para exibir a nova linha
         window.location.reload();
@@ -186,8 +194,10 @@
           _glpi_csrf_token : btn.dataset.csrf,
           action           : 'delete_task',
           id               : btn.dataset.id,
+          companies_id     : companiesId,
         });
         if (!data.success) throw new Error(data.message || 'Erro');
+        if (data.csrf) btn.dataset.csrf = data.csrf;
         document.getElementById('nm-task-row-' + btn.dataset.id)?.remove();
       } catch (err) { btn.disabled = false; }
     });

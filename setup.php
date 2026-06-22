@@ -17,7 +17,7 @@ define('PLUGIN_NEWMANAGEMENT_MIN_GLPI_VERSION', '11.0.0');
 // comprovada. Alterado para '11.99.99' para cobrir toda a série 11.x.
 // Ajuste para a próxima major quando necessário.
 define('PLUGIN_NEWMANAGEMENT_MAX_GLPI_VERSION', '11.99.99');
-define('PLUGIN_NEWMANAGEMENT_MIN_PHP_VERSION',  '8.1');
+define('PLUGIN_NEWMANAGEMENT_MIN_PHP_VERSION',  '8.2');
 
 /**
  * Registra o namespace Twig @newmanagement no loader do Twig.

@@ -5,7 +5,7 @@
 **Versão do Documento:** 1.0.0  
 **Data de Atualização:** 20 de maio de 2026  
 **Compatibilidade:** GLPI 11.0.0 até 11.0.99  
-**Versão do PHP:** 8.1+  
+**Versão do PHP:** 8.2+
 **Autor Original:** João Lucas  
 **Licença:** MIT
 

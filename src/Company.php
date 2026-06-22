@@ -259,14 +259,6 @@ class Company extends \CommonDBTM
             $menu['options']['ipbx']['links']['add']    = '/plugins/newmanagement/front/ipbx.php?action=add';
         }
 
-        if (\Session::haveRight('plugin_newmanagement_ipbxcloud', READ)) {
-            $menu['options']['ipbxcloud']['title']           = __('IPBX Cloud', 'newmanagement');
-            $menu['options']['ipbxcloud']['page']            = '/plugins/newmanagement/front/ipbxcloud.php';
-            $menu['options']['ipbxcloud']['icon']            = 'ti ti-cloud';
-            $menu['options']['ipbxcloud']['links']['search'] = '/plugins/newmanagement/front/ipbxcloud.php';
-            $menu['options']['ipbxcloud']['links']['add']    = '/plugins/newmanagement/front/ipbxcloud.php?action=add';
-        }
-
         if (\Session::haveRight('plugin_newmanagement_chatbot', READ)) {
             $menu['options']['chatbot']['title']           = __('Chatbots', 'newmanagement');
             $menu['options']['chatbot']['page']            = '/plugins/newmanagement/front/chatbot.php';
@@ -275,7 +267,7 @@ class Company extends \CommonDBTM
             $menu['options']['chatbot']['links']['add']    = '/plugins/newmanagement/front/chatbot.php?action=add';
         }
 
-        if (\Session::haveRight('plugin_newmanagement_fixedline', READ)) {
+        if (\Session::haveRight(FixedLine::$rightname, READ)) {
             $menu['options']['fixedline']['title']           = __('Linhas Fixas', 'newmanagement');
             $menu['options']['fixedline']['page']            = '/plugins/newmanagement/front/fixedline.php';
             $menu['options']['fixedline']['icon']            = 'ti ti-phone';

@@ -38,9 +38,14 @@ if ($ipbx_id <= 0 || $companies_id <= 0) {
     pgJson(false, ['error' => 'Parâmetros inválidos']);
 }
 
-$can_delete = Session::haveRight(Ipbx::$rightname, DELETE);
+$can_delete        = Session::haveRight(Ipbx::$rightname, DELETE);
+$can_view_password = Session::haveRight(Ipbx::$rightname, UPDATE);
 $csrf       = Session::getNewCSRFToken();
 $action_url = Plugin::getWebDir('newmanagement') . '/ajax/ipbx_sub.php';
+
+if (!Ipbx::ipbxBelongsToCompany($ipbx_id, $companies_id)) {
+    pgJson(false, ['error' => 'IPBX nao encontrado para esta empresa']);
+}
 
 try {
     switch ($section) {
@@ -55,7 +60,13 @@ try {
             $html = '';
             foreach ($rows as $row) {
                 $html .= Ipbx::renderExtensionRow(
-                    (int) $row['id'], $row, $companies_id, $csrf, $action_url, $can_delete
+                    (int) $row['id'],
+                    $row,
+                    $companies_id,
+                    $csrf,
+                    $action_url,
+                    $can_delete,
+                    $can_view_password
                 );
             }
             if (empty($rows)) {

@@ -44,7 +44,7 @@ if (!class_exists('CommonGLPI')) {
 if (!class_exists('CommonDBTM')) {
     abstract class CommonDBTM extends CommonGLPI {
         public array $fields = [];
-        public static string $rightname = '';
+        public static $rightname = '';
         public function prepareInputForAdd($input) { return $input; }
         public function prepareInputForUpdate($input) { return $input; }
         public function initForm(int $ID, array $options = []): void {}

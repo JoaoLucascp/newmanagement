@@ -205,9 +205,22 @@
     for (const [k, v] of Object.entries(body)) {
       fd.append(k, v ?? '');
     }
-    const resp = await fetch(actionUrl, { method: 'POST', body: fd });
+    const csrf = body._glpi_csrf_token || getField('csrf');
+    const resp = await fetch(actionUrl, {
+      method: 'POST',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-Glpi-Csrf-Token': csrf,
+      },
+      body: fd,
+    });
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    return resp.json();
+    const data = await resp.json();
+    if (data.csrf) {
+      const csrfInput = document.getElementById('nm-line-csrf');
+      if (csrfInput) csrfInput.value = data.csrf;
+    }
+    return data;
   }
 
   /** Feedback visual no botão **/

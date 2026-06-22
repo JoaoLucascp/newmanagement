@@ -14,7 +14,7 @@
 define('GLPI_ROOT', dirname(dirname(dirname(dirname(__DIR__)))));
 require_once GLPI_ROOT . '/inc/includes.php';
 
-use GlpiPlugin\Newmanagement\IpbxExtension;
+use GlpiPlugin\Newmanagement\Ipbx;
 
 Session::checkLoginUser();
 Session::checkToken();
@@ -28,19 +28,35 @@ $format      = strtolower($_GET['format']      ?? 'pdf');
 $ipbx_id     = (int) ($_GET['ipbx_id']         ?? 0);
 $companies_id = (int) ($_GET['companies_id']   ?? 0);
 
-if (!$ipbx_id) {
+if ($ipbx_id <= 0) {
     http_response_code(400);
     exit('ipbx_id obrigatório');
 }
 
 /* ── Busca dados ──────────────────────────────────────────────── */
+if ($companies_id <= 0) {
+    http_response_code(400);
+    exit('companies_id obrigatorio');
+}
+
+if (!Ipbx::ipbxBelongsToCompany($ipbx_id, $companies_id)) {
+    http_response_code(404);
+    exit('IPBX nao encontrado para esta empresa');
+}
+
+$can_view_password = Session::haveRight('plugin_newmanagement_ipbx', UPDATE);
+
 global $DB;
 $rows = [];
 $iter = $DB->request([
     'SELECT'  => ['number','password','user_name','device_ip','department',
                   'records_calls','lof','loc','ddf','ddc','ddi','srv'],
-    'FROM'    => 'glpi_plugin_newmanagement_ipbx_extensions',
-    'WHERE'   => ['ipbx_id' => $ipbx_id, 'is_deleted' => 0],
+    'FROM'    => Ipbx::TABLE_EXTENSIONS,
+    'WHERE'   => [
+        'ipbx_id'      => $ipbx_id,
+        'companies_id' => $companies_id,
+        'is_deleted'   => 0,
+    ],
     'ORDER'   => 'number ASC',
 ]);
 foreach ($iter as $row) {
@@ -107,7 +123,7 @@ if ($format === 'pdf') {
     foreach ($rows as $r) {
         $cells = [
             $r['number'],
-            $r['password'],
+            Ipbx::formatCredentialForDisplay($r['password'] ?? '', $can_view_password),
             $r['user_name'],
             $r['device_ip'],
             $r['department'],
@@ -142,7 +158,7 @@ fputcsv($out, $headers, ';');
 foreach ($rows as $r) {
     fputcsv($out, [
         $r['number'],
-        $r['password'],
+        Ipbx::formatCredentialForDisplay($r['password'] ?? '', $can_view_password),
         $r['user_name'],
         $r['device_ip'],
         $r['department'],

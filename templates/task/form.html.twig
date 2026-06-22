@@ -221,6 +221,7 @@
           method:  'POST',
           headers: {
             'Content-Type':      'application/json',
+            'X-Requested-With':  'XMLHttpRequest',
             'X-Glpi-Csrf-Token': csrfToken,
           },
           body:    JSON.stringify(buildPayload(action)),
@@ -235,7 +236,9 @@
             // Atualiza a URL sem reload
             history.replaceState(null, '', '{{ form_url }}?id=' + taskId);
           }
-          csrfToken = data.csrf_token ?? csrfToken;
+          csrfToken = data.csrf ?? data.csrf_token ?? csrfToken;
+          const csrfInput = document.getElementById('task-csrf');
+          if (csrfInput) csrfInput.value = csrfToken;
         } else {
           alert(data.message ?? '{{ "Erro ao salvar."|__('newmanagement') }}');
         }
@@ -260,9 +263,15 @@
           method:  'POST',
           headers: {
             'Content-Type':      'application/json',
+            'X-Requested-With':  'XMLHttpRequest',
             'X-Glpi-Csrf-Token': csrfToken,
           },
-          body:    JSON.stringify({ action: 'delete_task', _glpi_csrf_token: csrfToken, id: taskId }),
+          body:    JSON.stringify({
+            action: 'delete_task',
+            _glpi_csrf_token: csrfToken,
+            id: taskId,
+            companies_id: getField('companies_id'),
+          }),
           signal:  AbortSignal.timeout(10000),
         });
         const data = await res.json();

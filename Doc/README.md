@@ -27,7 +27,7 @@ Permitir que equipes de suporte e gestão de TI registrem, consultem e mantenham
 ## Requisitos
 
 - GLPI 11.0.0 – 11.99.99
-- PHP 8.1 ou superior (recomendado 8.2+)
+- PHP 8.2 ou superior
 - MySQL 8.0+ ou MariaDB 10.6+
 
 ## Instalação rápida

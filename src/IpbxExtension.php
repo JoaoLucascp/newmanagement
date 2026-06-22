@@ -13,7 +13,7 @@ if (!defined('GLPI_ROOT')) {
 
 class IpbxExtension extends \CommonDBTM
 {
-    public static string $rightname = 'plugin_newmanagement_ipbx';
+    public static $rightname = 'plugin_newmanagement_ipbx';
     public static string $itemtype  = 'GlpiPlugin\\Newmanagement\\Ipbx';
     public static string $items_id  = 'ipbx_id';
 

@@ -77,7 +77,8 @@ if ($companies_id <= 0) {
     nmJson(false, ['error' => 'companies_id inválido']);
 }
 
-$can_delete = \Session::haveRight(Ipbx::$rightname, DELETE);
+$can_delete        = \Session::haveRight(Ipbx::$rightname, DELETE);
+$can_view_password = \Session::haveRight(Ipbx::$rightname, UPDATE);
 
 global $DB;
 $now = date('Y-m-d H:i:s');
@@ -112,6 +113,9 @@ try {
             if ($ipbxId <= 0) {
                 nmJson(false, ['error' => 'ID inválido']);
             }
+            if (!Ipbx::ipbxBelongsToCompany($ipbxId, $companies_id)) {
+                nmJson(false, ['error' => 'IPBX nao encontrado para esta empresa']);
+            }
             $data = [
                 'id'             => $ipbxId,
                 'companies_id'   => $companies_id,
@@ -143,6 +147,9 @@ try {
             if ($ipbx_id <= 0) {
                 nmJson(false, ['error' => 'ipbx_id inválido']);
             }
+            if (!Ipbx::ipbxBelongsToCompany($ipbx_id, $companies_id)) {
+                nmJson(false, ['error' => 'IPBX nao encontrado para esta empresa']);
+            }
             $DB->insert(Ipbx::TABLE_EXTENSIONS, [
                 'ipbx_id'       => $ipbx_id,
                 'companies_id'  => $companies_id,
@@ -166,7 +173,15 @@ try {
             $row       = $DB->request(['FROM' => Ipbx::TABLE_EXTENSIONS, 'WHERE' => ['id' => $rowId]])->current();
             $csrf      = \Session::getNewCSRFToken();
             $actionUrl = \Plugin::getWebDir('newmanagement') . '/ajax/ipbx_sub.php';
-            $html      = Ipbx::renderExtensionRow((int) $rowId, $row, $companies_id, $csrf, $actionUrl, $can_delete);
+            $html      = Ipbx::renderExtensionRow(
+                (int) $rowId,
+                $row,
+                $companies_id,
+                $csrf,
+                $actionUrl,
+                $can_delete,
+                $can_view_password
+            );
             nmJson(true, ['id' => $rowId, 'html' => $html, 'number' => $row['number'] ?? '']);
             break;
 
@@ -224,6 +239,9 @@ try {
             if ($ipbx_id <= 0) {
                 nmJson(false, ['error' => 'ipbx_id inválido']);
             }
+            if (!Ipbx::ipbxBelongsToCompany($ipbx_id, $companies_id)) {
+                nmJson(false, ['error' => 'IPBX nao encontrado para esta empresa']);
+            }
             $payload = json_decode($_POST['rows'] ?? '[]', true);
             if (!is_array($payload) || empty($payload)) {
                 nmJson(false, ['error' => 'Nenhum dado para importar']);
@@ -265,6 +283,9 @@ try {
             if ($ipbx_id <= 0) {
                 nmJson(false, ['error' => 'ipbx_id inválido']);
             }
+            if (!Ipbx::ipbxBelongsToCompany($ipbx_id, $companies_id)) {
+                nmJson(false, ['error' => 'IPBX nao encontrado para esta empresa']);
+            }
             $DB->insert(Ipbx::TABLE_DEVICES, [
                 'ipbx_id'       => $ipbx_id,
                 'companies_id'  => $companies_id,
@@ -300,6 +321,9 @@ try {
             $ipbx_id = (int) ($_POST['ipbx_id'] ?? 0);
             if ($ipbx_id <= 0) {
                 nmJson(false, ['error' => 'ipbx_id inválido']);
+            }
+            if (!Ipbx::ipbxBelongsToCompany($ipbx_id, $companies_id)) {
+                nmJson(false, ['error' => 'IPBX nao encontrado para esta empresa']);
             }
             $DB->insert(Ipbx::TABLE_NETWORK, [
                 'ipbx_id'       => $ipbx_id,
@@ -338,6 +362,9 @@ try {
             $ipbx_id = (int) ($_POST['ipbx_id'] ?? 0);
             if ($ipbx_id <= 0) {
                 nmJson(false, ['error' => 'ipbx_id inválido']);
+            }
+            if (!Ipbx::ipbxBelongsToCompany($ipbx_id, $companies_id)) {
+                nmJson(false, ['error' => 'IPBX nao encontrado para esta empresa']);
             }
             $toDate = static fn(string $v): ?string => $v !== '' ? $v : null;
             $DB->insert('glpi_plugin_newmanagement_ipbx_lines', [

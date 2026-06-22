@@ -36,6 +36,25 @@ if (!Session::validateCSRF(['_glpi_csrf_token' => $input['_glpi_csrf_token'] ?? 
 $action = $input['action'] ?? '';
 $task   = new Task();
 
+function nmTaskBelongsToCompany(int $task_id, int $companies_id): bool
+{
+    global $DB;
+
+    if ($task_id <= 0 || $companies_id <= 0) {
+        return false;
+    }
+
+    return $DB->request([
+        'FROM'  => Task::getTable(),
+        'WHERE' => [
+            'id'           => $task_id,
+            'companies_id' => $companies_id,
+            'is_deleted'   => 0,
+        ],
+        'LIMIT' => 1,
+    ])->count() > 0;
+}
+
 try {
     switch ($action) {
 
@@ -61,6 +80,11 @@ try {
                 exit;
             }
 
+            if (empty($data['companies_id'])) {
+                echo json_encode(['success' => false, 'message' => __('Empresa obrigatoria.', 'newmanagement')]);
+                exit;
+            }
+
             $newid = $task->add($data);
             if ($newid) {
                 echo json_encode([
@@ -81,6 +105,12 @@ try {
             $id = (int) ($input['id'] ?? 0);
             if ($id <= 0) {
                 echo json_encode(['success' => false, 'message' => __('ID inválido.', 'newmanagement')]);
+                exit;
+            }
+
+            $companies_id = (int) ($input['companies_id'] ?? 0);
+            if (!nmTaskBelongsToCompany($id, $companies_id)) {
+                echo json_encode(['success' => false, 'message' => __('Tarefa nao encontrada para esta empresa.', 'newmanagement')]);
                 exit;
             }
 
@@ -121,7 +151,13 @@ try {
                 exit;
             }
 
-            $task->delete(['id' => $id], true); // true = purge (deleção permanente)
+            $companies_id = (int) ($input['companies_id'] ?? 0);
+            if (!nmTaskBelongsToCompany($id, $companies_id)) {
+                echo json_encode(['success' => false, 'message' => __('Tarefa nao encontrada para esta empresa.', 'newmanagement')]);
+                exit;
+            }
+
+            $task->delete(['id' => $id]);
             // fix(SE-02): retorna novo token CSRF após delete para manter sessão válida
             echo json_encode([
                 'success' => true,

@@ -54,7 +54,7 @@
       {% for row in extensions %}
         <tr class="tab_bg_1 nm-ext-saved-row" id="nm-ext-row-{{ row.id }}">
           <td>{{ row.number|e }}</td>
-          <td><code>{{ row.password|default('')|e }}</code></td>
+          <td><code>{{ row.password_display|default('')|e }}</code></td>
           <td>{{ row.user_name|default('')|e }}</td>
           <td>{{ row.device_ip|default('')|e }}</td>
           <td>{{ row.department|default('')|e }}</td>
@@ -80,11 +80,14 @@
           <td class="text-end">
             {% if can_delete %}
             <button type="button"
-                    class="btn btn-sm btn-icon nm-ext-delete"
+                    class="btn btn-sm btn-icon nm-del-btn"
+                    data-action="delete_extension"
                     data-id="{{ row.id }}"
-                    data-action-url="{{ action_url|e('html_attr') }}"
+                    data-row="nm-ext-row-{{ row.id }}"
                     data-companies-id="{{ companies_id }}"
                     data-csrf="{{ csrf|e('html_attr') }}"
+                    data-url="{{ action_url|e('html_attr') }}"
+                    data-confirm="{{ __('Remover ramal?', 'newmanagement') }}"
                     title="{{ __('Remover ramal', 'newmanagement') }}">
               <i class="ti ti-trash text-danger"></i>
             </button>

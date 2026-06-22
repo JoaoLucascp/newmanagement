@@ -138,7 +138,10 @@ async function nmPost(url, data) {
 
     const res = await fetch(url, {
         method: 'POST',
-        headers: { 'X-Glpi-Csrf-Token': csrf },
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-Glpi-Csrf-Token': csrf,
+        },
         body,
     });
 
@@ -486,6 +489,83 @@ function nmEnsureIpbxDelegated() {
         } catch (error) {
             console.error('[NM] Erro ao remover:', error.message);
             alert('Erro ao remover: ' + error.message);
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
+        }
+    });
+
+    // -----------------------------------------------------------------------
+    // + Adicionar Ramal
+    // -----------------------------------------------------------------------
+    document.addEventListener('click', async (e) => {
+        const btn = e.target.closest('#nm-ext-add-btn');
+        if (!btn) return;
+
+        const ipbxId = parseInt(btn.dataset.ipbxId || '0', 10);
+        if (ipbxId <= 0) { alert('Salve o Servidor IPBX primeiro.'); return; }
+
+        const number        = nmVal('nm-ext-number');
+        const password      = nmVal('nm-ext-password');
+        const device_ip     = nmVal('nm-ext-device_ip');
+        const user_name     = nmVal('nm-ext-user_name');
+        const department    = nmVal('nm-ext-department');
+        const records_calls = nmVal('nm-ext-records_calls') || '0';
+
+        if (!number.trim()) {
+            alert('Informe o numero do ramal.');
+            document.getElementById('nm-ext-number')?.focus();
+            return;
+        }
+
+        const boolValue = (field) => document.getElementById('nm-ext-' + field)?.checked ? '1' : '0';
+        const url         = btn.dataset.url || nmGetIpbxActionUrl(btn);
+        const companiesId = btn.dataset.companiesId || nmGetIpbxCompaniesId(btn);
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="nm-spinner"></span>';
+
+        try {
+            const result = await nmPost(url, {
+                action: btn.dataset.action,
+                ipbx_id: ipbxId,
+                companies_id: companiesId,
+                number,
+                password,
+                device_ip,
+                user_name,
+                records_calls,
+                department,
+                lof: boolValue('lof'),
+                loc: boolValue('loc'),
+                ddf: boolValue('ddf'),
+                ddc: boolValue('ddc'),
+                ddi: boolValue('ddi'),
+                srv: boolValue('srv'),
+            });
+            if (!result.success) throw new Error(result.error || 'Erro desconhecido');
+
+            const addRow = document.getElementById('nm-ext-add-row');
+            if (addRow && result.html) {
+                addRow.insertAdjacentHTML('beforebegin', result.html);
+            }
+            nmClearRow('nm-ext-add-row', [
+                'nm-ext-number',
+                'nm-ext-password',
+                'nm-ext-device_ip',
+                'nm-ext-user_name',
+                'nm-ext-department',
+                'nm-ext-records_calls',
+            ]);
+            ['lof', 'loc', 'ddf', 'ddc', 'ddi', 'srv'].forEach(field => {
+                const el = document.getElementById('nm-ext-' + field);
+                if (el) el.checked = false;
+            });
+            document.getElementById('nm-ext-empty')?.remove();
+            nmCounterIncrement('nm-count-ext');
+        } catch (error) {
+            console.error('[NM] Erro ao adicionar ramal:', error.message);
+            alert('Erro ao adicionar ramal: ' + error.message);
+        } finally {
             btn.innerHTML = originalHtml;
             btn.disabled = false;
         }
