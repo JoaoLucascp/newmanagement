@@ -2,49 +2,63 @@
   templates/fixedline/tab.html.twig
   Aba de Linha Fixa dentro da ficha de Empresa.
 
-  Variáveis recebidas de FixedLine::displayTabContentForCompany():
-    f            — array com todos os campos da linha
-    line_id      — int (0 = novo)
-    ipbx_id      — int
-    companies_id — int
-    csrf         — string
-    action_url   — string (URL do endpoint AJAX)
-    form_action  — 'add_line' | 'update_line'
-    can_write    — bool
-    can_delete   — bool
-    status_opts  — array {1: 'Ativo', 2: 'Cancelado'}
+  Variaveis recebidas de FixedLine::displayTabContentForCompany():
+    f            - array com todos os campos da linha
+    line_id      - int (0 = novo)
+    ipbx_id      - int
+    companies_id - int
+    csrf         - string
+    action_url   - string (URL do endpoint AJAX)
+    form_action  - 'add_line' | 'update_line'
+    can_write    - bool
+    can_delete   - bool
+    status_opts  - array {1: 'Ativo', 2: 'Cancelado'}
 #}
-<div class="nm-fixedline-tab"
-     data-action-url="{{ action_url|e('html_attr') }}"
-     data-companies-id="{{ companies_id }}">
+{% set can_delete = can_delete|default(false) %}
 
-  {# Campos ocultos de controle #}
-  <input type="hidden" id="nm-line-csrf"        value="{{ csrf|e('html_attr') }}">
-  <input type="hidden" id="nm-line-action"      value="{{ form_action }}">
-  <input type="hidden" id="nm-line-id"          value="{{ line_id }}">
-  <input type="hidden" id="nm-line-ipbx-id"     value="{{ ipbx_id }}">
+<div class="nm-fixedline-tab nm-fixedline-page"
+     data-action-url="{{ action_url|e('html_attr') }}"
+     data-companies-id="{{ companies_id }}"
+     data-delete-confirm="{{ __('Deseja realmente excluir esta linha fixa?', 'newmanagement')|e('html_attr') }}">
+
+  <input type="hidden" id="nm-line-csrf" value="{{ csrf|e('html_attr') }}">
+  <input type="hidden" id="nm-line-action" value="{{ form_action }}">
+  <input type="hidden" id="nm-line-id" value="{{ line_id }}">
+  <input type="hidden" id="nm-line-ipbx-id" value="{{ ipbx_id }}">
   <input type="hidden" id="nm-line-companies-id" value="{{ companies_id }}">
 
-  <table class="tab_cadre_fixe">
+  <div class="nm-fixedline-form-panel">
+    <div class="nm-section-heading">
+      <div class="nm-section-title">
+        <i class="ti ti-phone" aria-hidden="true"></i>
+        <span>{{ __('Linha Fixa', 'newmanagement') }}</span>
+      </div>
+      {% if line_id > 0 %}
+        <span class="badge bg-secondary-lt">ID {{ line_id }}</span>
+      {% endif %}
+    </div>
 
-    <tr class="tab_bg_1">
-      <td>{{ __('Número Piloto', 'newmanagement') }}</td>
-      <td>
+    <div class="nm-fixedline-grid">
+      <div class="nm-field nm-fixedline-col-4">
+        <label class="form-label" for="nm-line-pilot_number">{{ __('Número Piloto', 'newmanagement') }}</label>
         <input type="text" id="nm-line-pilot_number" autocomplete="off"
                value="{{ f.pilot_number|default('')|e('html_attr') }}"
                class="form-control"
                placeholder="Ex: 1131000000"
                {{ not can_write ? 'readonly' }}>
-      </td>
-      <td>{{ __('Quantidade de DDR', 'newmanagement') }}</td>
-      <td>
-        <input type="number" id="nm-line-ddr_count" autocomplete="off"
-               value="{{ f.ddr_count|default(0)|e('html_attr') }}"
-               class="form-control" min="0" placeholder="0"
+      </div>
+
+      <div class="nm-field nm-fixedline-col-4">
+        <label class="form-label" for="nm-line-operator">{{ __('Operadora', 'newmanagement') }}</label>
+        <input type="text" id="nm-line-operator" autocomplete="off"
+               value="{{ f.operator|default('')|e('html_attr') }}"
+               class="form-control"
+               placeholder="Ex: Vivo"
                {{ not can_write ? 'readonly' }}>
-      </td>
-      <td>{{ __('Status', 'newmanagement') }}</td>
-      <td>
+      </div>
+
+      <div class="nm-field nm-fixedline-col-4">
+        <label class="form-label" for="nm-line-status">{{ __('Status', 'newmanagement') }}</label>
         <select id="nm-line-status" class="form-select"
                 {{ not can_write ? 'disabled' }}>
           {% for val, lbl in status_opts %}
@@ -54,117 +68,106 @@
             </option>
           {% endfor %}
         </select>
-      </td>
-    </tr>
+      </div>
 
-    <tr class="tab_bg_1">
-      <td>{{ __('Operadora', 'newmanagement') }}</td>
-      <td>
-        <input type="text" id="nm-line-operator" autocomplete="off"
-               value="{{ f.operator|default('')|e('html_attr') }}"
-               class="form-control"
-               placeholder="Ex: Vivo"
-               {{ not can_write ? 'readonly' }}>
-      </td>
-      <td>{{ __('Quantidade de Canais', 'newmanagement') }}</td>
-      <td>
-        <input type="number" id="nm-line-channels" autocomplete="off"
-               value="{{ f.channels|default(0)|e('html_attr') }}"
-               class="form-control" min="0" placeholder="0"
-               {{ not can_write ? 'readonly' }}>
-      </td>
-      <td>{{ __('IP Proxy', 'newmanagement') }}</td>
-      <td>
-        <input type="text" id="nm-line-proxy_ip" autocomplete="off"
-               value="{{ f.proxy_ip|default('')|e('html_attr') }}"
-               class="form-control"
-               placeholder="Ex: 200.x.x.x"
-               {{ not can_write ? 'readonly' }}>
-      </td>
-    </tr>
-
-    <tr class="tab_bg_1">
-      <td>{{ __('Tipo', 'newmanagement') }}</td>
-      <td>
+      <div class="nm-field nm-fixedline-col-3">
+        <label class="form-label" for="nm-line-line_type">{{ __('Tipo', 'newmanagement') }}</label>
         <input type="text" id="nm-line-line_type" autocomplete="off"
                value="{{ f.line_type|default('')|e('html_attr') }}"
                class="form-control"
                placeholder="Ex: SIP, E1"
                {{ not can_write ? 'readonly' }}>
-      </td>
-      <td>{{ __('IP Tráfego Áudio', 'newmanagement') }}</td>
-      <td>
-        <input type="text" id="nm-line-audio_ip" autocomplete="off"
-               value="{{ f.audio_ip|default('')|e('html_attr') }}"
-               class="form-control"
-               placeholder="Ex: 200.x.x.x"
-               {{ not can_write ? 'readonly' }}>
-      </td>
-      <td>{{ __('Porta Proxy', 'newmanagement') }}</td>
-      <td>
-        <input type="text" id="nm-line-proxy_port" autocomplete="off"
-               value="{{ f.proxy_port|default('')|e('html_attr') }}"
-               class="form-control"
-               placeholder="Ex: 5060"
-               {{ not can_write ? 'readonly' }}>
-      </td>
-    </tr>
+      </div>
 
-    <tr class="tab_bg_1">
-      <td>{{ __('Data Portabilidade', 'newmanagement') }}</td>
-      <td>
-        <input type="date" id="nm-line-portability_date" autocomplete="off"
-               value="{{ f.portability_date|default('')|e('html_attr') }}"
-               class="form-control"
+      <div class="nm-field nm-fixedline-col-3">
+        <label class="form-label" for="nm-line-ddr_count">{{ __('Quantidade de DDR', 'newmanagement') }}</label>
+        <input type="number" id="nm-line-ddr_count" autocomplete="off"
+               value="{{ f.ddr_count|default(0)|e('html_attr') }}"
+               class="form-control" min="0" placeholder="0"
                {{ not can_write ? 'readonly' }}>
-      </td>
-      <td>{{ __('Operadora Anterior', 'newmanagement') }}</td>
-      <td>
+      </div>
+
+      <div class="nm-field nm-fixedline-col-3">
+        <label class="form-label" for="nm-line-channels">{{ __('Quantidade de Canais', 'newmanagement') }}</label>
+        <input type="number" id="nm-line-channels" autocomplete="off"
+               value="{{ f.channels|default(0)|e('html_attr') }}"
+               class="form-control" min="0" placeholder="0"
+               {{ not can_write ? 'readonly' }}>
+      </div>
+
+      <div class="nm-field nm-fixedline-col-3">
+        <label class="form-label" for="nm-line-previous_operator">{{ __('Operadora Anterior', 'newmanagement') }}</label>
         <input type="text" id="nm-line-previous_operator" autocomplete="off"
                value="{{ f.previous_operator|default('')|e('html_attr') }}"
                class="form-control"
                placeholder="Ex: Claro"
                {{ not can_write ? 'readonly' }}>
-      </td>
-      <td colspan="2"></td>
-    </tr>
+      </div>
 
-    <tr class="tab_bg_1">
-      <td>{{ __('Data de Ativação', 'newmanagement') }}</td>
-      <td>
+      <div class="nm-field nm-fixedline-col-5">
+        <label class="form-label" for="nm-line-proxy_ip">{{ __('IP Proxy', 'newmanagement') }}</label>
+        <input type="text" id="nm-line-proxy_ip" autocomplete="off"
+               value="{{ f.proxy_ip|default('')|e('html_attr') }}"
+               class="form-control"
+               placeholder="Ex: 200.x.x.x"
+               {{ not can_write ? 'readonly' }}>
+      </div>
+
+      <div class="nm-field nm-fixedline-col-2">
+        <label class="form-label" for="nm-line-proxy_port">{{ __('Porta Proxy', 'newmanagement') }}</label>
+        <input type="text" id="nm-line-proxy_port" autocomplete="off"
+               value="{{ f.proxy_port|default('')|e('html_attr') }}"
+               class="form-control"
+               placeholder="Ex: 5060"
+               {{ not can_write ? 'readonly' }}>
+      </div>
+
+      <div class="nm-field nm-fixedline-col-5">
+        <label class="form-label" for="nm-line-audio_ip">{{ __('IP Tráfego Áudio', 'newmanagement') }}</label>
+        <input type="text" id="nm-line-audio_ip" autocomplete="off"
+               value="{{ f.audio_ip|default('')|e('html_attr') }}"
+               class="form-control"
+               placeholder="Ex: 200.x.x.x"
+               {{ not can_write ? 'readonly' }}>
+      </div>
+
+      <div class="nm-field nm-fixedline-col-4">
+        <label class="form-label" for="nm-line-portability_date">{{ __('Data Portabilidade', 'newmanagement') }}</label>
+        <input type="date" id="nm-line-portability_date" autocomplete="off"
+               value="{{ f.portability_date|default('')|e('html_attr') }}"
+               class="form-control"
+               {{ not can_write ? 'readonly' }}>
+      </div>
+
+      <div class="nm-field nm-fixedline-col-4">
+        <label class="form-label" for="nm-line-activation_date">{{ __('Data de Ativação', 'newmanagement') }}</label>
         <input type="date" id="nm-line-activation_date" autocomplete="off"
                value="{{ f.activation_date|default('')|e('html_attr') }}"
                class="form-control"
                {{ not can_write ? 'readonly' }}>
-      </td>
-      <td>{{ __('Data de Vencimento', 'newmanagement') }}</td>
-      <td>
+      </div>
+
+      <div class="nm-field nm-fixedline-col-4">
+        <label class="form-label" for="nm-line-expiration_date">{{ __('Data de Vencimento', 'newmanagement') }}</label>
         <input type="date" id="nm-line-expiration_date" autocomplete="off"
                value="{{ f.expiration_date|default('')|e('html_attr') }}"
                class="form-control"
                {{ not can_write ? 'readonly' }}>
-      </td>
-      <td colspan="2"></td>
-    </tr>
+      </div>
 
-    <tr class="tab_bg_1">
-      <td>{{ __('Comentário', 'newmanagement') }}</td>
-      <td colspan="5">
+      <div class="nm-field nm-fixedline-col-full">
+        <label class="form-label" for="nm-line-comment">{{ __('Comentário', 'newmanagement') }}</label>
         <textarea id="nm-line-comment" class="form-control" rows="2"
-                  {{ not can_write ? 'readonly' }}
-        >{{ f.comment|default('')|e }}</textarea>
-      </td>
-    </tr>
+                  {{ not can_write ? 'readonly' }}>{{ f.comment|default('')|e }}</textarea>
+      </div>
+    </div>
+  </div>
 
-  </table>
-
-  {# === Botões de ação === #}
   {% if can_write or can_delete %}
-  <div class="d-flex justify-content-end gap-2 mt-3 mb-3">
-
+  <div class="nm-fixedline-savebar">
     {% if can_delete and line_id > 0 %}
     <button type="button" id="nm-line-delete"
-            class="btn btn-danger">
+            class="btn btn-outline-danger">
       <i class="ti ti-trash"></i>
       {{ __('Excluir Linha', 'newmanagement') }}
     </button>
@@ -177,29 +180,25 @@
       {{ __('Salvar Linha', 'newmanagement') }}
     </button>
     {% endif %}
-
   </div>
   {% endif %}
 
-</div>{# /.nm-fixedline-tab #}
+</div>
 
-{# === JavaScript === #}
 <script>
 (function () {
   'use strict';
 
-  const tab        = document.querySelector('.nm-fixedline-tab');
+  const tab = document.querySelector('.nm-fixedline-tab');
   if (!tab) return;
 
-  const actionUrl  = tab.dataset.actionUrl;
+  const actionUrl = tab.dataset.actionUrl;
 
-  /** Coleta todos os campos pelo prefixo nm-line- **/
   function getField(name) {
     const el = document.getElementById('nm-line-' + name);
     return el ? el.value : '';
   }
 
-  /** Envia um FormData via fetch e retorna a Promise com o JSON **/
   async function nmPost(body) {
     const fd = new FormData();
     for (const [k, v] of Object.entries(body)) {
@@ -223,60 +222,55 @@
     return data;
   }
 
-  /** Feedback visual no botão **/
   function setBtnState(btn, state) {
     const icons = { idle: 'ti-device-floppy', loading: 'ti-loader-2 spin', ok: 'ti-check', error: 'ti-x' };
-    const icon  = btn.querySelector('i');
+    const icon = btn.querySelector('i');
     btn.disabled = state === 'loading';
     if (icon) {
       icon.className = 'ti ' + (icons[state] || icons.idle);
     }
   }
 
-  // ---------------------------------------------------------------
-  // SALVAR
-  // ---------------------------------------------------------------
   const saveBtn = document.getElementById('nm-line-save');
   if (saveBtn) {
     saveBtn.addEventListener('click', async () => {
       setBtnState(saveBtn, 'loading');
       try {
         const data = await nmPost({
-          _glpi_csrf_token  : getField('csrf'),
-          action            : getField('action'),
-          id                : getField('id'),
-          ipbx_id           : getField('ipbx-id'),
-          companies_id      : getField('companies-id'),
-          pilot_number      : getField('pilot_number'),
-          line_type         : getField('line_type'),
-          operator          : getField('operator'),
-          channels          : getField('channels'),
-          ddr_count         : getField('ddr_count'),
-          proxy_ip          : getField('proxy_ip'),
-          proxy_port        : getField('proxy_port'),
-          audio_ip          : getField('audio_ip'),
-          portability_date  : getField('portability_date'),
-          previous_operator : getField('previous_operator'),
-          activation_date   : getField('activation_date'),
-          expiration_date   : getField('expiration_date'),
-          status            : getField('status'),
-          comment           : getField('comment'),
+          _glpi_csrf_token: getField('csrf'),
+          action: getField('action'),
+          id: getField('id'),
+          ipbx_id: getField('ipbx-id'),
+          companies_id: getField('companies-id'),
+          pilot_number: getField('pilot_number'),
+          line_type: getField('line_type'),
+          operator: getField('operator'),
+          channels: getField('channels'),
+          ddr_count: getField('ddr_count'),
+          proxy_ip: getField('proxy_ip'),
+          proxy_port: getField('proxy_port'),
+          audio_ip: getField('audio_ip'),
+          portability_date: getField('portability_date'),
+          previous_operator: getField('previous_operator'),
+          activation_date: getField('activation_date'),
+          expiration_date: getField('expiration_date'),
+          status: getField('status'),
+          comment: getField('comment'),
         });
 
         if (!data.success) throw new Error(data.error || 'Erro desconhecido');
 
         const actionInput = document.getElementById('nm-line-action');
-        const idInput     = document.getElementById('nm-line-id');
+        const idInput = document.getElementById('nm-line-id');
         if (actionInput && actionInput.value === 'add_line' && data.id) {
           actionInput.value = 'update_line';
-          idInput.value     = data.id;
+          idInput.value = data.id;
           const delBtn = document.getElementById('nm-line-delete');
           if (delBtn) delBtn.style.display = '';
         }
 
         setBtnState(saveBtn, 'ok');
         setTimeout(() => setBtnState(saveBtn, 'idle'), 2000);
-
       } catch (err) {
         setBtnState(saveBtn, 'error');
         setTimeout(() => setBtnState(saveBtn, 'idle'), 3000);
@@ -285,29 +279,26 @@
     });
   }
 
-  // ---------------------------------------------------------------
-  // EXCLUIR
-  // ---------------------------------------------------------------
   const delBtn = document.getElementById('nm-line-delete');
   if (delBtn) {
     delBtn.addEventListener('click', async () => {
-      if (!confirm('{{ __('Deseja realmente excluir esta linha fixa?', 'newmanagement') }}')) return;
+      if (!confirm(tab.dataset.deleteConfirm || 'Deseja realmente excluir esta linha fixa?')) return;
 
       delBtn.disabled = true;
       try {
         const data = await nmPost({
-          _glpi_csrf_token : getField('csrf'),
-          action           : 'delete_line',
-          id               : getField('id'),
-          companies_id     : getField('companies-id'),
+          _glpi_csrf_token: getField('csrf'),
+          action: 'delete_line',
+          id: getField('id'),
+          companies_id: getField('companies-id'),
         });
 
         if (!data.success) throw new Error(data.error || 'Erro ao excluir');
 
         const fields = [
-          'pilot_number','ddr_count','operator','channels','proxy_ip',
-          'line_type','audio_ip','proxy_port','portability_date',
-          'previous_operator','activation_date','expiration_date','comment'
+          'pilot_number', 'ddr_count', 'operator', 'channels', 'proxy_ip',
+          'line_type', 'audio_ip', 'proxy_port', 'portability_date',
+          'previous_operator', 'activation_date', 'expiration_date', 'comment',
         ];
         fields.forEach(f => {
           const el = document.getElementById('nm-line-' + f);
@@ -317,9 +308,8 @@
         if (statusEl) statusEl.value = '1';
 
         document.getElementById('nm-line-action').value = 'add_line';
-        document.getElementById('nm-line-id').value     = '0';
+        document.getElementById('nm-line-id').value = '0';
         delBtn.style.display = 'none';
-
       } catch (err) {
         delBtn.disabled = false;
         console.error('[NM FixedLine] Erro ao excluir:', err.message);
@@ -327,15 +317,11 @@
     });
   }
 
-  // ---------------------------------------------------------------
-  // CSS inline para ícone de loading girar
-  // ---------------------------------------------------------------
   if (!document.getElementById('nm-spin-style')) {
     const style = document.createElement('style');
     style.id = 'nm-spin-style';
     style.textContent = '@keyframes nm-spin{to{transform:rotate(360deg)}}.spin{animation:nm-spin .8s linear infinite}';
     document.head.appendChild(style);
   }
-
 }());
 </script>

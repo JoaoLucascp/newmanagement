@@ -33,6 +33,11 @@ class FixedLine extends \CommonDBTM
         return 'glpi_plugin_newmanagement_ipbx_lines';
     }
 
+    public static function getIcon(): string
+    {
+        return 'ti ti-phone';
+    }
+
     public static function isValidPhoneNumber(string $phone): bool
     {
         $digits = preg_replace('/\D/', '', $phone);
@@ -102,7 +107,7 @@ class FixedLine extends \CommonDBTM
 
     public function getTabNameForItem(\CommonGLPI $item, $withtemplate = 0): string
     {
-        return ($item instanceof Company) ? self::getTypeName(1) : '';
+        return ($item instanceof Company) ? self::createTabEntry(self::getTypeName(1)) : '';
     }
 
     public static function displayTabContentForItem(\CommonGLPI $item, $tabnum = 1, $withtemplate = 0): bool
@@ -122,7 +127,8 @@ class FixedLine extends \CommonDBTM
             return;
         }
 
-        $can_write = \Session::haveRight(self::$rightname, UPDATE);
+        $can_write  = \Session::haveRight(self::$rightname, UPDATE);
+        $can_delete = \Session::haveRight(self::$rightname, DELETE);
 
         $ipbx_id = 0;
         foreach ($DB->request([
@@ -175,6 +181,7 @@ class FixedLine extends \CommonDBTM
                 'action_url'   => \Plugin::getWebDir('newmanagement') . '/ajax/ipbx_sub.php',
                 'form_action'  => $line_id > 0 ? 'update_line' : 'add_line',
                 'can_write'    => $can_write,
+                'can_delete'   => $can_delete,
                 'status_opts'  => [
                     1 => __('Ativo',     'newmanagement'),
                     2 => __('Cancelado', 'newmanagement'),

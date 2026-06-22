@@ -11,20 +11,19 @@
  *  - Valida permissão READ no rightname do plugin
  */
 
-define('GLPI_ROOT', dirname(dirname(dirname(dirname(__DIR__)))));
-require_once GLPI_ROOT . '/inc/includes.php';
+include('../../../inc/includes.php');
 
 use GlpiPlugin\Newmanagement\Ipbx;
 
 Session::checkLoginUser();
-Session::checkToken();
+Session::checkCSRF($_GET, true);
 
 if (!Session::haveRight('plugin_newmanagement_ipbx', READ)) {
     http_response_code(403);
     exit('Acesso negado');
 }
 
-$format      = strtolower($_GET['format']      ?? 'pdf');
+$format      = strtolower($_GET['format']      ?? 'csv');
 $ipbx_id     = (int) ($_GET['ipbx_id']         ?? 0);
 $companies_id = (int) ($_GET['companies_id']   ?? 0);
 
@@ -63,8 +62,7 @@ foreach ($iter as $row) {
     $rows[] = $row;
 }
 
-$headers = ['Ramal','Senha','Usuário','IP Dispositivo','Departamento',
-            'Grava','LOF','LOC','DDF','DDC','DDI','SRV'];
+$headers = Ipbx::getExtensionImportHeaders();
 
 $yn = fn($v) => $v ? 'Sim' : 'Não';
 
@@ -154,7 +152,7 @@ header('Content-Disposition: attachment; filename="ramais_ipbx_' . $ipbx_id . '.
 
 $out = fopen('php://output', 'w');
 fputs($out, "\xEF\xBB\xBF"); // BOM UTF-8 para Excel
-fputcsv($out, $headers, ';');
+fputcsv($out, $headers, ';', '"', '\\');
 foreach ($rows as $r) {
     fputcsv($out, [
         $r['number'],
@@ -169,7 +167,7 @@ foreach ($rows as $r) {
         $yn($r['ddc']),
         $yn($r['ddi']),
         $yn($r['srv']),
-    ], ';');
+    ], ';', '"', '\\');
 }
 fclose($out);
 exit;

@@ -1,109 +1,127 @@
 {#
-  Newmanagement — Formulário de Empresa
-  Variáveis recebidas do PHP (Company::showForm):
-    item               — objeto Company com campos em item.fields
-    id                 — int: ID do registro (0 = novo)
-    id_label           — string: texto a exibir no campo ID (número ou 'Gerado automaticamente')
-    contract_options   — array<int, string>: opções do dropdown Status do Contrato
-    contract_selected  — int: valor selecionado atualmente
-    csrf_token         — string: token CSRF gerado pelo GLPI
-    action_url         — string: URL do form action
+  Newmanagement - Formulario de Empresa
+  Variaveis recebidas do PHP (Company::showForm):
+    item               - objeto Company com campos em item.fields
+    id                 - int: ID do registro (0 = novo)
+    id_label           - string: texto a exibir no campo ID
+    contract_options   - array<int, string>: opcoes do dropdown Status do Contrato
+    contract_selected  - int: valor selecionado atualmente
+    action_url         - string: URL do form action
 #}
+{# CommonDBTM::showFormHeader() opens a centered cell; close it before the custom layout. #}
+</td></tr>
 <tr class="tab_bg_1">
-  <td>{{ __('Nome', 'newmanagement') }} <span class="required">*</span></td>
-  <td>
-    <input type="text" id="name" name="name"
-           value="{{ item.fields.name|default('')|e }}"
-           class="form-control" required>
-  </td>
-  <td>{{ __('ID', 'newmanagement') }}</td>
-  <td>
-    <input type="text" class="form-control"
-           value="{{ id_label|e }}" disabled>
-  </td>
-</tr>
-
-<tr class="tab_bg_1">
-  <td>{{ __('CNPJ', 'newmanagement') }}</td>
-  <td>
-    <div class="input-group">
-      <input type="text" id="cnpj" name="cnpj"
-             value="{{ item.fields.cnpj|default('')|e }}"
-             class="form-control" placeholder="00.000.000/0000-00" maxlength="18">
-      <button type="button" class="btn btn-outline-secondary btn-sm"
-              id="btn-buscar-cnpj"
-              title="{{ __('Buscar CNPJ na BrasilAPI', 'newmanagement') }}">
-        <i class="ti ti-search"></i> {{ __('Buscar', 'newmanagement') }}
-      </button>
+<td colspan="4" class="nm-company-form-cell">
+<div class="nm-company-page">
+  <div class="nm-company-form-panel">
+    <div class="nm-section-heading">
+      <div class="nm-section-title">
+        <i class="ti ti-building" aria-hidden="true"></i>
+        <span>{{ __('Empresa', 'newmanagement') }}</span>
+      </div>
+      <span class="badge bg-secondary-lt">{{ id_label|e }}</span>
     </div>
-    <span id="cnpj-feedback" class="nm-feedback"></span>
-  </td>
-  <td>{{ __('Razão Social', 'newmanagement') }}</td>
-  <td>
-    <input type="text" id="razao_social" name="razao_social"
-           value="{{ item.fields.razao_social|default('')|e }}"
-           class="form-control">
-  </td>
-</tr>
 
-<tr class="tab_bg_1">
-  <td>
-    {{ __('E-mail', 'newmanagement') }}
-    <i class="ti ti-info-circle ms-1"
-       title="{{ __('A Receita Federal pode não disponibilizar este dado. Preencha manualmente se necessário.', 'newmanagement') }}"
-       style="cursor:help; color:var(--tblr-secondary);"></i>
-  </td>
-  <td>
-    <input type="email" id="email" name="email"
-           value="{{ item.fields.email|default('')|e }}"
-           class="form-control">
-  </td>
-  <td>{{ __('Telefone', 'newmanagement') }}</td>
-  <td>
-    <input type="text" id="phone" name="phone"
-           value="{{ item.fields.phone|default('')|e }}"
-           class="form-control" placeholder="(00) 00000-0000">
-  </td>
-</tr>
+    <div class="nm-company-grid">
+      <div class="nm-field nm-company-col-6">
+        <label class="form-label" for="name">
+          {{ __('Nome', 'newmanagement') }} <span class="required">*</span>
+        </label>
+        <input type="text" id="name" name="name"
+               value="{{ item.fields.name|default('')|e }}"
+               class="form-control" autocomplete="organization" required>
+      </div>
 
-<tr class="tab_bg_1">
-  <td>{{ __('CEP', 'newmanagement') }}</td>
-  <td>
-    <div class="input-group">
-      <input type="text" id="cep" name="cep"
-             value="{{ item.fields.cep|default('')|e }}"
-             class="form-control" placeholder="00000-000" maxlength="9">
-      <button type="button" class="btn btn-outline-secondary btn-sm"
-              id="btn-buscar-cep"
-              title="{{ __('Buscar CEP na BrasilAPI', 'newmanagement') }}">
-        <i class="ti ti-search"></i> {{ __('Buscar', 'newmanagement') }}
-      </button>
+      <div class="nm-field nm-company-col-2">
+        <label class="form-label" for="nm-company-id">{{ __('ID', 'newmanagement') }}</label>
+        <input type="text" id="nm-company-id" class="form-control"
+               value="{{ id_label|e }}" disabled>
+      </div>
+
+      <div class="nm-field nm-company-col-4">
+        <label class="form-label" for="contract_status">{{ __('Status do Contrato', 'newmanagement') }}</label>
+        <select id="contract_status" name="contract_status" class="form-select">
+          {% for value, label in contract_options %}
+            <option value="{{ value }}"
+              {% if value == contract_selected %}selected{% endif %}>
+              {{ label }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="nm-field nm-company-col-5">
+        <label class="form-label" for="cnpj">{{ __('CNPJ', 'newmanagement') }}</label>
+        <div class="input-group nm-company-search">
+          <input type="text" id="cnpj" name="cnpj"
+                 value="{{ item.fields.cnpj|default('')|e }}"
+                 class="form-control" placeholder="00.000.000/0000-00" maxlength="18"
+                 autocomplete="off">
+          <button type="button" class="btn btn-outline-secondary"
+                  id="btn-buscar-cnpj"
+                  title="{{ __('Buscar CNPJ na BrasilAPI', 'newmanagement') }}">
+            <i class="ti ti-search" aria-hidden="true"></i>
+            <span>{{ __('Buscar', 'newmanagement') }}</span>
+          </button>
+        </div>
+        <span id="cnpj-feedback" class="nm-feedback"></span>
+      </div>
+
+      <div class="nm-field nm-company-col-7">
+        <label class="form-label" for="razao_social">{{ __('Razão Social', 'newmanagement') }}</label>
+        <input type="text" id="razao_social" name="razao_social"
+               value="{{ item.fields.razao_social|default('')|e }}"
+               class="form-control" autocomplete="organization">
+      </div>
+
+      <div class="nm-field nm-company-col-5">
+        <label class="form-label" for="email">
+          {{ __('E-mail', 'newmanagement') }}
+          <i class="ti ti-info-circle ms-1 nm-muted-icon"
+             title="{{ __('A Receita Federal pode não disponibilizar este dado. Preencha manualmente se necessário.', 'newmanagement') }}"
+             aria-hidden="true"></i>
+        </label>
+        <input type="email" id="email" name="email"
+               value="{{ item.fields.email|default('')|e }}"
+               class="form-control" autocomplete="email">
+      </div>
+
+      <div class="nm-field nm-company-col-3">
+        <label class="form-label" for="phone">{{ __('Telefone', 'newmanagement') }}</label>
+        <input type="text" id="phone" name="phone"
+               value="{{ item.fields.phone|default('')|e }}"
+               class="form-control" placeholder="(00) 00000-0000" autocomplete="tel">
+      </div>
+
+      <div class="nm-field nm-company-col-4">
+        <label class="form-label" for="cep">{{ __('CEP', 'newmanagement') }}</label>
+        <div class="input-group nm-company-search">
+          <input type="text" id="cep" name="cep"
+                 value="{{ item.fields.cep|default('')|e }}"
+                 class="form-control" placeholder="00000-000" maxlength="9"
+                 autocomplete="postal-code">
+          <button type="button" class="btn btn-outline-secondary"
+                  id="btn-buscar-cep"
+                  title="{{ __('Buscar CEP na BrasilAPI', 'newmanagement') }}">
+            <i class="ti ti-search" aria-hidden="true"></i>
+            <span>{{ __('Buscar', 'newmanagement') }}</span>
+          </button>
+        </div>
+        <span id="cep-feedback" class="nm-feedback"></span>
+      </div>
+
+      <div class="nm-field nm-company-col-full">
+        <label class="form-label" for="address">{{ __('Endereço', 'newmanagement') }}</label>
+        <textarea id="address" name="address" class="form-control" rows="2"
+                  autocomplete="street-address">{{ item.fields.address|default('')|e }}</textarea>
+      </div>
+
+      <div class="nm-field nm-company-col-full">
+        <label class="form-label" for="comment">{{ __('Comentário', 'newmanagement') }}</label>
+        <textarea id="comment" name="comment" class="form-control" rows="3">{{ item.fields.comment|default('')|e }}</textarea>
+      </div>
     </div>
-    <span id="cep-feedback" class="nm-feedback"></span>
-  </td>
-  <td>{{ __('Status do Contrato', 'newmanagement') }}</td>
-  <td>
-    <select name="contract_status" class="form-select">
-      {% for value, label in contract_options %}
-        <option value="{{ value }}"
-          {% if value == contract_selected %}selected{% endif %}>
-          {{ label }}
-        </option>
-      {% endfor %}
-    </select>
-  </td>
-</tr>
-
-<tr class="tab_bg_1">
-  <td>{{ __('Endereço', 'newmanagement') }}</td>
-  <td colspan="3">
-    <textarea id="address" name="address" class="form-control" rows="2">{{ item.fields.address|default('')|e }}</textarea>
-  </td>
-</tr>
-
-<tr class="tab_bg_1">
-  <td>{{ __('Comentário', 'newmanagement') }}</td>
-  <td colspan="3">
-    <textarea id="comment" name="comment" class="form-control" rows="3">{{ item.fields.comment|default('')|e }}</textarea>
-  </td>
+  </div>
+</div>
+</td>
 </tr>

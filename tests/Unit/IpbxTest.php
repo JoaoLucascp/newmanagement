@@ -39,4 +39,25 @@ class IpbxTest extends TestCase
         $this->assertStringContainsString('******', $html);
         $this->assertStringNotContainsString('<code>1234</code>', $html);
     }
+
+    public function test_normalize_extension_import_row_accepts_portuguese_headers(): void
+    {
+        $headers = array_map(
+            [Ipbx::class, 'normalizeExtensionImportHeader'],
+            ['Ramal', 'Senha', 'Usuário', 'IP Dispositivo', 'Departamento', 'Grava', 'LOF']
+        );
+
+        $row = Ipbx::normalizeExtensionImportRow(
+            ['1001', '1234', 'Operador', '192.168.0.10', 'Suporte', 'Sim', '1'],
+            $headers
+        );
+
+        $this->assertSame('1001', $row['number']);
+        $this->assertSame('1234', $row['password']);
+        $this->assertSame('Operador', $row['user_name']);
+        $this->assertSame('192.168.0.10', $row['device_ip']);
+        $this->assertSame('Suporte', $row['department']);
+        $this->assertSame(1, $row['records_calls']);
+        $this->assertSame(1, $row['lof']);
+    }
 }

@@ -1,100 +1,118 @@
 {#
-  templates/chatbot/partials/mass_comm.html.twig
   Tabela de Comunicação em Massa.
-  Herda do contexto pai: chatbot_id, companies_id, csrf, action_url, can_write, can_delete, mass_comm
 #}
-<table class="tab_cadre_fixehov" id="nm-mc-table">
-  <thead>
-    <tr class="headerRow noHover">
-      <th>{{ __('Nome do Sistema', 'newmanagement') }}</th>
-      <th>{{ __('Data Ativação', 'newmanagement') }}</th>
-      <th>{{ __('Número Autenticado', 'newmanagement') }}</th>
-      <th>{{ __('Tipo Homologação', 'newmanagement') }}</th>
-      <th>{{ __('Link de Acesso', 'newmanagement') }}</th>
-      <th>{{ __('Login', 'newmanagement') }}</th>
-      <th>{{ __('Senha', 'newmanagement') }}</th>
-      <th style="text-align:right">
-        {% if can_write %}
-          <button type="button" id="nm-mc-add-btn"
-                  class="btn btn-sm btn-outline-secondary"
-                  data-action="add_mass_comm"
-                  data-chatbot-id="{{ chatbot_id }}"
-                  data-companies-id="{{ companies_id }}"
-                  data-url="{{ action_url|e('html_attr') }}"
-                  data-csrf="{{ csrf|e('html_attr') }}">
-            <i class="ti ti-plus"></i> {{ __('Adicionar', 'newmanagement') }}
-          </button>
-        {% endif %}
-      </th>
-    </tr>
-  </thead>
+{% set mc_total = mass_comm|length %}
 
-  <tbody id="nm-mc-tbody">
-    {% for row in mass_comm %}
-      <tr class="tab_bg_1" id="nm-mc-row-{{ row.id }}">
-        <td>{{ row.system_name }}</td>
-        <td>{{ row.activation_date }}</td>
-        <td>{{ row.authenticated_number }}</td>
-        <td>{{ row.homologation_type }}</td>
-        <td>
-          {% if row.access_link is not empty %}
-            <a href="{{ row.access_link|e('html_attr') }}"
-               target="_blank" rel="noopener">
-              <i class="ti ti-external-link"></i>
-            </a>
-          {% endif %}
-        </td>
-        <td>{{ row.login }}</td>
-        <td>••••••</td>
-        <td>
-          {% if can_delete %}
-            <button type="button"
-                    class="btn btn-sm btn-danger nm-chatbot-del"
-                    data-action="delete_mass_comm"
-                    data-id="{{ row.id }}"
-                    data-row="nm-mc-row-{{ row.id }}"
-                    data-companies-id="{{ companies_id }}"
-                    data-url="{{ action_url|e('html_attr') }}"
-                    data-csrf="{{ csrf|e('html_attr') }}"
-                    data-confirm="{{ __('Remover?', 'newmanagement') }}">
-              <i class="ti ti-trash"></i>
-            </button>
-          {% endif %}
-        </td>
-      </tr>
-    {% endfor %}
+<div id="nm-mc-section"
+     class="nm-related-section nm-chatbot-table-section"
+     data-section="mass_comm"
+     data-chatbot-id="{{ chatbot_id }}"
+     data-companies-id="{{ companies_id }}"
+     data-action-url="{{ action_url|e('html_attr') }}"
+     data-total="{{ mc_total }}">
 
+  <div class="nm-related-toolbar">
+    <div class="nm-related-heading">
+      <div class="nm-related-title">
+        <i class="ti ti-send" aria-hidden="true"></i>
+        <span>{{ __('Comunicação em Massa', 'newmanagement') }}</span>
+      </div>
+      <span class="nm-related-meta"><span class="nm-count-mc">{{ mc_total }}</span> {{ __('registros', 'newmanagement') }}</span>
+    </div>
     {% if can_write %}
-      <tr class="tab_bg_2 nm-add-row" id="nm-mc-add-row">
-        <td><input type="text"     id="nm-mc-system_name_0"
-             name="chatbot_mass_comm[system_name][]"
-             class="form-control form-control-sm"
-             placeholder="{{ __('Nome', 'newmanagement') }}"></td>
-        <td><input type="date"     id="nm-mc-activation_date_0"
-             name="chatbot_mass_comm[activation_date][]"
-             class="form-control form-control-sm"></td>
-        <td><input type="text"     id="nm-mc-authenticated_number_0"
-             name="chatbot_mass_comm[authenticated_number][]"
-             class="form-control form-control-sm"
-             placeholder="5511..."></td>
-        <td><input type="text"     id="nm-mc-homologation_type_0"
-             name="chatbot_mass_comm[homologation_type][]"
-             class="form-control form-control-sm"
-             placeholder="Ex: BSP"></td>
-        <td><input type="url"      id="nm-mc-access_link_0"
-             name="chatbot_mass_comm[access_link][]"
-             class="form-control form-control-sm"
-             placeholder="https://"></td>
-        <td><input type="text"     id="nm-mc-login_0"
-             name="chatbot_mass_comm[login][]"
-             class="form-control form-control-sm"></td>
-        <td><input type="password" id="nm-mc-password_0"
-             name="chatbot_mass_comm[password][]"
-             class="form-control form-control-sm"
-             placeholder="{{ __('Senha', 'newmanagement') }}"
-             autocomplete="new-password"></td>
-        <td></td>
-      </tr>
+      <button type="button" id="nm-mc-add-btn"
+              class="btn btn-sm btn-outline-primary"
+              data-chatbot-id="{{ chatbot_id }}"
+              data-companies-id="{{ companies_id }}">
+        <i class="ti ti-plus"></i> {{ __('Adicionar', 'newmanagement') }}
+      </button>
     {% endif %}
-  </tbody>
-</table>
+  </div>
+
+  <div class="table-responsive nm-table-wrap">
+    <table class="table table-vcenter table-hover nm-data-table nm-chatbot-table nm-mc-table" id="nm-mc-table">
+      <colgroup>
+        <col class="nm-col-mc-system">
+        <col class="nm-col-mc-date">
+        <col class="nm-col-mc-number">
+        <col class="nm-col-mc-homolog">
+        <col class="nm-col-mc-link">
+        <col class="nm-col-mc-login">
+        <col class="nm-col-mc-password">
+        <col class="nm-col-actions">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>{{ __('Nome do Sistema', 'newmanagement') }}</th>
+          <th>{{ __('Data Ativação', 'newmanagement') }}</th>
+          <th>{{ __('Número Autenticado', 'newmanagement') }}</th>
+          <th>{{ __('Tipo Homologação', 'newmanagement') }}</th>
+          <th>{{ __('Link de Acesso', 'newmanagement') }}</th>
+          <th>{{ __('Login', 'newmanagement') }}</th>
+          <th>{{ __('Senha', 'newmanagement') }}</th>
+          <th class="text-end"></th>
+        </tr>
+      </thead>
+
+      <tbody id="nm-mc-tbody">
+        {% for row in mass_comm %}
+          <tr class="tab_bg_1 nm-mc-saved-row" id="nm-mc-row-{{ row.id }}">
+            <td>{{ row.system_name|default('')|e }}</td>
+            <td>{{ row.activation_date|default('')|e }}</td>
+            <td>{{ row.authenticated_number|default('')|e }}</td>
+            <td>{{ row.homologation_type|default('')|e }}</td>
+            <td>
+              {% if row.access_link is not empty %}
+                <a href="{{ row.access_link|e('html_attr') }}" target="_blank" rel="noopener">
+                  <i class="ti ti-external-link"></i>
+                </a>
+              {% endif %}
+            </td>
+            <td>{{ row.login|default('')|e }}</td>
+            <td>******</td>
+            <td class="text-end">
+              {% if can_delete %}
+                <button type="button"
+                        class="btn btn-sm btn-icon nm-chatbot-del"
+                        data-action="delete_mass_comm"
+                        data-id="{{ row.id }}"
+                        data-row="nm-mc-row-{{ row.id }}"
+                        data-companies-id="{{ companies_id }}"
+                        data-url="{{ action_url|e('html_attr') }}"
+                        data-confirm="{{ __('Remover comunicação em massa?', 'newmanagement') }}"
+                        title="{{ __('Remover', 'newmanagement') }}">
+                  <i class="ti ti-trash text-danger"></i>
+                </button>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+
+        {% if mass_comm is empty %}
+          <tr id="nm-mc-empty">
+            <td colspan="8" class="text-center text-muted py-3">
+              {{ __('Nenhuma comunicação em massa cadastrada.', 'newmanagement') }}
+            </td>
+          </tr>
+        {% endif %}
+
+        {% if can_write %}
+          <tr class="nm-mc-input-template" id="nm-mc-add-row" hidden style="display:none">
+            <td><input type="text" class="nm-mc-system_name form-control form-control-sm" form="_none" autocomplete="off" placeholder="{{ __('Nome', 'newmanagement') }}"></td>
+            <td><input type="date" class="nm-mc-activation_date form-control form-control-sm" form="_none"></td>
+            <td><input type="text" class="nm-mc-authenticated_number form-control form-control-sm" form="_none" autocomplete="off" placeholder="5511..."></td>
+            <td><input type="text" class="nm-mc-homologation_type form-control form-control-sm" form="_none" autocomplete="off" placeholder="Ex: BSP"></td>
+            <td><input type="url" class="nm-mc-access_link form-control form-control-sm" form="_none" autocomplete="off" placeholder="https://"></td>
+            <td><input type="text" class="nm-mc-login form-control form-control-sm" form="_none" autocomplete="off" placeholder="{{ __('Login', 'newmanagement') }}"></td>
+            <td><input type="password" class="nm-mc-password form-control form-control-sm" form="_none" autocomplete="new-password" placeholder="{{ __('Senha', 'newmanagement') }}"></td>
+            <td class="text-end">
+              <button type="button" class="btn btn-sm btn-icon nm-row-del-btn" title="{{ __('Descartar linha', 'newmanagement') }}">
+                <i class="ti ti-trash text-danger"></i>
+              </button>
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>

@@ -218,18 +218,45 @@ function nmDelBtn(action, id, rowId, companiesId, url, confirmMsg, title) {
     </button>`;
 }
 
+function nmCsvValue(value) {
+    const text = String(value == null ? '' : value);
+    return /[";\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function nmDownloadTextFile(filename, content, mimeType) {
+    const blob = new Blob([content], { type: mimeType || 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+}
+
 // ---------------------------------------------------------------------------
 // Contadores das abas IPBX
 // ---------------------------------------------------------------------------
 
 function nmCounterIncrement(elId) {
-    const el = document.getElementById(elId);
-    if (el) el.textContent = parseInt(el.textContent || '0', 10) + 1;
+    const targets = [];
+    const byId = document.getElementById(elId);
+    if (byId) targets.push(byId);
+    document.querySelectorAll('.' + elId).forEach(el => targets.push(el));
+    if (!targets.length) return;
+    const next = parseInt(targets[0].textContent || '0', 10) + 1;
+    targets.forEach(el => { el.textContent = next; });
 }
 
 function nmCounterDecrement(elId) {
-    const el = document.getElementById(elId);
-    if (el) el.textContent = Math.max(0, parseInt(el.textContent || '0', 10) - 1);
+    const targets = [];
+    const byId = document.getElementById(elId);
+    if (byId) targets.push(byId);
+    document.querySelectorAll('.' + elId).forEach(el => targets.push(el));
+    if (!targets.length) return;
+    const next = Math.max(0, parseInt(targets[0].textContent || '0', 10) - 1);
+    targets.forEach(el => { el.textContent = next; });
 }
 
 // ---------------------------------------------------------------------------
@@ -237,29 +264,28 @@ function nmCounterDecrement(elId) {
 // ---------------------------------------------------------------------------
 
 function nmInitIpbxTabs() {
-    const wrapper = document.querySelector('.nm-tabs-wrapper');
-    if (!wrapper) return;
+    document.querySelectorAll('.nm-tabs-wrapper').forEach(wrapper => {
+        const tabs = Array.from(wrapper.querySelectorAll('.nm-tab'));
+        const panels = Array.from(wrapper.querySelectorAll('.nm-tab-panel'));
+        if (!tabs.length || !panels.length) return;
 
-    const tabs = Array.from(wrapper.querySelectorAll('.nm-tab'));
-    const panels = Array.from(wrapper.querySelectorAll('.nm-tab-panel'));
-    if (!tabs.length || !panels.length) return;
+        const currentTab = tabs.find(tab => tab.classList.contains('active'))
+            || tabs.find(tab => tab.getAttribute('aria-selected') === 'true')
+            || tabs[0];
+        const activePanelId = currentTab?.dataset.panel || panels[0]?.id;
 
-    const currentTab = tabs.find(tab => tab.classList.contains('active'))
-        || tabs.find(tab => tab.getAttribute('aria-selected') === 'true')
-        || tabs[0];
-    const activePanelId = currentTab?.dataset.panel || 'nm-panel-ext';
+        tabs.forEach(tab => {
+            const isActive = tab.dataset.panel === activePanelId;
+            tab.classList.toggle('active', isActive);
+            tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        });
 
-    tabs.forEach(tab => {
-        const isActive = tab.dataset.panel === activePanelId;
-        tab.classList.toggle('active', isActive);
-        tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
-    });
-
-    panels.forEach(panel => {
-        const isActive = panel.id === activePanelId;
-        panel.classList.toggle('active', isActive);
-        if (isActive) panel.removeAttribute('hidden');
-        else panel.setAttribute('hidden', '');
+        panels.forEach(panel => {
+            const isActive = panel.id === activePanelId;
+            panel.classList.toggle('active', isActive);
+            if (isActive) panel.removeAttribute('hidden');
+            else panel.setAttribute('hidden', '');
+        });
     });
 }
 
@@ -481,7 +507,10 @@ function nmEnsureIpbxDelegated() {
         }
         tab.classList.add('active');
         tab.setAttribute('aria-selected', 'true');
-        const panel = document.getElementById(tab.dataset.panel);
+        const panelId = tab.dataset.panel;
+        const panel = wrapper
+            ? Array.from(wrapper.querySelectorAll('.nm-tab-panel')).find(p => p.id === panelId)
+            : document.getElementById(panelId);
         if (panel) {
             panel.classList.add('active');
             panel.removeAttribute('hidden');
@@ -765,6 +794,118 @@ function nmEnsureIpbxDelegated() {
         }
         return saved;
     }
+
+    function nmExtCsvTemplate() {
+        const rows = [
+            ['Ramal', 'Senha', 'Usuario', 'IP Dispositivo', 'Departamento', 'Grava', 'LOF', 'LOC', 'DDF', 'DDC', 'DDI', 'SRV'],
+            ['1001', '1234', 'Maria Silva', '192.168.1.50', 'Suporte', 'Sim', '1', '0', '1', '1', '0', '0'],
+            ['1002', '4321', 'Joao Souza', '192.168.1.51', 'Comercial', 'Nao', '0', '1', '0', '1', '0', '1'],
+        ];
+        return '\uFEFF' + rows.map(row => row.map(nmCsvValue).join(';')).join('\r\n') + '\r\n';
+    }
+
+    function nmExtBuildExportUrl(btn) {
+        const exportUrl = btn.dataset.exportUrl;
+        const ipbxId = btn.dataset.ipbxId || nmVal('nm-ipbx-id') || '0';
+        const companiesId = btn.dataset.companiesId || nmGetIpbxCompaniesId(btn);
+        if (!exportUrl || parseInt(ipbxId, 10) <= 0 || !companiesId) {
+            throw new Error('Salve o Servidor IPBX primeiro.');
+        }
+
+        const params = new URLSearchParams({
+            format: 'csv',
+            ipbx_id: ipbxId,
+            companies_id: companiesId,
+            _glpi_csrf_token: nmGetCsrfToken(),
+        });
+
+        return `${exportUrl}?${params.toString()}`;
+    }
+
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('#nm-ext-template-btn');
+        if (!btn) return;
+        nmDownloadTextFile('modelo_ramais_ipbx.csv', nmExtCsvTemplate(), 'text/csv;charset=utf-8');
+    });
+
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('#nm-ext-export-btn');
+        if (!btn) return;
+        try {
+            window.location.href = nmExtBuildExportUrl(btn);
+        } catch (error) {
+            alert(error.message);
+        }
+    });
+
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('#nm-ext-import-btn');
+        if (!btn) return;
+        if (nmExtPendingRows().length > 0) {
+            const proceed = confirm('Existem ramais adicionados na tela que ainda nao foram salvos. Importar agora vai gravar o CSV diretamente e recarregar a pagina. Continuar?');
+            if (!proceed) return;
+        }
+        const input = document.getElementById('nm-ext-import-file');
+        if (!input) {
+            alert('Nao foi possivel localizar o seletor de arquivo CSV.');
+            return;
+        }
+        input.value = '';
+        input.click();
+    });
+
+    document.addEventListener('change', async (e) => {
+        const input = e.target.closest('#nm-ext-import-file');
+        if (!input) return;
+
+        const file = input.files?.[0];
+        if (!file) return;
+
+        const btn = document.getElementById('nm-ext-import-btn');
+        const section = input.closest('#nm-ext-section') || document.getElementById('nm-ext-section');
+        const actionUrl = nmGetIpbxActionUrl(input);
+        const ipbxId = section?.dataset.ipbxId || nmVal('nm-ipbx-id') || '0';
+        const companiesId = section?.dataset.companiesId || nmGetIpbxCompaniesId(input);
+
+        if (parseInt(ipbxId, 10) <= 0) {
+            alert('Salve o Servidor IPBX primeiro.');
+            return;
+        }
+
+        const originalHtml = btn?.innerHTML || '';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="nm-spinner"></span> Importando...';
+        }
+
+        try {
+            const result = await nmPost(actionUrl, {
+                action: 'import_extensions',
+                ipbx_id: ipbxId,
+                companies_id: companiesId,
+                csv_file: file,
+            });
+            if (!result.success) throw new Error(result.error || 'Erro ao importar ramais');
+
+            const details = Array.isArray(result.errors) && result.errors.length
+                ? '\n\nPrimeiros avisos:\n' + result.errors.join('\n')
+                : '';
+            alert(`Importacao concluida.\nImportados: ${result.inserted || 0}\nIgnorados: ${result.skipped || 0}${details}`);
+
+            if ((result.inserted || 0) > 0) {
+                window.location.reload();
+            }
+        } catch (error) {
+            console.error('[NM] Erro ao importar ramais:', error.message);
+            alert('Erro ao importar ramais: ' + error.message);
+        } finally {
+            input.value = '';
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        }
+    });
 
     function nmScopedValue(row, selector) {
         return row.querySelector(selector)?.value || '';
@@ -1050,15 +1191,408 @@ function nmEnsureIpbxDelegated() {
 }
 
 // ---------------------------------------------------------------------------
+// Chatbot - delegacao de eventos
+// ---------------------------------------------------------------------------
+
+const NM_CHATBOT_BOUND_KEY = '__nmChatbotHandlersBound__';
+
+function nmGetChatbotRoot(ctx) {
+    return ctx?.closest('.nm-chatbot-tab') || document.querySelector('.nm-chatbot-tab');
+}
+
+function nmGetChatbotActionUrl(ctx) {
+    return nmGetChatbotRoot(ctx)?.dataset.actionUrl || '';
+}
+
+function nmGetChatbotCompaniesId(ctx) {
+    return nmGetChatbotRoot(ctx)?.dataset.companiesId || nmVal('nm-chatbot-companies-id');
+}
+
+function nmChatbotCanDelete(ctx) {
+    return nmGetChatbotRoot(ctx)?.dataset.canDelete === '1';
+}
+
+function nmUpdateChatbotId(newId) {
+    const actionInput = document.getElementById('nm-chatbot-action');
+    if (actionInput) actionInput.value = 'update_chatbot';
+    const idInput = document.getElementById('nm-chatbot-id');
+    if (idInput) idInput.value = newId;
+    document.querySelectorAll('[data-chatbot-id]').forEach(el => {
+        el.dataset.chatbotId = newId;
+    });
+}
+
+function nmChatbotSyncEmpty(tbodyId, rowSelector, emptyId, colspan, message) {
+    const tbody = document.getElementById(tbodyId);
+    if (!tbody) return;
+    const hasRows = tbody.querySelector(rowSelector);
+    const emptyRow = tbody.querySelector('#' + emptyId);
+    if (hasRows) {
+        emptyRow?.remove();
+        return;
+    }
+    if (emptyRow) return;
+    const tr = document.createElement('tr');
+    tr.id = emptyId;
+    tr.innerHTML = `<td colspan="${colspan}" class="text-center text-muted py-3">${message}</td>`;
+    const template = tbody.querySelector('tr[id$="-add-row"]');
+    if (template) tbody.insertBefore(tr, template);
+    else tbody.appendChild(tr);
+}
+
+function nmChatbotSyncAllEmptyStates() {
+    nmChatbotSyncEmpty('nm-mc-tbody', '.nm-mc-saved-row, .nm-mc-pending-row', 'nm-mc-empty', 8, 'Nenhuma comunicacao em massa cadastrada.');
+    nmChatbotSyncEmpty('nm-wa-tbody', '.nm-wa-saved-row, .nm-wa-pending-row', 'nm-wa-empty', 5, 'Nenhum numero restrito cadastrado.');
+    nmChatbotSyncEmpty('nm-cu-tbody', '.nm-cu-saved-row, .nm-cu-pending-row', 'nm-cu-empty', 6, 'Nenhum usuario cadastrado.');
+}
+
+function nmChatbotScopedValue(row, selector) {
+    return row.querySelector(selector)?.value || '';
+}
+
+function nmChatbotPendingRows(selector) {
+    return Array.from(document.querySelectorAll(selector));
+}
+
+function nmChatbotClonePendingRow(btn, sectionSelector, tbodyId, templateId, templateClass, pendingClass, focusSelector, missingMessage) {
+    const section = btn.closest(sectionSelector) || document.querySelector(sectionSelector);
+    const tbody = section?.querySelector('#' + tbodyId) || document.getElementById(tbodyId);
+    const template = tbody?.querySelector('#' + templateId) || document.getElementById(templateId);
+    if (!tbody || !template) {
+        alert(missingMessage);
+        return;
+    }
+
+    const row = template.cloneNode(true);
+    row.removeAttribute('id');
+    row.hidden = false;
+    row.style.display = '';
+    row.classList.remove(templateClass);
+    row.classList.add('tab_bg_1', 'nm-input-row', pendingClass);
+    row.dataset.chatbotId = nmVal('nm-chatbot-id') || '0';
+    row.dataset.companiesId = btn.dataset.companiesId || nmGetChatbotCompaniesId(btn);
+
+    row.querySelectorAll('input').forEach(input => {
+        input.value = '';
+        input.removeAttribute('id');
+        input.removeAttribute('name');
+    });
+    row.querySelectorAll('select').forEach(select => {
+        select.selectedIndex = 0;
+        select.removeAttribute('id');
+        select.removeAttribute('name');
+    });
+
+    tbody.querySelector('tr[id$="-empty"]')?.remove();
+    tbody.insertBefore(row, template);
+    row.querySelector(focusSelector)?.focus();
+}
+
+function nmChatbotBlankRow(row, selectors) {
+    return selectors.every(selector => nmChatbotScopedValue(row, selector).trim() === '');
+}
+
+function nmMcRowsReady(rows) {
+    const readyRows = [];
+    for (const row of rows) {
+        if (nmChatbotBlankRow(row, ['.nm-mc-system_name', '.nm-mc-activation_date', '.nm-mc-authenticated_number', '.nm-mc-homologation_type', '.nm-mc-access_link', '.nm-mc-login', '.nm-mc-password'])) {
+            row.remove();
+            nmChatbotSyncEmpty('nm-mc-tbody', '.nm-mc-saved-row, .nm-mc-pending-row', 'nm-mc-empty', 8, 'Nenhuma comunicacao em massa cadastrada.');
+            continue;
+        }
+        if (!nmChatbotScopedValue(row, '.nm-mc-system_name').trim()) {
+            alert('Informe o nome do sistema.');
+            row.querySelector('.nm-mc-system_name')?.focus();
+            return null;
+        }
+        readyRows.push(row);
+    }
+    return readyRows;
+}
+
+function nmWaRowsReady(rows) {
+    const readyRows = [];
+    for (const row of rows) {
+        if (nmChatbotBlankRow(row, ['.nm-wa-whatsapp_number', '.nm-wa-restriction_date', '.nm-wa-restriction_time', '.nm-wa-end_date'])) {
+            row.remove();
+            nmChatbotSyncEmpty('nm-wa-tbody', '.nm-wa-saved-row, .nm-wa-pending-row', 'nm-wa-empty', 5, 'Nenhum numero restrito cadastrado.');
+            continue;
+        }
+        if (!nmChatbotScopedValue(row, '.nm-wa-whatsapp_number').trim()) {
+            alert('Informe o numero WhatsApp.');
+            row.querySelector('.nm-wa-whatsapp_number')?.focus();
+            return null;
+        }
+        readyRows.push(row);
+    }
+    return readyRows;
+}
+
+function nmCuRowsReady(rows) {
+    const readyRows = [];
+    for (const row of rows) {
+        if (nmChatbotBlankRow(row, ['.nm-cu-user_name', '.nm-cu-login', '.nm-cu-password', '.nm-cu-email'])) {
+            row.remove();
+            nmChatbotSyncEmpty('nm-cu-tbody', '.nm-cu-saved-row, .nm-cu-pending-row', 'nm-cu-empty', 6, 'Nenhum usuario cadastrado.');
+            continue;
+        }
+        if (!nmChatbotScopedValue(row, '.nm-cu-user_name').trim() && !nmChatbotScopedValue(row, '.nm-cu-login').trim()) {
+            alert('Informe o nome ou login do usuario.');
+            row.querySelector('.nm-cu-user_name')?.focus();
+            return null;
+        }
+        readyRows.push(row);
+    }
+    return readyRows;
+}
+
+function nmChatbotMainPayload(btn) {
+    return {
+        action: nmVal('nm-chatbot-action') || 'add_chatbot',
+        id: nmVal('nm-chatbot-id') || '0',
+        companies_id: nmVal('nm-chatbot-companies-id') || nmGetChatbotCompaniesId(btn),
+        model: nmVal('nm-chatbot-model'),
+        chatbot_registration_id: nmVal('nm-chatbot-registration_id'),
+        activation_date: nmVal('nm-chatbot-activation_date'),
+        whatsapp_number: nmVal('nm-chatbot-whatsapp'),
+        access_link: nmVal('nm-chatbot-access_link'),
+        plan: nmVal('nm-chatbot-plan'),
+        users_count: nmVal('nm-chatbot-users_count'),
+        supervisors_count: nmVal('nm-chatbot-supervisors_count'),
+        admins_count: nmVal('nm-chatbot-admins_count'),
+        admin_login: nmVal('nm-chatbot-admin_login'),
+        admin_password: nmVal('nm-chatbot-admin_password'),
+        superadmin_login: nmVal('nm-chatbot-superadmin_login'),
+        superadmin_password: nmVal('nm-chatbot-superadmin_password'),
+        manager_name: nmVal('nm-chatbot-manager_name'),
+        manager_contact: nmVal('nm-chatbot-manager_contact'),
+        manager_email: nmVal('nm-chatbot-manager_email'),
+        social_networks: nmVal('nm-chatbot-social_networks'),
+        comment: nmVal('nm-chatbot-comment'),
+    };
+}
+
+function nmMcPayload(row, chatbotId, companiesId) {
+    return {
+        action: 'add_mass_comm',
+        chatbot_id: chatbotId,
+        companies_id: companiesId,
+        system_name: nmChatbotScopedValue(row, '.nm-mc-system_name').trim(),
+        activation_date: nmChatbotScopedValue(row, '.nm-mc-activation_date'),
+        authenticated_number: nmChatbotScopedValue(row, '.nm-mc-authenticated_number'),
+        homologation_type: nmChatbotScopedValue(row, '.nm-mc-homologation_type'),
+        access_link: nmChatbotScopedValue(row, '.nm-mc-access_link'),
+        login: nmChatbotScopedValue(row, '.nm-mc-login'),
+        password: nmChatbotScopedValue(row, '.nm-mc-password'),
+    };
+}
+
+function nmWaPayload(row, chatbotId, companiesId) {
+    return {
+        action: 'add_wa_restriction',
+        chatbot_id: chatbotId,
+        companies_id: companiesId,
+        whatsapp_number: nmChatbotScopedValue(row, '.nm-wa-whatsapp_number').trim(),
+        restriction_date: nmChatbotScopedValue(row, '.nm-wa-restriction_date'),
+        restriction_time: nmChatbotScopedValue(row, '.nm-wa-restriction_time'),
+        end_date: nmChatbotScopedValue(row, '.nm-wa-end_date'),
+    };
+}
+
+function nmCuPayload(row, chatbotId, companiesId) {
+    return {
+        action: 'add_chatbot_user',
+        chatbot_id: chatbotId,
+        companies_id: companiesId,
+        user_name: nmChatbotScopedValue(row, '.nm-cu-user_name').trim(),
+        login: nmChatbotScopedValue(row, '.nm-cu-login'),
+        password: nmChatbotScopedValue(row, '.nm-cu-password'),
+        email: nmChatbotScopedValue(row, '.nm-cu-email'),
+        user_type: nmChatbotScopedValue(row, '.nm-cu-user_type') || 'usuario',
+    };
+}
+
+function nmChatbotDeleteButton(action, id, rowId, companiesId, actionUrl, confirmMsg) {
+    if (!nmChatbotCanDelete(document.querySelector('.nm-chatbot-tab'))) return '';
+    return `<button type="button" class="btn btn-sm btn-icon nm-chatbot-del" data-action="${action}" data-id="${id}" data-row="${rowId}" data-companies-id="${companiesId}" data-url="${nmEsc(actionUrl)}" data-confirm="${confirmMsg}" title="Remover"><i class="ti ti-trash text-danger"></i></button>`;
+}
+
+function nmMcSavedRow(row, id, actionUrl, companiesId) {
+    const payload = nmMcPayload(row, id, companiesId);
+    const rowId = 'nm-mc-row-' + id;
+    const link = payload.access_link ? `<a href="${nmEsc(payload.access_link)}" target="_blank" rel="noopener"><i class="ti ti-external-link"></i></a>` : '';
+    return `<tr class="tab_bg_1 nm-mc-saved-row" id="${rowId}"><td>${nmEsc(payload.system_name)}</td><td>${nmEsc(payload.activation_date)}</td><td>${nmEsc(payload.authenticated_number)}</td><td>${nmEsc(payload.homologation_type)}</td><td>${link}</td><td>${nmEsc(payload.login)}</td><td>******</td><td class="text-end">${nmChatbotDeleteButton('delete_mass_comm', id, rowId, companiesId, actionUrl, 'Remover comunicacao em massa?')}</td></tr>`;
+}
+
+function nmWaSavedRow(row, id, actionUrl, companiesId) {
+    const payload = nmWaPayload(row, id, companiesId);
+    const rowId = 'nm-wa-row-' + id;
+    return `<tr class="tab_bg_1 nm-wa-saved-row" id="${rowId}"><td>${nmEsc(payload.whatsapp_number)}</td><td>${nmEsc(payload.restriction_date)}</td><td>${nmEsc(payload.restriction_time)}</td><td>${nmEsc(payload.end_date)}</td><td class="text-end">${nmChatbotDeleteButton('delete_wa_restriction', id, rowId, companiesId, actionUrl, 'Remover numero restrito?')}</td></tr>`;
+}
+
+function nmCuSavedRow(row, id, actionUrl, companiesId) {
+    const payload = nmCuPayload(row, id, companiesId);
+    const rowId = 'nm-cu-row-' + id;
+    return `<tr class="tab_bg_1 nm-cu-saved-row" id="${rowId}"><td>${nmEsc(payload.user_name)}</td><td>${nmEsc(payload.login)}</td><td>******</td><td>${nmEsc(payload.email)}</td><td>${nmEsc(payload.user_type)}</td><td class="text-end">${nmChatbotDeleteButton('delete_chatbot_user', id, rowId, companiesId, actionUrl, 'Remover usuario?')}</td></tr>`;
+}
+
+async function nmChatbotSavePendingRows(rows, actionUrl, chatbotId, companiesId, payloadBuilder, rowBuilder, counterId, syncArgs, errorMessage) {
+    if (!rows.length) return 0;
+    if (chatbotId <= 0) throw new Error('Salve o Chatbot primeiro.');
+
+    let saved = 0;
+    for (const row of rows) {
+        row.querySelectorAll('input, select, button').forEach(el => { el.disabled = true; });
+        const result = await nmPost(actionUrl, payloadBuilder(row, chatbotId, companiesId));
+        if (!result.success) {
+            row.querySelectorAll('input, select, button').forEach(el => { el.disabled = false; });
+            throw new Error(result.error || errorMessage);
+        }
+        const id = result.id;
+        row.outerHTML = rowBuilder(row, id, actionUrl, companiesId);
+        nmCounterIncrement(counterId);
+        nmChatbotSyncEmpty(...syncArgs);
+        saved += 1;
+    }
+    return saved;
+}
+
+function nmEnsureChatbotDelegated() {
+    if (document[NM_CHATBOT_BOUND_KEY]) return;
+    document[NM_CHATBOT_BOUND_KEY] = true;
+
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('#nm-mc-add-btn');
+        if (!btn) return;
+        nmChatbotClonePendingRow(btn, '#nm-mc-section', 'nm-mc-tbody', 'nm-mc-add-row', 'nm-mc-input-template', 'nm-mc-pending-row', '.nm-mc-system_name', 'Nao foi possivel localizar a linha de comunicacao em massa.');
+    });
+
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('#nm-wa-add-btn');
+        if (!btn) return;
+        nmChatbotClonePendingRow(btn, '#nm-wa-section', 'nm-wa-tbody', 'nm-wa-add-row', 'nm-wa-input-template', 'nm-wa-pending-row', '.nm-wa-whatsapp_number', 'Nao foi possivel localizar a linha de numero restrito.');
+    });
+
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('#nm-cu-add-btn');
+        if (!btn) return;
+        nmChatbotClonePendingRow(btn, '#nm-cu-section', 'nm-cu-tbody', 'nm-cu-add-row', 'nm-cu-input-template', 'nm-cu-pending-row', '.nm-cu-user_name', 'Nao foi possivel localizar a linha de usuario.');
+    });
+
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('.nm-row-del-btn');
+        if (!btn) return;
+        const row = btn.closest('.nm-mc-pending-row, .nm-wa-pending-row, .nm-cu-pending-row');
+        if (!row) return;
+        const isMc = row.classList.contains('nm-mc-pending-row');
+        const isWa = row.classList.contains('nm-wa-pending-row');
+        row.remove();
+        if (isMc) nmChatbotSyncEmpty('nm-mc-tbody', '.nm-mc-saved-row, .nm-mc-pending-row', 'nm-mc-empty', 8, 'Nenhuma comunicacao em massa cadastrada.');
+        else if (isWa) nmChatbotSyncEmpty('nm-wa-tbody', '.nm-wa-saved-row, .nm-wa-pending-row', 'nm-wa-empty', 5, 'Nenhum numero restrito cadastrado.');
+        else nmChatbotSyncEmpty('nm-cu-tbody', '.nm-cu-saved-row, .nm-cu-pending-row', 'nm-cu-empty', 6, 'Nenhum usuario cadastrado.');
+    });
+
+    document.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.nm-chatbot-del');
+        if (!btn) return;
+        if (!confirm(btn.dataset.confirm || 'Remover item?')) return;
+
+        const actionUrl = btn.dataset.url || nmGetChatbotActionUrl(btn);
+        const companiesId = btn.dataset.companiesId || nmGetChatbotCompaniesId(btn);
+        const rowId = btn.dataset.row;
+        const action = btn.dataset.action;
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="nm-spinner"></span>';
+
+        try {
+            const result = await nmPost(actionUrl, { action, id: btn.dataset.id, companies_id: companiesId });
+            if (!result.success) throw new Error(result.error || 'Erro ao remover');
+            document.getElementById(rowId)?.remove();
+            if (action === 'delete_mass_comm') {
+                nmCounterDecrement('nm-count-mc');
+                nmChatbotSyncEmpty('nm-mc-tbody', '.nm-mc-saved-row, .nm-mc-pending-row', 'nm-mc-empty', 8, 'Nenhuma comunicacao em massa cadastrada.');
+            } else if (action === 'delete_wa_restriction') {
+                nmCounterDecrement('nm-count-wa');
+                nmChatbotSyncEmpty('nm-wa-tbody', '.nm-wa-saved-row, .nm-wa-pending-row', 'nm-wa-empty', 5, 'Nenhum numero restrito cadastrado.');
+            } else if (action === 'delete_chatbot_user') {
+                nmCounterDecrement('nm-count-cu');
+                nmChatbotSyncEmpty('nm-cu-tbody', '.nm-cu-saved-row, .nm-cu-pending-row', 'nm-cu-empty', 6, 'Nenhum usuario cadastrado.');
+            }
+        } catch (error) {
+            console.error('[NM] Erro ao remover item do Chatbot:', error.message);
+            alert('Erro ao remover: ' + error.message);
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
+        }
+    });
+
+    document.addEventListener('click', async (e) => {
+        const btn = e.target.closest('#nm-chatbot-save');
+        if (!btn) return;
+
+        const pendingMcRows = nmMcRowsReady(nmChatbotPendingRows('#nm-mc-tbody .nm-mc-pending-row'));
+        if (pendingMcRows === null) return;
+        const pendingWaRows = nmWaRowsReady(nmChatbotPendingRows('#nm-wa-tbody .nm-wa-pending-row'));
+        if (pendingWaRows === null) return;
+        const pendingCuRows = nmCuRowsReady(nmChatbotPendingRows('#nm-cu-tbody .nm-cu-pending-row'));
+        if (pendingCuRows === null) return;
+
+        const actionUrl = btn.dataset.actionUrl || nmGetChatbotActionUrl(btn);
+        const chatbotData = nmChatbotMainPayload(btn);
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="nm-spinner"></span> Salvando...';
+
+        try {
+            const result = await nmPost(actionUrl, chatbotData);
+            if (!result.success) throw new Error(result.error || 'Erro ao salvar chatbot');
+
+            const savedChatbotId = parseInt(result.id || chatbotData.id || '0', 10);
+            if (savedChatbotId > 0) nmUpdateChatbotId(savedChatbotId);
+
+            const companiesId = chatbotData.companies_id;
+            const savedMc = await nmChatbotSavePendingRows(pendingMcRows, actionUrl, savedChatbotId, companiesId, nmMcPayload, nmMcSavedRow, 'nm-count-mc', ['nm-mc-tbody', '.nm-mc-saved-row, .nm-mc-pending-row', 'nm-mc-empty', 8, 'Nenhuma comunicacao em massa cadastrada.'], 'Erro ao salvar comunicacao em massa');
+            const savedWa = await nmChatbotSavePendingRows(pendingWaRows, actionUrl, savedChatbotId, companiesId, nmWaPayload, nmWaSavedRow, 'nm-count-wa', ['nm-wa-tbody', '.nm-wa-saved-row, .nm-wa-pending-row', 'nm-wa-empty', 5, 'Nenhum numero restrito cadastrado.'], 'Erro ao salvar numero restrito');
+            const savedCu = await nmChatbotSavePendingRows(pendingCuRows, actionUrl, savedChatbotId, companiesId, nmCuPayload, nmCuSavedRow, 'nm-count-cu', ['nm-cu-tbody', '.nm-cu-saved-row, .nm-cu-pending-row', 'nm-cu-empty', 6, 'Nenhum usuario cadastrado.'], 'Erro ao salvar usuario');
+
+            const savedParts = [];
+            if (savedMc > 0) savedParts.push(`${savedMc} comunicacao${savedMc > 1 ? 'es' : ''}`);
+            if (savedWa > 0) savedParts.push(`${savedWa} restricao${savedWa > 1 ? 'es' : ''}`);
+            if (savedCu > 0) savedParts.push(`${savedCu} usuario${savedCu > 1 ? 's' : ''}`);
+
+            btn.innerHTML = savedParts.length ? `<i class="ti ti-check"></i> Salvo! ${savedParts.join(', ')}` : '<i class="ti ti-check"></i> Salvo!';
+            btn.classList.replace('btn-primary', 'btn-success');
+            setTimeout(() => {
+                btn.innerHTML = originalHtml;
+                btn.classList.replace('btn-success', 'btn-primary');
+                btn.disabled = false;
+            }, 2000);
+        } catch (error) {
+            console.error('[NM] Erro ao salvar Chatbot:', error.message);
+            alert('Erro ao salvar Chatbot: ' + error.message);
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
+        }
+    });
+}
+
+// ---------------------------------------------------------------------------
 // MutationObserver — reinicia abas quando GLPI injeta HTML via AJAX
 // ---------------------------------------------------------------------------
 
 (function nmWatchForIpbxTab() {
     nmEnsureIpbxDelegated();
+    nmEnsureChatbotDelegated();
     nmInitIpbxTabs();
+    nmChatbotSyncAllEmptyStates();
 
     const observer = new MutationObserver(() => {
         if (document.querySelector('.nm-ipbx-tab')) nmEnsureIpbxDelegated();
+        if (document.querySelector('.nm-chatbot-tab')) {
+            nmEnsureChatbotDelegated();
+            nmChatbotSyncAllEmptyStates();
+        }
         if (document.querySelector('.nm-tab-bar'))  nmInitIpbxTabs();
     });
 

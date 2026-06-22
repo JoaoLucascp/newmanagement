@@ -1,318 +1,265 @@
 {#
   templates/chatbot/tab.html.twig
   Aba principal do Chatbot dentro da ficha de Empresa.
-  Variáveis recebidas de Chatbot::showTabForCompany():
-    f              — array com todos os campos do chatbot
-    chatbot_id     — int (0 = novo)
-    companies_id   — int
-    csrf           — string
-    action_url     — string (URL do endpoint AJAX)
-    form_action    — 'add_chatbot' | 'update_chatbot'
-    can_write      — bool
-    can_delete     — bool
-    mass_comm      — array de rows
-    wa_restrictions — array de rows
-    users          — array de rows
-
-  Fix [A1] — SEGURANÇA:
-    Os campos admin_password e superadmin_password NUNCA recebem value.
-    O template usa f.has_admin_password / f.has_superadmin_password (bool)
-    apenas para exibir o placeholder "••••••" quando uma senha está salva,
-    indicando ao usuário que existe senha sem revelar seu valor.
-    Preencher o campo substitui a senha; deixar vazio mantém a senha atual.
 #}
-<div class="nm-chatbot-tab"
+<div class="nm-chatbot-tab nm-chatbot-page"
      data-action-url="{{ action_url|e('html_attr') }}"
-     data-companies-id="{{ companies_id }}">
+     data-companies-id="{{ companies_id }}"
+     data-can-delete="{{ can_delete ? '1' : '0' }}">
 
-  {# Campos ocultos de controle #}
-  <div id="nm-chatbot-form-wrapper">
-    <input type="hidden" id="nm-chatbot-csrf"         name="_glpi_csrf_token" value="{{ csrf|e }}">
-    <input type="hidden" id="nm-chatbot-action"        value="{{ form_action }}">
-    <input type="hidden" id="nm-chatbot-id"            value="{{ chatbot_id }}">
+  <div id="nm-chatbot-form-wrapper" class="nm-chatbot-form-panel">
+    <input type="hidden" id="nm-chatbot-csrf" name="_glpi_csrf_token" value="{{ csrf|e }}">
+    <input type="hidden" id="nm-chatbot-action" value="{{ form_action }}">
+    <input type="hidden" id="nm-chatbot-id" value="{{ chatbot_id }}">
     <input type="hidden" id="nm-chatbot-companies-id" value="{{ companies_id }}">
 
-    <table class="tab_cadre_fixe nm-table">
+    <div class="nm-section-heading">
+      <div class="nm-section-title">
+        <i class="ti ti-robot" aria-hidden="true"></i>
+        <span>{{ __('Chatbot', 'newmanagement') }}</span>
+      </div>
+      {% if chatbot_id > 0 %}
+        <span class="badge bg-secondary-lt">ID {{ chatbot_id }}</span>
+      {% endif %}
+    </div>
 
-      <tr class="tab_bg_1">
-        <td>{{ __('Modelo do Chatbot', 'newmanagement') }}</td>
-        <td><input type="text" id="nm-chatbot-model"
-             value="{{ f.model|e('html_attr') }}"
-             class="form-control"
-             {{ not can_write ? 'readonly disabled' }}
-        ></td>
-        <td>{{ __('ID de Cadastro', 'newmanagement') }}</td>
-        <td><input type="text" id="nm-chatbot-registration_id"
-             value="{{ f.chatbot_registration_id|e('html_attr') }}"
-             class="form-control"
-             {{ not can_write ? 'readonly disabled' }}
-        ></td>
-      </tr>
+    <div class="nm-chatbot-grid">
+      <div class="nm-field nm-chatbot-col-4">
+        <label class="form-label" for="nm-chatbot-model">{{ __('Modelo do Chatbot', 'newmanagement') }}</label>
+        <input type="text" id="nm-chatbot-model"
+               value="{{ f.model|e('html_attr') }}"
+               class="form-control"
+               {{ not can_write ? 'readonly disabled' }}>
+      </div>
 
-      <tr class="tab_bg_1">
-        <td>{{ __('Data de Ativação', 'newmanagement') }}</td>
-        <td><input type="date" id="nm-chatbot-activation_date"
-             value="{{ f.activation_date|e('html_attr') }}"
-             class="form-control"
-             {{ not can_write ? 'readonly disabled' }}
-        ></td>
-        <td>{{ __('Número WhatsApp', 'newmanagement') }}</td>
-        <td><input type="text" id="nm-chatbot-whatsapp"
-             value="{{ f.whatsapp_number|e('html_attr') }}"
-             class="form-control"
-             placeholder="Ex: 5511999999999"
-             {{ not can_write ? 'readonly disabled' }}
-        ></td>
-      </tr>
+      <div class="nm-field nm-chatbot-col-4">
+        <label class="form-label" for="nm-chatbot-registration_id">{{ __('ID de Cadastro', 'newmanagement') }}</label>
+        <input type="text" id="nm-chatbot-registration_id"
+               value="{{ f.chatbot_registration_id|e('html_attr') }}"
+               class="form-control"
+               {{ not can_write ? 'readonly disabled' }}>
+      </div>
 
-      <tr class="tab_bg_1">
-        <td>{{ __('Link de Acesso', 'newmanagement') }}</td>
-        <td><input type="url" id="nm-chatbot-access_link"
-             value="{{ f.access_link|e('html_attr') }}"
-             class="form-control"
-             placeholder="https://"
-             {{ not can_write ? 'readonly disabled' }}
-        ></td>
-        <td>{{ __('Plano Contratado', 'newmanagement') }}</td>
-        <td><input type="text" id="nm-chatbot-plan"
-             value="{{ f.plan|e('html_attr') }}"
-             class="form-control"
-             {{ not can_write ? 'readonly disabled' }}
-        ></td>
-      </tr>
+      <div class="nm-field nm-chatbot-col-4">
+        <label class="form-label" for="nm-chatbot-activation_date">{{ __('Data de Ativação', 'newmanagement') }}</label>
+        <input type="date" id="nm-chatbot-activation_date"
+               value="{{ f.activation_date|e('html_attr') }}"
+               class="form-control"
+               {{ not can_write ? 'readonly disabled' }}>
+      </div>
 
-      <tr class="tab_bg_1">
-        <td>{{ __('Qtd. Usuários', 'newmanagement') }}</td>
-        <td><input type="number" id="nm-chatbot-users_count"
-             value="{{ f.users_count|e('html_attr') }}"
-             class="form-control" min="0"
-             {{ not can_write ? 'readonly disabled' }}
-        ></td>
-        <td>{{ __('Qtd. Supervisores', 'newmanagement') }}</td>
-        <td><input type="number" id="nm-chatbot-supervisors_count"
-             value="{{ f.supervisors_count|e('html_attr') }}"
-             class="form-control" min="0"
-             {{ not can_write ? 'readonly disabled' }}
-        ></td>
-      </tr>
+      <div class="nm-field nm-chatbot-col-4">
+        <label class="form-label" for="nm-chatbot-whatsapp">{{ __('Número WhatsApp', 'newmanagement') }}</label>
+        <input type="text" id="nm-chatbot-whatsapp"
+               value="{{ f.whatsapp_number|e('html_attr') }}"
+               class="form-control"
+               placeholder="Ex: 5511999999999"
+               {{ not can_write ? 'readonly disabled' }}>
+      </div>
 
-      <tr class="tab_bg_1">
-        <td>{{ __('Qtd. Administradores', 'newmanagement') }}</td>
-        <td><input type="number" id="nm-chatbot-admins_count"
-             value="{{ f.admins_count|e('html_attr') }}"
-             class="form-control" min="0"
-             {{ not can_write ? 'readonly disabled' }}
-        ></td>
-        <td>{{ __('Redes Sociais Ativas', 'newmanagement') }}</td>
-        <td><input type="text" id="nm-chatbot-social_networks"
-             value="{{ f.social_networks|e('html_attr') }}"
-             class="form-control"
-             placeholder="Ex: WhatsApp, Instagram, Telegram"
-             {{ not can_write ? 'readonly disabled' }}
-        ></td>
-      </tr>
+      <div class="nm-field nm-chatbot-col-4">
+        <label class="form-label" for="nm-chatbot-access_link">{{ __('Link de Acesso', 'newmanagement') }}</label>
+        <input type="url" id="nm-chatbot-access_link"
+               value="{{ f.access_link|e('html_attr') }}"
+               class="form-control"
+               placeholder="https://"
+               {{ not can_write ? 'readonly disabled' }}>
+      </div>
 
-      <tr class="noHover">
-        <th colspan="4">{{ __('Credenciais de Administrador', 'newmanagement') }}</th>
-      </tr>
+      <div class="nm-field nm-chatbot-col-4">
+        <label class="form-label" for="nm-chatbot-plan">{{ __('Plano Contratado', 'newmanagement') }}</label>
+        <input type="text" id="nm-chatbot-plan"
+               value="{{ f.plan|e('html_attr') }}"
+               class="form-control"
+               {{ not can_write ? 'readonly disabled' }}>
+      </div>
 
-      <tr class="tab_bg_1">
-        <td>{{ __('Login Admin', 'newmanagement') }}</td>
-        <td><input type="text" id="nm-chatbot-admin_login"
-             value="{{ f.admin_login|e('html_attr') }}"
-             class="form-control" autocomplete="off"
-             {{ not can_write ? 'readonly disabled' }}
-        ></td>
+      <div class="nm-field nm-chatbot-col-3">
+        <label class="form-label" for="nm-chatbot-users_count">{{ __('Qtd. Usuários', 'newmanagement') }}</label>
+        <input type="number" id="nm-chatbot-users_count"
+               value="{{ f.users_count|e('html_attr') }}"
+               class="form-control" min="0"
+               {{ not can_write ? 'readonly disabled' }}>
+      </div>
 
-        {#
-          Fix [A1] — CAMPO DE SENHA:
-          - value é SEMPRE vazio: a senha nunca sai do servidor.
-          - placeholder "••••••" indica que uma senha está salva,
-            sem revelar nenhum caractere do valor real.
-          - Label "Nova Senha Admin" deixa claro que só é necessário
-            preencher para trocar; deixar vazio mantém a senha atual.
-          - O backend (ajax/chatbot_sub.php) só sobrescreve a senha
-            se o campo vier preenchido no POST.
-        #}
-        <td>
-          {% if chatbot_id > 0 %}
-            {{ __('Nova Senha Admin', 'newmanagement') }}
-            <small class="text-muted d-block">
-              {{ __('Deixe em branco para manter a senha atual', 'newmanagement') }}
-            </small>
-          {% else %}
-            {{ __('Senha Admin', 'newmanagement') }}
+      <div class="nm-field nm-chatbot-col-3">
+        <label class="form-label" for="nm-chatbot-supervisors_count">{{ __('Qtd. Supervisores', 'newmanagement') }}</label>
+        <input type="number" id="nm-chatbot-supervisors_count"
+               value="{{ f.supervisors_count|e('html_attr') }}"
+               class="form-control" min="0"
+               {{ not can_write ? 'readonly disabled' }}>
+      </div>
+
+      <div class="nm-field nm-chatbot-col-3">
+        <label class="form-label" for="nm-chatbot-admins_count">{{ __('Qtd. Administradores', 'newmanagement') }}</label>
+        <input type="number" id="nm-chatbot-admins_count"
+               value="{{ f.admins_count|e('html_attr') }}"
+               class="form-control" min="0"
+               {{ not can_write ? 'readonly disabled' }}>
+      </div>
+
+      <div class="nm-field nm-chatbot-col-3">
+        <label class="form-label" for="nm-chatbot-social_networks">{{ __('Redes Sociais Ativas', 'newmanagement') }}</label>
+        <input type="text" id="nm-chatbot-social_networks"
+               value="{{ f.social_networks|e('html_attr') }}"
+               class="form-control"
+               placeholder="Ex: WhatsApp, Instagram, Telegram"
+               {{ not can_write ? 'readonly disabled' }}>
+      </div>
+
+      <div class="nm-chatbot-grid-heading">
+        <i class="ti ti-key" aria-hidden="true"></i>
+        <span>{{ __('Credenciais de Administrador', 'newmanagement') }}</span>
+      </div>
+
+      <div class="nm-field nm-chatbot-col-3">
+        <label class="form-label" for="nm-chatbot-admin_login">{{ __('Login Admin', 'newmanagement') }}</label>
+        <input type="text" id="nm-chatbot-admin_login"
+               value="{{ f.admin_login|e('html_attr') }}"
+               class="form-control" autocomplete="off"
+               {{ not can_write ? 'readonly disabled' }}>
+      </div>
+
+      <div class="nm-field nm-chatbot-col-3">
+        <label class="form-label" for="nm-chatbot-admin_password">
+          {{ chatbot_id > 0 ? __('Nova Senha Admin', 'newmanagement') : __('Senha Admin', 'newmanagement') }}
+        </label>
+        <div class="input-group nm-password-group">
+          <input type="password" id="nm-chatbot-admin_password"
+                 class="form-control" autocomplete="new-password"
+                 value=""
+                 placeholder="{{ f.has_admin_password ? '******' : '' }}"
+                 {{ not can_write ? 'readonly disabled' }}>
+          {% if can_write %}
+            <button type="button" class="btn btn-icon nm-btn-eye"
+                    data-target="nm-chatbot-admin_password"
+                    title="{{ __('Mostrar ou ocultar senha', 'newmanagement') }}">
+              <i class="ti ti-eye"></i>
+            </button>
           {% endif %}
-        </td>
-        <td>
-          <div class="input-group">
-            <input type="password"
-                   id="nm-chatbot-admin_password"
-                   class="form-control"
-                   autocomplete="new-password"
-                   value=""
-                   placeholder="{{ f.has_admin_password ? '••••••' : '' }}"
-                   {{ not can_write ? 'readonly disabled' }}
-            >
-            {% if can_write %}
-              <button type="button" class="btn btn-sm btn-icon nm-btn-eye"
-                      data-target="nm-chatbot-admin_password">
-                <i class="ti ti-eye"></i>
-              </button>
-            {% endif %}
-          </div>
-        </td>
-      </tr>
+        </div>
+      </div>
 
-      <tr class="tab_bg_1">
-        <td>{{ __('Login Super-Admin', 'newmanagement') }}</td>
-        <td><input type="text" id="nm-chatbot-superadmin_login"
-             value="{{ f.superadmin_login|e('html_attr') }}"
-             class="form-control" autocomplete="off"
-             {{ not can_write ? 'readonly disabled' }}
-        ></td>
+      <div class="nm-field nm-chatbot-col-3">
+        <label class="form-label" for="nm-chatbot-superadmin_login">{{ __('Login Super-Admin', 'newmanagement') }}</label>
+        <input type="text" id="nm-chatbot-superadmin_login"
+               value="{{ f.superadmin_login|e('html_attr') }}"
+               class="form-control" autocomplete="off"
+               {{ not can_write ? 'readonly disabled' }}>
+      </div>
 
-        {#
-          Fix [A1] — mesmo padrão do campo admin_password acima.
-        #}
-        <td>
-          {% if chatbot_id > 0 %}
-            {{ __('Nova Senha Super-Admin', 'newmanagement') }}
-            <small class="text-muted d-block">
-              {{ __('Deixe em branco para manter a senha atual', 'newmanagement') }}
-            </small>
-          {% else %}
-            {{ __('Senha Super-Admin', 'newmanagement') }}
+      <div class="nm-field nm-chatbot-col-3">
+        <label class="form-label" for="nm-chatbot-superadmin_password">
+          {{ chatbot_id > 0 ? __('Nova Senha Super-Admin', 'newmanagement') : __('Senha Super-Admin', 'newmanagement') }}
+        </label>
+        <div class="input-group nm-password-group">
+          <input type="password" id="nm-chatbot-superadmin_password"
+                 class="form-control" autocomplete="new-password"
+                 value=""
+                 placeholder="{{ f.has_superadmin_password ? '******' : '' }}"
+                 {{ not can_write ? 'readonly disabled' }}>
+          {% if can_write %}
+            <button type="button" class="btn btn-icon nm-btn-eye"
+                    data-target="nm-chatbot-superadmin_password"
+                    title="{{ __('Mostrar ou ocultar senha', 'newmanagement') }}">
+              <i class="ti ti-eye"></i>
+            </button>
           {% endif %}
-        </td>
-        <td>
-          <div class="input-group">
-            <input type="password"
-                   id="nm-chatbot-superadmin_password"
-                   class="form-control"
-                   autocomplete="new-password"
-                   value=""
-                   placeholder="{{ f.has_superadmin_password ? '••••••' : '' }}"
-                   {{ not can_write ? 'readonly disabled' }}
-            >
-            {% if can_write %}
-              <button type="button" class="btn btn-sm btn-icon nm-btn-eye"
-                      data-target="nm-chatbot-superadmin_password">
-                <i class="ti ti-eye"></i>
-              </button>
-            {% endif %}
-          </div>
-        </td>
-      </tr>
+        </div>
+      </div>
 
-      <tr class="noHover">
-        <th colspan="4">{{ __('Responsável pelo Chatbot', 'newmanagement') }}</th>
-      </tr>
+      <div class="nm-chatbot-grid-heading">
+        <i class="ti ti-user-check" aria-hidden="true"></i>
+        <span>{{ __('Responsável pelo Chatbot', 'newmanagement') }}</span>
+      </div>
 
-      <tr class="tab_bg_1">
-        <td>{{ __('Nome do Responsável', 'newmanagement') }}</td>
-        <td><input type="text" id="nm-chatbot-manager_name"
-             value="{{ f.manager_name|e('html_attr') }}"
-             class="form-control"
-             {{ not can_write ? 'readonly disabled' }}
-        ></td>
-        <td>{{ __('Contato do Responsável', 'newmanagement') }}</td>
-        <td><input type="text" id="nm-chatbot-manager_contact"
-             value="{{ f.manager_contact|e('html_attr') }}"
-             class="form-control"
-             placeholder="(00) 00000-0000"
-             {{ not can_write ? 'readonly disabled' }}
-        ></td>
-      </tr>
+      <div class="nm-field nm-chatbot-col-4">
+        <label class="form-label" for="nm-chatbot-manager_name">{{ __('Nome do Responsável', 'newmanagement') }}</label>
+        <input type="text" id="nm-chatbot-manager_name"
+               value="{{ f.manager_name|e('html_attr') }}"
+               class="form-control"
+               {{ not can_write ? 'readonly disabled' }}>
+      </div>
 
-      <tr class="tab_bg_1">
-        <td>{{ __('E-mail do Responsável', 'newmanagement') }}</td>
-        <td colspan="3">
-          <input type="email" id="nm-chatbot-manager_email"
-                 value="{{ f.manager_email|e('html_attr') }}"
-                 class="form-control"
-                 {{ not can_write ? 'readonly disabled' }}
-          >
-        </td>
-      </tr>
+      <div class="nm-field nm-chatbot-col-4">
+        <label class="form-label" for="nm-chatbot-manager_contact">{{ __('Contato do Responsável', 'newmanagement') }}</label>
+        <input type="text" id="nm-chatbot-manager_contact"
+               value="{{ f.manager_contact|e('html_attr') }}"
+               class="form-control"
+               placeholder="(00) 00000-0000"
+               {{ not can_write ? 'readonly disabled' }}>
+      </div>
 
-      <tr class="tab_bg_1">
-        <td>{{ __('Comentário', 'newmanagement') }}</td>
-        <td colspan="3">
-          <textarea id="nm-chatbot-comment" class="form-control" rows="2"
-                    {{ not can_write ? 'readonly disabled' }}
-          >{{ f.comment|e }}</textarea>
-        </td>
-      </tr>
+      <div class="nm-field nm-chatbot-col-4">
+        <label class="form-label" for="nm-chatbot-manager_email">{{ __('E-mail do Responsável', 'newmanagement') }}</label>
+        <input type="email" id="nm-chatbot-manager_email"
+               value="{{ f.manager_email|e('html_attr') }}"
+               class="form-control"
+               {{ not can_write ? 'readonly disabled' }}>
+      </div>
 
-    </table>
-  </div>{# /#nm-chatbot-form-wrapper #}
+      <div class="nm-field nm-chatbot-col-full">
+        <label class="form-label" for="nm-chatbot-comment">{{ __('Comentário', 'newmanagement') }}</label>
+        <textarea id="nm-chatbot-comment" class="form-control" rows="2"
+                  {{ not can_write ? 'readonly disabled' }}>{{ f.comment|e }}</textarea>
+      </div>
+    </div>
+  </div>
 
-  {# Sub-seção: Comunicação em Massa #}
-  <div class="nm-subsection">
-    <div class="d-flex align-items-center mb-2">
-      <i class="ti ti-send me-2 fs-5 text-muted"></i>
-      <span class="fw-bold text-muted text-uppercase"
-            style="font-size:0.75rem;letter-spacing:.05em">
-        Comunicação em Massa
-      </span>
+  <div class="nm-tabs-wrapper nm-chatbot-tabs nm-chatbot-related">
+    <div class="nm-tab-bar" role="tablist" aria-label="{{ __('Recursos do Chatbot', 'newmanagement') }}">
       <button type="button"
-              class="btn btn-sm btn-icon ms-auto nm-toggle-section"
-              data-target="nm-mc-tbody"
-              aria-expanded="true"
-              title="Recolher/Expandir">
-        <i class="ti ti-chevron-up"></i>
+              class="nm-tab active"
+              role="tab"
+              aria-selected="true"
+              aria-controls="nm-panel-mc"
+              id="nm-tab-mc"
+              data-panel="nm-panel-mc">
+        <i class="ti ti-send" aria-hidden="true"></i>
+        {{ __('Comunicação em Massa', 'newmanagement') }}
+        <span class="nm-tab-count" id="nm-count-mc">{{ mass_comm|length }}</span>
+      </button>
+
+      <button type="button"
+              class="nm-tab"
+              role="tab"
+              aria-selected="false"
+              aria-controls="nm-panel-wa"
+              id="nm-tab-wa"
+              data-panel="nm-panel-wa">
+        <i class="ti ti-ban" aria-hidden="true"></i>
+        {{ __('Números Restritos pela Meta', 'newmanagement') }}
+        <span class="nm-tab-count" id="nm-count-wa">{{ wa_restrictions|length }}</span>
+      </button>
+
+      <button type="button"
+              class="nm-tab"
+              role="tab"
+              aria-selected="false"
+              aria-controls="nm-panel-cu"
+              id="nm-tab-cu"
+              data-panel="nm-panel-cu">
+        <i class="ti ti-users" aria-hidden="true"></i>
+        {{ __('Usuários Cadastrados no Chatbot', 'newmanagement') }}
+        <span class="nm-tab-count" id="nm-count-cu">{{ users|length }}</span>
       </button>
     </div>
-    <div class="nm-subsection-body">
+
+    <div class="nm-tab-panel active" id="nm-panel-mc" role="tabpanel" aria-labelledby="nm-tab-mc">
       {% include '@newmanagement/chatbot/partials/mass_comm.html.twig' %}
     </div>
-  </div>
 
-  {# Sub-seção: Números Restritos pela Meta #}
-  <div class="nm-subsection">
-    <div class="d-flex align-items-center mb-2">
-      <i class="ti ti-ban me-2 fs-5 text-muted"></i>
-      <span class="fw-bold text-muted text-uppercase"
-            style="font-size:0.75rem;letter-spacing:.05em">
-        Números Restritos pela Meta
-      </span>
-      <button type="button"
-              class="btn btn-sm btn-icon ms-auto nm-toggle-section"
-              data-target="nm-wa-tbody"
-              aria-expanded="true"
-              title="Recolher/Expandir">
-        <i class="ti ti-chevron-up"></i>
-      </button>
-    </div>
-    <div class="nm-subsection-body">
+    <div class="nm-tab-panel" id="nm-panel-wa" role="tabpanel" aria-labelledby="nm-tab-wa" hidden>
       {% include '@newmanagement/chatbot/partials/wa_restrictions.html.twig' %}
     </div>
-  </div>
 
-  {# Sub-seção: Usuários Cadastrados #}
-  <div class="nm-subsection">
-    <div class="d-flex align-items-center mb-2">
-      <i class="ti ti-users me-2 fs-5 text-muted"></i>
-      <span class="fw-bold text-muted text-uppercase"
-            style="font-size:0.75rem;letter-spacing:.05em">
-        Usuários Cadastrados no Chatbot
-      </span>
-      <button type="button"
-              class="btn btn-sm btn-icon ms-auto nm-toggle-section"
-              data-target="nm-cu-tbody"
-              aria-expanded="true"
-              title="Recolher/Expandir">
-        <i class="ti ti-chevron-up"></i>
-      </button>
-    </div>
-    <div class="nm-subsection-body">
+    <div class="nm-tab-panel" id="nm-panel-cu" role="tabpanel" aria-labelledby="nm-tab-cu" hidden>
       {% include '@newmanagement/chatbot/partials/users.html.twig' %}
     </div>
   </div>
 
   {% if can_write %}
-    <div style="text-align:right;padding:var(--space-4,1rem) 0">
+    <div class="nm-chatbot-savebar">
       <button type="button" id="nm-chatbot-save"
               class="btn btn-primary"
               data-action-url="{{ action_url|e('html_attr') }}">
@@ -321,5 +268,4 @@
       </button>
     </div>
   {% endif %}
-
-</div>{# /.nm-chatbot-tab #}
+</div>

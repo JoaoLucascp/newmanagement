@@ -27,6 +27,11 @@ class Task extends \CommonDBTM
         return 'glpi_plugin_newmanagement_tasks';
     }
 
+    public static function getIcon(): string
+    {
+        return 'ti ti-checklist';
+    }
+
     public function defineTabs($options = []): array
     {
         $ong = [];

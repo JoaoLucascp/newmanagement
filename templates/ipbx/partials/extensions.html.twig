@@ -24,14 +24,38 @@
       </div>
       <span class="nm-related-meta">{{ ext_total }} {{ __('ramais', 'newmanagement') }}</span>
     </div>
-    {% if can_write and ipbx_id > 0 %}
-      <button type="button" id="nm-ext-add-btn"
-              class="btn btn-sm btn-outline-primary"
-              data-ipbx-id="{{ ipbx_id }}"
-              data-companies-id="{{ companies_id }}">
-        <i class="ti ti-plus"></i> {{ __('Adicionar', 'newmanagement') }}
-      </button>
-    {% endif %}
+    <div class="nm-related-actions">
+      {% if ipbx_id > 0 %}
+        {% if can_write %}
+          <input type="file" id="nm-ext-import-file" class="d-none" accept=".csv,text/csv">
+          <button type="button" id="nm-ext-import-btn"
+                  class="btn btn-sm btn-outline-secondary"
+                  data-ipbx-id="{{ ipbx_id }}"
+                  data-companies-id="{{ companies_id }}">
+            <i class="ti ti-upload"></i> {{ __('Importar CSV', 'newmanagement') }}
+          </button>
+          <button type="button" id="nm-ext-template-btn"
+                  class="btn btn-sm btn-outline-secondary">
+            <i class="ti ti-file-spreadsheet"></i> {{ __('Modelo CSV', 'newmanagement') }}
+          </button>
+        {% endif %}
+        <button type="button" id="nm-ext-export-btn"
+                class="btn btn-sm btn-outline-secondary"
+                data-export-url="{{ extension_export_url|e('html_attr') }}"
+                data-ipbx-id="{{ ipbx_id }}"
+                data-companies-id="{{ companies_id }}">
+          <i class="ti ti-download"></i> {{ __('Exportar CSV', 'newmanagement') }}
+        </button>
+      {% endif %}
+      {% if can_write and ipbx_id > 0 %}
+        <button type="button" id="nm-ext-add-btn"
+                class="btn btn-sm btn-outline-primary"
+                data-ipbx-id="{{ ipbx_id }}"
+                data-companies-id="{{ companies_id }}">
+          <i class="ti ti-plus"></i> {{ __('Adicionar', 'newmanagement') }}
+        </button>
+      {% endif %}
+    </div>
   </div>
 
   <div class="table-responsive nm-table-wrap">

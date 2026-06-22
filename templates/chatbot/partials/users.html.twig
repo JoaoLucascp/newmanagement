@@ -1,88 +1,110 @@
 {#
-  templates/chatbot/partials/users.html.twig
   Tabela de Usuários Cadastrados no Chatbot.
-  Herda do contexto pai: chatbot_id, companies_id, csrf, action_url, can_write, can_delete, users
 #}
-<table class="tab_cadre_fixehov" id="nm-cu-table">
-  <thead>
-    <tr class="headerRow noHover">
-      <th>{{ __('Nome', 'newmanagement') }}</th>
-      <th>{{ __('Login', 'newmanagement') }}</th>
-      <th>{{ __('Senha', 'newmanagement') }}</th>
-      <th>{{ __('E-mail', 'newmanagement') }}</th>
-      <th>{{ __('Tipo', 'newmanagement') }}</th>
-      <th style="text-align:right">
-        {% if can_write %}
-          <button type="button" id="nm-cu-add-btn"
-                  class="btn btn-sm btn-outline-secondary"
-                  data-action="add_chatbot_user"
-                  data-chatbot-id="{{ chatbot_id }}"
-                  data-companies-id="{{ companies_id }}"
-                  data-url="{{ action_url|e('html_attr') }}"
-                  data-csrf="{{ csrf|e('html_attr') }}">
-            <i class="ti ti-plus"></i> {{ __('Adicionar', 'newmanagement') }}
-          </button>
-        {% endif %}
-      </th>
-    </tr>
-  </thead>
+{% set cu_total = users|length %}
 
-  <tbody id="nm-cu-tbody">
-    {% for row in users %}
-      <tr class="tab_bg_1" id="nm-cu-row-{{ row.id }}">
-        <td>{{ row.user_name }}</td>
-        <td>{{ row.login }}</td>
-        <td>••••••</td>
-        <td>{{ row.email }}</td>
-        <td>{{ row.user_type }}</td>
-        <td>
-          {% if can_delete %}
-            <button type="button"
-                    class="btn btn-sm btn-danger nm-chatbot-del"
-                    data-action="delete_chatbot_user"
-                    data-id="{{ row.id }}"
-                    data-row="nm-cu-row-{{ row.id }}"
-                    data-companies-id="{{ companies_id }}"
-                    data-url="{{ action_url|e('html_attr') }}"
-                    data-csrf="{{ csrf|e('html_attr') }}"
-                    data-confirm="{{ __('Remover usuário?', 'newmanagement') }}">
-              <i class="ti ti-trash"></i>
-            </button>
-          {% endif %}
-        </td>
-      </tr>
-    {% endfor %}
+<div id="nm-cu-section"
+     class="nm-related-section nm-chatbot-table-section"
+     data-section="users"
+     data-chatbot-id="{{ chatbot_id }}"
+     data-companies-id="{{ companies_id }}"
+     data-action-url="{{ action_url|e('html_attr') }}"
+     data-total="{{ cu_total }}">
 
+  <div class="nm-related-toolbar">
+    <div class="nm-related-heading">
+      <div class="nm-related-title">
+        <i class="ti ti-users" aria-hidden="true"></i>
+        <span>{{ __('Usuários Cadastrados no Chatbot', 'newmanagement') }}</span>
+      </div>
+      <span class="nm-related-meta"><span class="nm-count-cu">{{ cu_total }}</span> {{ __('usuários', 'newmanagement') }}</span>
+    </div>
     {% if can_write %}
-      <tr class="tab_bg_2 nm-add-row" id="nm-cu-add-row">
-        <td><input type="text"     id="nm-cu-user_name_0"
-             name="chatbot_users[user_name][]"
-             class="form-control form-control-sm"
-             placeholder="{{ __('Nome', 'newmanagement') }}"></td>
-        <td><input type="text"     id="nm-cu-login_0"
-             name="chatbot_users[login][]"
-             class="form-control form-control-sm"
-             placeholder="{{ __('Login', 'newmanagement') }}"></td>
-        <td><input type="password" id="nm-cu-password_0"
-             name="chatbot_users[password][]"
-             class="form-control form-control-sm"
-             placeholder="{{ __('Senha', 'newmanagement') }}"
-             autocomplete="new-password"></td>
-        <td><input type="email"    id="nm-cu-email_0"
-             name="chatbot_users[email][]"
-             class="form-control form-control-sm"
-             placeholder="email@"></td>
-        <td>
-          <select id="nm-cu-user_type_0"
-                  name="chatbot_users[user_type][]"
-                  class="form-select form-select-sm">
-            <option value="usuario">{{ __('Usuário', 'newmanagement') }}</option>
-            <option value="supervisor">{{ __('Supervisor', 'newmanagement') }}</option>
-            <option value="administrador">{{ __('Administrador', 'newmanagement') }}</option>
-          </select>
-        </td>
-        <td></td>
-      </tr>
+      <button type="button" id="nm-cu-add-btn"
+              class="btn btn-sm btn-outline-primary"
+              data-chatbot-id="{{ chatbot_id }}"
+              data-companies-id="{{ companies_id }}">
+        <i class="ti ti-plus"></i> {{ __('Adicionar', 'newmanagement') }}
+      </button>
     {% endif %}
-  </tbody>
-</table>
+  </div>
+
+  <div class="table-responsive nm-table-wrap">
+    <table class="table table-vcenter table-hover nm-data-table nm-chatbot-table nm-cu-table" id="nm-cu-table">
+      <colgroup>
+        <col class="nm-col-cu-name">
+        <col class="nm-col-cu-login">
+        <col class="nm-col-cu-password">
+        <col class="nm-col-cu-email">
+        <col class="nm-col-cu-type">
+        <col class="nm-col-actions">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>{{ __('Nome', 'newmanagement') }}</th>
+          <th>{{ __('Login', 'newmanagement') }}</th>
+          <th>{{ __('Senha', 'newmanagement') }}</th>
+          <th>{{ __('E-mail', 'newmanagement') }}</th>
+          <th>{{ __('Tipo', 'newmanagement') }}</th>
+          <th class="text-end"></th>
+        </tr>
+      </thead>
+
+      <tbody id="nm-cu-tbody">
+        {% for row in users %}
+          <tr class="tab_bg_1 nm-cu-saved-row" id="nm-cu-row-{{ row.id }}">
+            <td>{{ row.user_name|default('')|e }}</td>
+            <td>{{ row.login|default('')|e }}</td>
+            <td>******</td>
+            <td>{{ row.email|default('')|e }}</td>
+            <td>{{ row.user_type|default('')|e }}</td>
+            <td class="text-end">
+              {% if can_delete %}
+                <button type="button"
+                        class="btn btn-sm btn-icon nm-chatbot-del"
+                        data-action="delete_chatbot_user"
+                        data-id="{{ row.id }}"
+                        data-row="nm-cu-row-{{ row.id }}"
+                        data-companies-id="{{ companies_id }}"
+                        data-url="{{ action_url|e('html_attr') }}"
+                        data-confirm="{{ __('Remover usuário?', 'newmanagement') }}"
+                        title="{{ __('Remover', 'newmanagement') }}">
+                  <i class="ti ti-trash text-danger"></i>
+                </button>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+
+        {% if users is empty %}
+          <tr id="nm-cu-empty">
+            <td colspan="6" class="text-center text-muted py-3">
+              {{ __('Nenhum usuário cadastrado.', 'newmanagement') }}
+            </td>
+          </tr>
+        {% endif %}
+
+        {% if can_write %}
+          <tr class="nm-cu-input-template" id="nm-cu-add-row" hidden style="display:none">
+            <td><input type="text" class="nm-cu-user_name form-control form-control-sm" form="_none" autocomplete="off" placeholder="{{ __('Nome', 'newmanagement') }}"></td>
+            <td><input type="text" class="nm-cu-login form-control form-control-sm" form="_none" autocomplete="off" placeholder="{{ __('Login', 'newmanagement') }}"></td>
+            <td><input type="password" class="nm-cu-password form-control form-control-sm" form="_none" autocomplete="new-password" placeholder="{{ __('Senha', 'newmanagement') }}"></td>
+            <td><input type="email" class="nm-cu-email form-control form-control-sm" form="_none" autocomplete="off" placeholder="email@"></td>
+            <td>
+              <select class="nm-cu-user_type form-select form-select-sm" form="_none">
+                <option value="usuario">{{ __('Usuário', 'newmanagement') }}</option>
+                <option value="supervisor">{{ __('Supervisor', 'newmanagement') }}</option>
+                <option value="administrador">{{ __('Administrador', 'newmanagement') }}</option>
+              </select>
+            </td>
+            <td class="text-end">
+              <button type="button" class="btn btn-sm btn-icon nm-row-del-btn" title="{{ __('Descartar linha', 'newmanagement') }}">
+                <i class="ti ti-trash text-danger"></i>
+              </button>
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>

@@ -31,6 +31,11 @@ class Company extends \CommonDBTM
         return 'glpi_plugin_newmanagement_companies';
     }
 
+    public static function getIcon(): string
+    {
+        return 'ti ti-building';
+    }
+
     public static function getContractStatusOptions(): array
     {
         return [

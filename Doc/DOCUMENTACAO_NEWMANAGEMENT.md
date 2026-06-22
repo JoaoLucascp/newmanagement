@@ -2,11 +2,11 @@
 
 ## 📑 Sumário Executivo
 
-**Versão do Documento:** 1.0.0  
-**Data de Atualização:** 20 de maio de 2026  
-**Compatibilidade:** GLPI 11.0.0 até 11.0.99  
+**Versão do Documento:** 1.0.0
+**Data de Atualização:** 20 de maio de 2026
+**Compatibilidade:** GLPI 11.0.0 até 11.0.99
 **Versão do PHP:** 8.2+
-**Autor Original:** João Lucas  
+**Autor Original:** João Lucas
 **Licença:** MIT
 
 ---
@@ -40,19 +40,19 @@ O **Newmanagement** é um plugin corporativo de gestão integrada para o GLPI qu
 ├─────────────────────────────────────────────────────┤
 │          MODELOS (src/*.php - CommonDBTM)           │
 ├─────────────────────────────────────────────────────┤
-│  BANCO DE DADOS (MySQL/MariaDB - Tabelas GLPI)     │
+│  BANCO DE DADOS (MySQL/MariaDB - Tabelas GLPI)      │
 └─────────────────────────────────────────────────────┘
 ```
 
 ### 🏗️ Padrões de Design Implementados
 
-| Padrão | Implementação | Local |
-|--------|--------------|-------|
-| **MVC** | Model-View-Controller | src/, front/, templates/ |
-| **PSR-4** | Autoloading Namespace | `GlpiPlugin\Newmanagement\*` |
-| **CommonDBTM** | ORM do GLPI | Classe base para todas as entidades |
-| **Plugin Hooks** | Sistema de extensão GLPI | hook.php |
-| **Segurança CSRF** | Token CSRF automático | `$PLUGIN_HOOKS['csrf_compliant']` |
+| Padrão                   | Implementação           | Local                               |
+| ------------------------- | ------------------------- | ----------------------------------- |
+| **MVC**             | Model-View-Controller     | src/, front/, templates/            |
+| **PSR-4**           | Autoloading Namespace     | `GlpiPlugin\Newmanagement\*`      |
+| **CommonDBTM**      | ORM do GLPI               | Classe base para todas as entidades |
+| **Plugin Hooks**    | Sistema de extensão GLPI | hook.php                            |
+| **Segurança CSRF** | Token CSRF automático    | `$PLUGIN_HOOKS['csrf_compliant']` |
 
 ### 🔒 Stack de Segurança
 
@@ -69,14 +69,14 @@ O **Newmanagement** é um plugin corporativo de gestão integrada para o GLPI qu
 
 ### 📋 Necessidades do Negócio Atendidas
 
-| Necessidade | Solução Newmanagement |
-|-------------|----------------------|
-| Documentação centralizada de infraestrutura | Módulos especializados para cada tipo de equipamento |
-| Acompanhamento de status de contrato | Campo `contract_status` em empresas |
-| Rastreamento de tarefas operacionais | Módulo de tarefas com geolocalização |
-| Auditoria de mudanças | Timestamps `date_creation` e `date_mod` em todas as tabelas |
-| Suporte técnico melhorado | Histórico completo e relacionamentos entre entidades |
-| Conformidade LGPD/GDPR | Soft-delete via `is_deleted` |
+| Necessidade                                   | Solução Newmanagement                                         |
+| --------------------------------------------- | --------------------------------------------------------------- |
+| Documentação centralizada de infraestrutura | Módulos especializados para cada tipo de equipamento           |
+| Acompanhamento de status de contrato          | Campo `contract_status` em empresas                           |
+| Rastreamento de tarefas operacionais          | Módulo de tarefas com geolocalização                         |
+| Auditoria de mudanças                        | Timestamps `date_creation` e `date_mod` em todas as tabelas |
+| Suporte técnico melhorado                    | Histórico completo e relacionamentos entre entidades           |
+| Conformidade LGPD/GDPR                        | Soft-delete via `is_deleted`                                  |
 
 ---
 
@@ -105,6 +105,7 @@ O **Newmanagement** é um plugin corporativo de gestão integrada para o GLPI qu
 ### 🎛️ Componentes Principais
 
 #### **A. Gerenciador de Empresas (Company)**
+
 ```
 Function: Cadastro master de clientes/empresas
 Campos: id, name, cnpj, razao_social, email, phone, cep, address, contract_status
@@ -114,6 +115,7 @@ Permissões: plugin_newmanagement_company
 ```
 
 #### **B. Documentação IPBX On-Premise (Ipbx)**
+
 ```
 Function: Registro de servidores telefônicos locais
 Campos: id, company_id, name, ip_address, port, admin_user, status
@@ -123,6 +125,7 @@ Permissões: plugin_newmanagement_ipbx
 ```
 
 #### **C. Documentação IPBX Cloud (IpbxCloud)**
+
 ```
 Function: Registro de servidores telefônicos em nuvem
 Campos: id, company_id, name, provider, url, api_key, status
@@ -132,6 +135,7 @@ Permissões: plugin_newmanagement_ipbx_cloud
 ```
 
 #### **D. Gestão de Chatbots (Chatbot)**
+
 ```
 Function: Rastreamento de sistemas de atendimento omnichannel
 Campos: id, company_id, name, platform, webhook_url, status
@@ -141,6 +145,7 @@ Permissões: plugin_newmanagement_chatbot
 ```
 
 #### **E. Linhas Fixas (FixedLine)**
+
 ```
 Function: Documentação de números telefônicos comerciais
 Campos: id, company_id, phone_number, extension, carrier, status
@@ -150,6 +155,7 @@ Permissões: plugin_newmanagement_fixedline
 ```
 
 #### **F. Tarefas com Geolocalização (Task)**
+
 ```
 Function: Planejamento e execução de atividades operacionais
 Campos: id, company_id, title, description, status, assigned_to, due_date
@@ -312,21 +318,21 @@ newmanagement/
 
 ### ✅ Checklist de Conformidade
 
-| Requisito | Implementado | Local |
-|-----------|--------------|-------|
-| Namespace PSR-4 | ✅ | `GlpiPlugin\Newmanagement\*` em src/ |
-| Herança de CommonDBTM | ✅ | Todas as classes em src/ |
-| Plugin Hooks | ✅ | hook.php linha ~47 |
-| Migração de Banco | ✅ | hook.php instalação |
-| CSRF Protection | ✅ | setup.php linha ~23 |
-| Asset Registration | ✅ | hook.php CSS/JS registration |
-| Menu Integration | ✅ | hook.php MENU_TOADD hook |
-| Twig Templates | ✅ | templates/ com `.html.twig` |
-| Soft Delete | ✅ | Campo `is_deleted` em tabelas |
-| Timestamps | ✅ | `date_creation`, `date_mod` |
-| Massive Actions | ✅ | Suportado em todas as entidades |
-| Search Options | ✅ | `rawSearchOptions()` implementado |
-| Rights Management | ✅ | `$rightname` definido |
+| Requisito              | Implementado | Local                                  |
+| ---------------------- | ------------ | -------------------------------------- |
+| Namespace PSR-4        | ✅           | `GlpiPlugin\Newmanagement\*` em src/ |
+| Herança de CommonDBTM | ✅           | Todas as classes em src/               |
+| Plugin Hooks           | ✅           | hook.php linha ~47                     |
+| Migração de Banco    | ✅           | hook.php instalação                  |
+| CSRF Protection        | ✅           | setup.php linha ~23                    |
+| Asset Registration     | ✅           | hook.php CSS/JS registration           |
+| Menu Integration       | ✅           | hook.php MENU_TOADD hook               |
+| Twig Templates         | ✅           | templates/ com `.html.twig`          |
+| Soft Delete            | ✅           | Campo `is_deleted` em tabelas        |
+| Timestamps             | ✅           | `date_creation`, `date_mod`        |
+| Massive Actions        | ✅           | Suportado em todas as entidades        |
+| Search Options         | ✅           | `rawSearchOptions()` implementado    |
+| Rights Management      | ✅           | `$rightname` definido                |
 
 ---
 
@@ -335,6 +341,7 @@ newmanagement/
 ### Tabelas Criadas
 
 #### 1. **glpi_plugin_newmanagement_companies** (Empresas)
+
 ```sql
 CREATE TABLE IF NOT EXISTS `glpi_plugin_newmanagement_companies` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -356,6 +363,7 @@ CREATE TABLE IF NOT EXISTS `glpi_plugin_newmanagement_companies` (
 ```
 
 #### 2. **glpi_plugin_newmanagement_ipbx** (IPBX On-Premise)
+
 ```sql
 CREATE TABLE IF NOT EXISTS `glpi_plugin_newmanagement_ipbx` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -376,6 +384,7 @@ CREATE TABLE IF NOT EXISTS `glpi_plugin_newmanagement_ipbx` (
 ```
 
 #### 3. **glpi_plugin_newmanagement_ipbx_cloud** (IPBX Cloud)
+
 ```sql
 CREATE TABLE IF NOT EXISTS `glpi_plugin_newmanagement_ipbx_cloud` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -473,33 +482,36 @@ Session::checkRight('plugin_newmanagement_company', PURGE);    // Exclusão
 
 ## 📊 INDICADORES DE QUALIDADE
 
-| Métrica | Status | Meta |
-|---------|--------|------|
-| PSR-12 Compliance | ✅ | 100% |
-| Code Coverage | ⚠️ | 80% |
-| SQL Injection Risk | ✅ | 0 vulnerabilities |
-| XSS Risk | ✅ | 0 vulnerabilities |
-| CSRF Protection | ✅ | Enabled |
-| Documentation | 🟨 | Melhorar |
-| Test Coverage | 🔴 | 0% (TODO) |
+| Métrica           | Status | Meta              |
+| ------------------ | ------ | ----------------- |
+| PSR-12 Compliance  | ✅     | 100%              |
+| Code Coverage      | ⚠️   | 80%               |
+| SQL Injection Risk | ✅     | 0 vulnerabilities |
+| XSS Risk           | ✅     | 0 vulnerabilities |
+| CSRF Protection    | ✅     | Enabled           |
+| Documentation      | 🟨     | Melhorar          |
+| Test Coverage      | 🔴     | 0% (TODO)         |
 
 ---
 
 ## 🚀 PRÓXIMAS MELHORIAS PLANEJADAS
 
 ### Curto Prazo (v1.1)
+
 - [ ] Testes unitários completos
 - [ ] Validação de CNPJ em tempo real (APIs públicas)
 - [ ] Geolocalização funcional em tarefas
 - [ ] Assinatura digital com certificados
 
 ### Médio Prazo (v1.2)
+
 - [ ] API REST para integrações
 - [ ] Webhooks para eventos
 - [ ] Relatórios em PDF
 - [ ] Importação em massa (CSV)
 
 ### Longo Prazo (v2.0)
+
 - [ ] Dashboard executivo
 - [ ] Alertas de contrato próximo de vencer
 - [ ] Integração com sistemas de telefonia (API)
@@ -526,22 +538,21 @@ Session::checkRight('plugin_newmanagement_company', PURGE);    // Exclusão
 
 ## ✅ CHECKLIST DE CONFORMIDADE FINAL
 
-- [x] Baseado em CommonDBTM
-- [x] Namespace PSR-4 correto
-- [x] Tabelas com encoding UTF-8
-- [x] Soft delete implementado
-- [x] Timestamps criação/modificação
-- [x] CSRF protection
-- [x] Rights management
-- [x] Twig templates
-- [x] CSS/JS em public/
-- [x] i18n suportado
+- [X] Baseado em CommonDBTM
+- [X] Namespace PSR-4 correto
+- [X] Tabelas com encoding UTF-8
+- [X] Soft delete implementado
+- [X] Timestamps criação/modificação
+- [X] CSRF protection
+- [X] Rights management
+- [X] Twig templates
+- [X] CSS/JS em public/
+- [X] i18n suportado
 - [ ] Testes automatizados
 - [ ] Documentação API
 - [ ] Exemplos de uso
 
 ---
 
-**Documento finalizado em 20/05/2026**  
+**Documento finalizado em 20/05/2026**
 **Próxima revisão prevista para:** Q3 2026
-

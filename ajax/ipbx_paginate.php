@@ -53,7 +53,7 @@ try {
         case 'extensions':
             [$rows, $total] = Ipbx::fetchPage(
                 Ipbx::TABLE_EXTENSIONS,
-                ['ipbx_id' => $ipbx_id],
+                ['ipbx_id' => $ipbx_id, 'companies_id' => $companies_id, 'is_deleted' => 0],
                 'number ASC',
                 $page
             );
@@ -70,7 +70,7 @@ try {
                 );
             }
             if (empty($rows)) {
-                $html = '<tr><td colspan="7" class="text-center text-muted py-3">'
+                $html = '<tr><td colspan="13" class="text-center text-muted py-3">'
                     . __('Nenhum ramal encontrado.', 'newmanagement')
                     . '</td></tr>';
             }
@@ -85,7 +85,7 @@ try {
         case 'devices':
             [$rows, $total] = Ipbx::fetchPage(
                 Ipbx::TABLE_DEVICES,
-                ['ipbx_id' => $ipbx_id],
+                ['ipbx_id' => $ipbx_id, 'companies_id' => $companies_id, 'is_deleted' => 0],
                 'device_type ASC',
                 $page
             );
@@ -111,7 +111,7 @@ try {
         case 'network':
             [$rows, $total] = Ipbx::fetchPage(
                 Ipbx::TABLE_NETWORK,
-                ['ipbx_id' => $ipbx_id],
+                ['ipbx_id' => $ipbx_id, 'companies_id' => $companies_id, 'is_deleted' => 0],
                 'ip_network ASC',
                 $page
             );

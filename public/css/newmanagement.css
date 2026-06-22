@@ -87,7 +87,7 @@
 }
 
 /* ---------------------------------------------------------------------------
-   Abas horizontais IPBX
+   Abas horizontais
 --------------------------------------------------------------------------- */
 .nm-tabs-wrapper {
     border: 1px solid var(--tblr-border-color, #dee2e6);
@@ -273,6 +273,10 @@
 }
 
 .nm-related-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
     padding-bottom: .75rem;
     margin-bottom: .25rem;
 }
@@ -288,6 +292,13 @@
     color: var(--nm-panel-muted);
     font-size: .75rem;
     white-space: nowrap;
+}
+
+.nm-related-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: .4rem;
 }
 
 .nm-table-wrap {
@@ -378,23 +389,291 @@
     padding: .25rem 0 .5rem;
 }
 
+/* ---------------------------------------------------------------------------
+   Empresa - GLPI 11 layout
+--------------------------------------------------------------------------- */
+.nm-company-page {
+    --nm-panel-border: var(--tblr-border-color, #dfe3ea);
+    --nm-panel-muted: var(--tblr-muted, #667085);
+    --nm-panel-bg: var(--tblr-bg-surface, #fff);
+    --nm-panel-soft: var(--tblr-bg-surface-secondary, #f6f8fb);
+    width: 100%;
+    padding: .9rem 1rem 1rem;
+    text-align: left;
+}
+
+.nm-company-form-cell {
+    padding: 0 !important;
+    text-align: left !important;
+}
+
+.nm-company-form-panel {
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+}
+
+.nm-company-grid {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: .8rem 1rem;
+}
+
+.nm-company-col-2 { grid-column: span 2; }
+.nm-company-col-3 { grid-column: span 3; }
+.nm-company-col-4 { grid-column: span 4; }
+.nm-company-col-5 { grid-column: span 5; }
+.nm-company-col-6 { grid-column: span 6; }
+.nm-company-col-7 { grid-column: span 7; }
+.nm-company-col-full { grid-column: 1 / -1; }
+
+.nm-company-page .form-label {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: .25rem;
+    text-align: left !important;
+}
+
+.nm-company-page .form-control,
+.nm-company-page .form-select {
+    min-height: 2.25rem;
+}
+
+.nm-company-search .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    min-height: 2.25rem;
+    white-space: nowrap;
+}
+
+.nm-muted-icon {
+    color: var(--nm-panel-muted);
+    cursor: help;
+}
+
+/* ---------------------------------------------------------------------------
+   Linha Fixa - GLPI 11 layout
+--------------------------------------------------------------------------- */
+.nm-fixedline-page {
+    --nm-panel-border: var(--tblr-border-color, #dfe3ea);
+    --nm-panel-muted: var(--tblr-muted, #667085);
+    --nm-panel-bg: var(--tblr-bg-surface, #fff);
+    --nm-panel-soft: var(--tblr-bg-surface-secondary, #f6f8fb);
+    width: 100%;
+    padding: 1rem;
+    text-align: left;
+}
+
+.nm-fixedline-form-panel {
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+}
+
+.nm-fixedline-grid {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: .8rem 1rem;
+}
+
+.nm-fixedline-col-2 { grid-column: span 2; }
+.nm-fixedline-col-3 { grid-column: span 3; }
+.nm-fixedline-col-4 { grid-column: span 4; }
+.nm-fixedline-col-5 { grid-column: span 5; }
+.nm-fixedline-col-full { grid-column: 1 / -1; }
+
+.nm-fixedline-page .form-label {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: .25rem;
+    text-align: left;
+}
+
+.nm-fixedline-page .form-control,
+.nm-fixedline-page .form-select {
+    min-height: 2.25rem;
+}
+
+.nm-fixedline-savebar {
+    display: flex;
+    justify-content: flex-end;
+    gap: .5rem;
+    padding-top: 1rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Chatbot - GLPI 11 layout
+--------------------------------------------------------------------------- */
+.nm-chatbot-page {
+    --nm-panel-border: var(--tblr-border-color, #dfe3ea);
+    --nm-panel-muted: var(--tblr-muted, #667085);
+    --nm-panel-bg: var(--tblr-bg-surface, #fff);
+    --nm-panel-soft: var(--tblr-bg-surface-secondary, #f6f8fb);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+    text-align: left;
+}
+
+.nm-chatbot-form-panel {
+    padding: 1rem;
+    border: 1px solid var(--nm-panel-border);
+    border-radius: var(--tblr-border-radius, .375rem);
+    background: var(--nm-panel-bg);
+}
+
+.nm-chatbot-grid {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: .8rem 1rem;
+}
+
+.nm-chatbot-col-3 { grid-column: span 3; }
+.nm-chatbot-col-4 { grid-column: span 4; }
+.nm-chatbot-col-full { grid-column: 1 / -1; }
+
+.nm-chatbot-grid-heading {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    grid-column: 1 / -1;
+    padding-top: .35rem;
+    color: var(--tblr-body-color, #1f2937);
+    font-size: .86rem;
+    font-weight: 600;
+}
+
+.nm-chatbot-grid-heading i {
+    color: var(--tblr-primary, #206bc4);
+}
+
+.nm-chatbot-page .form-control,
+.nm-chatbot-page .form-select {
+    min-height: 2.25rem;
+}
+
+.nm-chatbot-related {
+    margin-top: 0;
+    background: var(--nm-panel-bg);
+}
+
+.nm-chatbot-tabs .nm-tab-panel {
+    padding: 0;
+}
+
+.nm-chatbot-table-section {
+    background: transparent;
+}
+
+.nm-chatbot-table {
+    min-width: 1040px;
+}
+
+.nm-chatbot-savebar {
+    display: flex;
+    justify-content: flex-end;
+    padding: .25rem 0 .5rem;
+}
+
+.nm-mc-pending-row,
+.nm-wa-pending-row,
+.nm-cu-pending-row {
+    background: #f8fbff;
+}
+
+.nm-col-mc-system { width: 16%; }
+.nm-col-mc-date { width: 9rem; }
+.nm-col-mc-number { width: 14%; }
+.nm-col-mc-homolog { width: 14%; }
+.nm-col-mc-link { width: 14%; }
+.nm-col-mc-login { width: 13%; }
+.nm-col-mc-password { width: 12%; }
+.nm-col-wa-number { width: 32%; }
+.nm-col-wa-date { width: 18%; }
+.nm-col-wa-time { width: 29%; }
+.nm-col-cu-name { width: 20%; }
+.nm-col-cu-login { width: 20%; }
+.nm-col-cu-password { width: 20%; }
+.nm-col-cu-email { width: 24%; }
+.nm-col-cu-type { width: 13%; }
+
 @media (max-width: 1200px) {
-    .nm-ipbx-grid {
+    .nm-ipbx-grid,
+    .nm-company-grid,
+    .nm-fixedline-grid,
+    .nm-chatbot-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .nm-company-col-2,
+    .nm-company-col-3,
+    .nm-company-col-4,
+    .nm-company-col-5,
+    .nm-company-col-6,
+    .nm-company-col-7 {
+        grid-column: span 1;
+    }
+
+    .nm-fixedline-col-2,
+    .nm-fixedline-col-3,
+    .nm-fixedline-col-4,
+    .nm-fixedline-col-5 {
+        grid-column: span 1;
+    }
+
+    .nm-chatbot-col-3,
+    .nm-chatbot-col-4 {
+        grid-column: span 1;
+    }
+
+    .nm-company-col-full,
+    .nm-fixedline-col-full,
+    .nm-chatbot-col-full,
+    .nm-chatbot-grid-heading {
+        grid-column: 1 / -1;
     }
 }
 
 @media (max-width: 700px) {
     .nm-ipbx-form-panel,
+    .nm-company-form-panel,
+    .nm-fixedline-form-panel,
+    .nm-chatbot-form-panel,
     .nm-related-section {
         padding: .75rem;
     }
 
-    .nm-ipbx-grid {
+    .nm-ipbx-grid,
+    .nm-company-grid,
+    .nm-fixedline-grid,
+    .nm-chatbot-grid {
         grid-template-columns: 1fr;
     }
 
+    .nm-company-col-2,
+    .nm-company-col-3,
+    .nm-company-col-4,
+    .nm-company-col-5,
+    .nm-company-col-6,
+    .nm-company-col-7,
+    .nm-company-col-full,
+    .nm-fixedline-col-2,
+    .nm-fixedline-col-3,
+    .nm-fixedline-col-4,
+    .nm-fixedline-col-5,
+    .nm-fixedline-col-full,
+    .nm-chatbot-col-3,
+    .nm-chatbot-col-4,
+    .nm-chatbot-col-full,
+    .nm-chatbot-grid-heading,
     .nm-field--compact {
+        grid-column: auto;
         max-width: none;
     }
 
@@ -405,9 +684,30 @@
         flex-direction: column;
     }
 
+    .nm-related-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
     .nm-related-toolbar .btn,
+    .nm-company-search .btn,
+    .nm-fixedline-savebar .btn,
+    .nm-chatbot-savebar .btn,
     .nm-ipbx-savebar .btn {
         width: 100%;
+    }
+
+    .nm-fixedline-page {
+        padding: .75rem;
+    }
+
+    .nm-fixedline-savebar {
+        flex-direction: column;
+    }
+
+    .nm-company-search {
+        align-items: stretch;
+        flex-direction: column;
     }
 
     .nm-ipbx-savebar {

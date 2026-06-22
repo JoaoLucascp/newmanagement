@@ -70,6 +70,105 @@ function nmEncryptPassword(string $value): ?string
     return \Toolbox::sodiumEncrypt($value);
 }
 
+function nmCsvRowIsBlank(array $row): bool
+{
+    foreach ($row as $value) {
+        if (trim((string) $value) !== '') {
+            return false;
+        }
+    }
+    return true;
+}
+
+function nmDetectCsvDelimiter(string $path): string
+{
+    $sample = (string) file_get_contents($path, false, null, 0, 4096);
+    $counts = [
+        ';'  => substr_count($sample, ';'),
+        ','  => substr_count($sample, ','),
+        "\t" => substr_count($sample, "\t"),
+    ];
+    arsort($counts);
+    $delimiter = (string) array_key_first($counts);
+
+    return $counts[$delimiter] > 0 ? $delimiter : ';';
+}
+
+function nmReadExtensionImportRows(): array
+{
+    if (
+        isset($_FILES['csv_file'])
+        && ($_FILES['csv_file']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE
+    ) {
+        $file = $_FILES['csv_file'];
+        if (($file['error'] ?? UPLOAD_ERR_OK) !== UPLOAD_ERR_OK) {
+            throw new \InvalidArgumentException(__('Falha ao receber o arquivo CSV.', 'newmanagement'));
+        }
+        if ((int) ($file['size'] ?? 0) > 5 * 1024 * 1024) {
+            throw new \InvalidArgumentException(__('O arquivo CSV deve ter no maximo 5 MB.', 'newmanagement'));
+        }
+
+        $path = (string) ($file['tmp_name'] ?? '');
+        if ($path === '' || !is_file($path)) {
+            throw new \InvalidArgumentException(__('Arquivo CSV invalido.', 'newmanagement'));
+        }
+
+        $delimiter = nmDetectCsvDelimiter($path);
+        $handle = fopen($path, 'r');
+        if ($handle === false) {
+            throw new \InvalidArgumentException(__('Nao foi possivel ler o arquivo CSV.', 'newmanagement'));
+        }
+
+        $firstRow = null;
+        while (($row = fgetcsv($handle, 0, $delimiter, '"', '\\')) !== false) {
+            if (!nmCsvRowIsBlank($row)) {
+                $firstRow = $row;
+                break;
+            }
+        }
+
+        if ($firstRow === null) {
+            fclose($handle);
+            return [];
+        }
+
+        $knownHeaders = array_keys(Ipbx::getExtensionImportColumns());
+        $headers = array_map([Ipbx::class, 'normalizeExtensionImportHeader'], $firstRow);
+        $hasHeader = count(array_intersect($headers, $knownHeaders)) >= 2
+            || in_array('number', $headers, true);
+
+        $rows = [];
+        if (!$hasHeader) {
+            $rows[] = Ipbx::normalizeExtensionImportRow($firstRow);
+            $headers = null;
+        }
+
+        while (($row = fgetcsv($handle, 0, $delimiter, '"', '\\')) !== false) {
+            if (nmCsvRowIsBlank($row)) {
+                continue;
+            }
+            $rows[] = Ipbx::normalizeExtensionImportRow($row, $headers);
+        }
+        fclose($handle);
+
+        return $rows;
+    }
+
+    $payload = json_decode($_POST['rows'] ?? '[]', true);
+    if (!is_array($payload)) {
+        return [];
+    }
+
+    return array_map(static function ($row): array {
+        $row = (array) $row;
+        $ordered = [];
+        foreach (array_keys(Ipbx::getExtensionImportColumns()) as $field) {
+            $ordered[] = $row[$field] ?? '';
+        }
+        return Ipbx::normalizeExtensionImportRow($ordered, array_keys(Ipbx::getExtensionImportColumns()));
+    }, $payload);
+}
+
 $action       = $_POST['action']       ?? '';
 $companies_id = (int) ($_POST['companies_id'] ?? 0);
 
@@ -242,15 +341,66 @@ try {
             if (!Ipbx::ipbxBelongsToCompany($ipbx_id, $companies_id)) {
                 nmJson(false, ['error' => 'IPBX nao encontrado para esta empresa']);
             }
-            $payload = json_decode($_POST['rows'] ?? '[]', true);
-            if (!is_array($payload) || empty($payload)) {
-                nmJson(false, ['error' => 'Nenhum dado para importar']);
+            try {
+                $payload = nmReadExtensionImportRows();
+            } catch (\InvalidArgumentException $e) {
+                nmJson(false, ['error' => $e->getMessage()]);
             }
-            $boolNorm = static fn($v): int => in_array(strtolower((string) $v), ['1','sim','yes','true'], true) ? 1 : 0;
+            if (empty($payload)) {
+                nmJson(false, ['error' => 'Nenhum ramal encontrado no arquivo']);
+            }
+            if (count($payload) > 5000) {
+                nmJson(false, ['error' => 'Importe no maximo 5000 ramais por arquivo']);
+            }
+
+            $existingNumbers = [];
+            $existingRows = $DB->request([
+                'SELECT' => ['number'],
+                'FROM'   => Ipbx::TABLE_EXTENSIONS,
+                'WHERE'  => [
+                    'ipbx_id'      => $ipbx_id,
+                    'companies_id' => $companies_id,
+                    'is_deleted'   => 0,
+                ],
+            ]);
+            foreach ($existingRows as $existing) {
+                $existingNumber = trim((string) ($existing['number'] ?? ''));
+                if ($existingNumber !== '') {
+                    $existingNumbers[strtolower($existingNumber)] = true;
+                }
+            }
+
+            $seen = [];
+            $errors = [];
             $inserted = 0;
-            foreach ($payload as $r) {
+            $skipped = 0;
+            foreach ($payload as $idx => $r) {
+                $line = $idx + 2;
                 $number = trim((string) ($r['number'] ?? ''));
-                if ($number === '') continue;
+                if ($number === '') {
+                    $skipped++;
+                    if (count($errors) < 10) {
+                        $errors[] = sprintf(__('Linha %s: ramal vazio.', 'newmanagement'), $line);
+                    }
+                    continue;
+                }
+
+                $numberKey = strtolower($number);
+                if (isset($existingNumbers[$numberKey])) {
+                    $skipped++;
+                    if (count($errors) < 10) {
+                        $errors[] = sprintf(__('Linha %s: ramal %s ja existe.', 'newmanagement'), $line, $number);
+                    }
+                    continue;
+                }
+                if (isset($seen[$numberKey])) {
+                    $skipped++;
+                    if (count($errors) < 10) {
+                        $errors[] = sprintf(__('Linha %s: ramal %s duplicado no CSV.', 'newmanagement'), $line, $number);
+                    }
+                    continue;
+                }
+
                 $DB->insert(Ipbx::TABLE_EXTENSIONS, [
                     'ipbx_id'       => $ipbx_id,
                     'companies_id'  => $companies_id,
@@ -259,19 +409,26 @@ try {
                     'device_ip'     => trim((string) ($r['device_ip']  ?? '')),
                     'user_name'     => trim((string) ($r['user_name']  ?? '')),
                     'department'    => trim((string) ($r['department'] ?? '')),
-                    'records_calls' => $boolNorm($r['records_calls'] ?? 0),
-                    'lof'           => $boolNorm($r['lof'] ?? 0),
-                    'loc'           => $boolNorm($r['loc'] ?? 0),
-                    'ddf'           => $boolNorm($r['ddf'] ?? 0),
-                    'ddc'           => $boolNorm($r['ddc'] ?? 0),
-                    'ddi'           => $boolNorm($r['ddi'] ?? 0),
-                    'srv'           => $boolNorm($r['srv'] ?? 0),
+                    'records_calls' => (int) ($r['records_calls'] ?? 0),
+                    'lof'           => (int) ($r['lof'] ?? 0),
+                    'loc'           => (int) ($r['loc'] ?? 0),
+                    'ddf'           => (int) ($r['ddf'] ?? 0),
+                    'ddc'           => (int) ($r['ddc'] ?? 0),
+                    'ddi'           => (int) ($r['ddi'] ?? 0),
+                    'srv'           => (int) ($r['srv'] ?? 0),
                     'date_creation' => $now,
                     'date_mod'      => $now,
                 ]);
+                $seen[$numberKey] = true;
                 $inserted++;
             }
-            nmJson(true, ['inserted' => $inserted]);
+
+            nmJson(true, [
+                'inserted' => $inserted,
+                'skipped'  => $skipped,
+                'errors'   => $errors,
+                'total'    => count($payload),
+            ]);
             break;
 
         // ------------------------------------------------------------------

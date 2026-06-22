@@ -30,6 +30,11 @@ class Chatbot extends \CommonDBTM
         return 'glpi_plugin_newmanagement_chatbots';
     }
 
+    public static function getIcon(): string
+    {
+        return 'ti ti-robot';
+    }
+
     // Tabelas filhas como constantes para evitar strings hardcoded
     const TABLE_MASS_COMM       = 'glpi_plugin_newmanagement_chatbot_mass_comm';
     const TABLE_WA_RESTRICTIONS = 'glpi_plugin_newmanagement_chatbot_wa_restrictions';

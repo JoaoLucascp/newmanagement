@@ -24,6 +24,107 @@ class Ipbx extends \CommonDBTM
     const TABLE_NETWORK    = 'glpi_plugin_newmanagement_ipbx_network';
     const PASSWORD_MASK    = '******';
 
+    public static function getExtensionImportColumns(): array
+    {
+        return [
+            'number'        => __('Ramal', 'newmanagement'),
+            'password'      => __('Senha', 'newmanagement'),
+            'user_name'     => __('Usuario', 'newmanagement'),
+            'device_ip'     => __('IP Dispositivo', 'newmanagement'),
+            'department'    => __('Departamento', 'newmanagement'),
+            'records_calls' => __('Grava', 'newmanagement'),
+            'lof'           => 'LOF',
+            'loc'           => 'LOC',
+            'ddf'           => 'DDF',
+            'ddc'           => 'DDC',
+            'ddi'           => 'DDI',
+            'srv'           => 'SRV',
+        ];
+    }
+
+    public static function getExtensionImportHeaders(): array
+    {
+        return array_values(self::getExtensionImportColumns());
+    }
+
+    public static function normalizeExtensionImportHeader(string $header): string
+    {
+        $header = trim($header, "\xEF\xBB\xBF \t\n\r\0\x0B");
+        $header = function_exists('mb_strtolower')
+            ? mb_strtolower($header, 'UTF-8')
+            : strtolower($header);
+        $header = strtr($header, [
+            'á' => 'a', 'à' => 'a', 'â' => 'a', 'ã' => 'a', 'ä' => 'a',
+            'é' => 'e', 'è' => 'e', 'ê' => 'e', 'ë' => 'e',
+            'í' => 'i', 'ì' => 'i', 'î' => 'i', 'ï' => 'i',
+            'ó' => 'o', 'ò' => 'o', 'ô' => 'o', 'õ' => 'o', 'ö' => 'o',
+            'ú' => 'u', 'ù' => 'u', 'û' => 'u', 'ü' => 'u',
+            'ç' => 'c',
+        ]);
+        $header = preg_replace('/[^a-z0-9]+/', '_', $header) ?? '';
+        $header = trim($header, '_');
+
+        $aliases = [
+            'ramal'          => 'number',
+            'numero'         => 'number',
+            'number'         => 'number',
+            'senha'          => 'password',
+            'password'       => 'password',
+            'usuario'        => 'user_name',
+            'user'           => 'user_name',
+            'user_name'      => 'user_name',
+            'ip_dispositivo' => 'device_ip',
+            'ip_device'      => 'device_ip',
+            'device_ip'      => 'device_ip',
+            'departamento'   => 'department',
+            'department'     => 'department',
+            'grava'          => 'records_calls',
+            'record'         => 'records_calls',
+            'records'        => 'records_calls',
+            'records_calls'  => 'records_calls',
+            'lof'            => 'lof',
+            'loc'            => 'loc',
+            'ddf'            => 'ddf',
+            'ddc'            => 'ddc',
+            'ddi'            => 'ddi',
+            'srv'            => 'srv',
+        ];
+
+        return $aliases[$header] ?? $header;
+    }
+
+    public static function boolFromImportValue($value): int
+    {
+        $value = trim((string) $value);
+        $value = function_exists('mb_strtolower')
+            ? mb_strtolower($value, 'UTF-8')
+            : strtolower($value);
+
+        return in_array($value, ['1', 'sim', 's', 'yes', 'y', 'true', 'x'], true) ? 1 : 0;
+    }
+
+    public static function normalizeExtensionImportRow(array $row, ?array $headers = null): array
+    {
+        $columns = array_keys(self::getExtensionImportColumns());
+        $data = array_fill_keys($columns, '');
+
+        foreach ($row as $index => $value) {
+            $key = $headers !== null
+                ? ($headers[$index] ?? null)
+                : ($columns[$index] ?? null);
+            if ($key === null || !array_key_exists($key, $data)) {
+                continue;
+            }
+            $data[$key] = trim((string) $value);
+        }
+
+        foreach (['records_calls', 'lof', 'loc', 'ddf', 'ddc', 'ddi', 'srv'] as $field) {
+            $data[$field] = self::boolFromImportValue($data[$field]);
+        }
+
+        return $data;
+    }
+
     public static function getTypeName($nb = 0): string
     {
         return _n('Servidor IPBX', 'Servidores IPBX', $nb, 'newmanagement');
@@ -34,9 +135,14 @@ class Ipbx extends \CommonDBTM
         return 'glpi_plugin_newmanagement_ipbx';
     }
 
+    public static function getIcon(): string
+    {
+        return 'ti ti-server';
+    }
+
     public function getTabNameForItem(\CommonGLPI $item, $withtemplate = 0): string
     {
-        return ($item instanceof Company) ? self::getTypeName(1) : '';
+        return ($item instanceof Company) ? self::createTabEntry(self::getTypeName(1)) : '';
     }
 
     public static function displayTabContentForItem(\CommonGLPI $item, $tabnum = 1, $withtemplate = 0): bool
@@ -163,7 +269,7 @@ class Ipbx extends \CommonDBTM
 
         [$extensions, $ext_total] = self::fetchPage(
             self::TABLE_EXTENSIONS,
-            ['ipbx_id' => $ipbx_id],
+            ['ipbx_id' => $ipbx_id, 'companies_id' => $companies_id, 'is_deleted' => 0],
             'number ASC',
             $ext_page
         );
@@ -177,13 +283,13 @@ class Ipbx extends \CommonDBTM
 
         [$devices, $dev_total] = self::fetchPage(
             self::TABLE_DEVICES,
-            ['ipbx_id' => $ipbx_id],
+            ['ipbx_id' => $ipbx_id, 'companies_id' => $companies_id, 'is_deleted' => 0],
             'device_type ASC',
             $dev_page
         );
         [$network, $net_total] = self::fetchPage(
             self::TABLE_NETWORK,
-            ['ipbx_id' => $ipbx_id],
+            ['ipbx_id' => $ipbx_id, 'companies_id' => $companies_id, 'is_deleted' => 0],
             'ip_network ASC',
             $net_page
         );
@@ -192,6 +298,7 @@ class Ipbx extends \CommonDBTM
             '@newmanagement/ipbx/tab.html.twig',
             [
                 'action_url'       => \Plugin::getWebDir('newmanagement') . '/ajax/ipbx_sub.php',
+                'extension_export_url' => \Plugin::getWebDir('newmanagement') . '/front/ipbx_extension_export.php',
                 'paginate_url'     => \Plugin::getWebDir('newmanagement') . '/ajax/ipbx_paginate.php',
                 'companies_id'     => $companies_id,
                 'ipbx_id'          => $ipbx_id,
