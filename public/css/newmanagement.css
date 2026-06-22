@@ -4,9 +4,7 @@
  */
 
 /* ---------------------------------------------------------------------------
-   Input Group: campo + botão de busca lado a lado
-   Usa a classe nativa Bootstrap 5 .input-group do GLPI.
-   .nm-input-group mantida por compatibilidade retroativa.
+   Input group: campo + botao de busca lado a lado
 --------------------------------------------------------------------------- */
 .nm-input-group {
     display: flex;
@@ -20,7 +18,7 @@
 }
 
 /* ---------------------------------------------------------------------------
-   Spinner de loading (usado no estado de carregamento dos botões Buscar)
+   Spinner de loading
 --------------------------------------------------------------------------- */
 @keyframes nm-spin {
     to { transform: rotate(360deg); }
@@ -40,7 +38,7 @@
 }
 
 /* ---------------------------------------------------------------------------
-   Feedback de validação (abaixo dos campos CNPJ e CEP)
+   Feedback de validacao
 --------------------------------------------------------------------------- */
 .nm-feedback {
     display: block;
@@ -61,7 +59,7 @@
 }
 
 /* ---------------------------------------------------------------------------
-   Badge de Status do Contrato na listagem
+   Badge de status do contrato
 --------------------------------------------------------------------------- */
 .nm-badge {
     display: inline-flex;
@@ -71,7 +69,6 @@
     border-radius: 999px;
     font-size: 0.75rem;
     font-weight: 600;
-    letter-spacing: 0.02em;
 }
 
 .nm-badge--ativo {
@@ -89,7 +86,9 @@
     color: #555;
 }
 
-/* ── Abas horizontais IPBX ───────────────────────────────────── */
+/* ---------------------------------------------------------------------------
+   Abas horizontais IPBX
+--------------------------------------------------------------------------- */
 .nm-tabs-wrapper {
     border: 1px solid var(--tblr-border-color, #dee2e6);
     border-radius: var(--tblr-border-radius, .375rem);
@@ -104,7 +103,10 @@
     overflow-x: auto;
     scrollbar-width: none;
 }
-.nm-tab-bar::-webkit-scrollbar { display: none; }
+
+.nm-tab-bar::-webkit-scrollbar {
+    display: none;
+}
 
 .nm-tab {
     display: inline-flex;
@@ -152,19 +154,263 @@
     color: #fff;
 }
 
-/*
- * fix(UI-02): painéis visíveis recebem display:block explícito.
- * Necessário porque o Tabler/GLPI pode ter regras herdadas que
- * sobrescrevem o comportamento padrão de div após remoção de [hidden].
- * [hidden] continua sendo a fonte de verdade para ocultar painéis.
- */
 .nm-tab-panel {
-    display: none;   /* oculto por padrão — JS/HTML controlam visibilidade */
+    display: none;
     padding: 1rem;
 }
 
 .nm-tab-panel.active,
 .nm-tab-panel:not([hidden]) {
-    display: block !important;  /* garante visibilidade independente de herança */
+    display: block !important;
 }
-/* ───────────────────────────────────────────────────────── */
+
+/* ---------------------------------------------------------------------------
+   Servidor IPBX - GLPI 11 layout
+--------------------------------------------------------------------------- */
+.nm-ipbx-page {
+    --nm-panel-border: var(--tblr-border-color, #dfe3ea);
+    --nm-panel-muted: var(--tblr-muted, #667085);
+    --nm-panel-bg: var(--tblr-bg-surface, #fff);
+    --nm-panel-soft: var(--tblr-bg-surface-secondary, #f6f8fb);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.nm-ipbx-form-panel {
+    padding: 1rem;
+    border: 1px solid var(--nm-panel-border);
+    border-radius: var(--tblr-border-radius, .375rem);
+    background: var(--nm-panel-bg);
+}
+
+.nm-section-heading,
+.nm-related-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+}
+
+.nm-section-heading {
+    padding-bottom: .75rem;
+    margin-bottom: .875rem;
+    border-bottom: 1px solid var(--nm-panel-border);
+}
+
+.nm-section-title,
+.nm-related-title {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    min-width: 0;
+    color: var(--tblr-body-color, #1f2937);
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.nm-section-title {
+    font-size: .95rem;
+}
+
+.nm-related-title {
+    font-size: .875rem;
+}
+
+.nm-section-title i,
+.nm-related-title i {
+    color: var(--tblr-primary, #206bc4);
+    font-size: 1rem;
+}
+
+.nm-ipbx-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: .85rem 1rem;
+}
+
+.nm-field {
+    min-width: 0;
+}
+
+.nm-field--compact {
+    max-width: 15rem;
+}
+
+.nm-field--full {
+    grid-column: 1 / -1;
+    max-width: none;
+}
+
+.nm-field .form-label {
+    margin-bottom: .25rem;
+    color: var(--nm-panel-muted);
+    font-size: .75rem;
+    font-weight: 600;
+}
+
+.nm-ipbx-page .form-control,
+.nm-ipbx-page .form-select {
+    min-height: 2.25rem;
+}
+
+.nm-password-group .btn-icon {
+    min-width: 2.25rem;
+    border-color: var(--nm-panel-border);
+}
+
+.nm-ipbx-tabs {
+    margin-top: 0;
+    background: var(--nm-panel-bg);
+}
+
+.nm-ipbx-tabs .nm-tab-panel {
+    padding: 0;
+}
+
+.nm-related-section {
+    padding: .875rem 1rem 1rem;
+}
+
+.nm-related-toolbar {
+    padding-bottom: .75rem;
+    margin-bottom: .25rem;
+}
+
+.nm-related-heading {
+    display: flex;
+    align-items: baseline;
+    gap: .6rem;
+    min-width: 0;
+}
+
+.nm-related-meta {
+    color: var(--nm-panel-muted);
+    font-size: .75rem;
+    white-space: nowrap;
+}
+
+.nm-table-wrap {
+    border: 1px solid var(--nm-panel-border);
+    border-radius: var(--tblr-border-radius, .375rem);
+    background: var(--nm-panel-bg);
+}
+
+.nm-data-table {
+    min-width: 980px;
+    margin-bottom: 0;
+    table-layout: fixed;
+}
+
+.nm-data-table thead th {
+    padding: .55rem .5rem;
+    border-bottom: 1px solid var(--nm-panel-border);
+    background: var(--nm-panel-soft);
+    color: var(--tblr-body-color, #1f2937);
+    font-size: .76rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.nm-data-table tbody td {
+    padding: .5rem;
+    vertical-align: middle;
+}
+
+.nm-data-table code {
+    display: inline-block;
+    max-width: 100%;
+    padding: .1rem .25rem;
+    overflow: hidden;
+    color: inherit;
+    text-overflow: ellipsis;
+    vertical-align: middle;
+    background: transparent;
+}
+
+.nm-data-table .form-control,
+.nm-data-table .form-select {
+    min-height: 2rem;
+    font-size: .78rem;
+}
+
+.nm-data-table .form-switch .form-check-input {
+    margin-left: 0;
+}
+
+.nm-ext-pending-row {
+    background: #f8fbff;
+}
+
+.nm-input-row {
+    background: var(--nm-panel-bg);
+}
+
+.nm-col-ext-number { width: 11%; }
+.nm-col-ext-password { width: 12%; }
+.nm-col-ext-user { width: 13%; }
+.nm-col-ext-ip { width: 13%; }
+.nm-col-ext-department { width: 13%; }
+.nm-col-ext-records { width: 6.5rem; }
+.nm-col-switch { width: 3.4rem; }
+.nm-col-actions { width: 3rem; }
+.nm-col-dev-type,
+.nm-col-dev-ip,
+.nm-col-dev-login,
+.nm-col-dev-password { width: 23%; }
+.nm-col-net-ip,
+.nm-col-net-mask,
+.nm-col-net-gateway,
+.nm-col-net-dns { width: 15%; }
+.nm-col-net-supplier { width: 22%; }
+
+.nm-pagination-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    margin-top: .75rem;
+}
+
+.nm-ipbx-savebar {
+    display: flex;
+    justify-content: flex-end;
+    padding: .25rem 0 .5rem;
+}
+
+@media (max-width: 1200px) {
+    .nm-ipbx-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 700px) {
+    .nm-ipbx-form-panel,
+    .nm-related-section {
+        padding: .75rem;
+    }
+
+    .nm-ipbx-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .nm-field--compact {
+        max-width: none;
+    }
+
+    .nm-section-heading,
+    .nm-related-toolbar,
+    .nm-pagination-row {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .nm-related-toolbar .btn,
+    .nm-ipbx-savebar .btn {
+        width: 100%;
+    }
+
+    .nm-ipbx-savebar {
+        padding-bottom: 0;
+    }
+}

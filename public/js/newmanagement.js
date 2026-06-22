@@ -237,23 +237,116 @@ function nmCounterDecrement(elId) {
 // ---------------------------------------------------------------------------
 
 function nmInitIpbxTabs() {
-    const firstPanel = document.getElementById('nm-panel-ext');
-    if (firstPanel) {
-        firstPanel.removeAttribute('hidden');
-        firstPanel.classList.add('active');
-    }
-    ['nm-panel-dev', 'nm-panel-net'].forEach(id => {
-        const p = document.getElementById(id);
-        if (p) {
-            p.setAttribute('hidden', '');
-            p.classList.remove('active');
-        }
+    const wrapper = document.querySelector('.nm-tabs-wrapper');
+    if (!wrapper) return;
+
+    const tabs = Array.from(wrapper.querySelectorAll('.nm-tab'));
+    const panels = Array.from(wrapper.querySelectorAll('.nm-tab-panel'));
+    if (!tabs.length || !panels.length) return;
+
+    const currentTab = tabs.find(tab => tab.classList.contains('active'))
+        || tabs.find(tab => tab.getAttribute('aria-selected') === 'true')
+        || tabs[0];
+    const activePanelId = currentTab?.dataset.panel || 'nm-panel-ext';
+
+    tabs.forEach(tab => {
+        const isActive = tab.dataset.panel === activePanelId;
+        tab.classList.toggle('active', isActive);
+        tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    });
+
+    panels.forEach(panel => {
+        const isActive = panel.id === activePanelId;
+        panel.classList.toggle('active', isActive);
+        if (isActive) panel.removeAttribute('hidden');
+        else panel.setAttribute('hidden', '');
     });
 }
 
 // ---------------------------------------------------------------------------
 // Paginação AJAX
 // ---------------------------------------------------------------------------
+
+function nmSyncEmptyState(section, tbodySelector, rowSelector, emptyId, colspan, message, templateId) {
+    const root = section || document;
+    const tbody = root?.querySelector(tbodySelector) || document.querySelector(tbodySelector);
+    if (!tbody) return;
+
+    const hasRows = tbody.querySelector(rowSelector);
+    const emptyRow = tbody.querySelector('#' + emptyId);
+    if (hasRows) {
+        emptyRow?.remove();
+        return;
+    }
+    if (emptyRow) return;
+
+    const tr = document.createElement('tr');
+    tr.id = emptyId;
+    tr.innerHTML = `<td colspan="${colspan}" class="text-center text-muted py-3">${message}</td>`;
+    const template = tbody.querySelector(templateId);
+    if (template) tbody.insertBefore(tr, template);
+    else tbody.appendChild(tr);
+}
+
+function nmDevSyncEmptyState(section) {
+    nmSyncEmptyState(
+        section,
+        '#nm-dev-tbody',
+        '.nm-dev-saved-row, .nm-dev-pending-row',
+        'nm-dev-empty',
+        5,
+        'Nenhum dispositivo cadastrado.',
+        '#nm-dev-add-row'
+    );
+}
+
+function nmNetSyncEmptyState(section) {
+    nmSyncEmptyState(
+        section,
+        '#nm-net-tbody',
+        '.nm-net-saved-row, .nm-net-pending-row',
+        'nm-net-empty',
+        7,
+        'Nenhuma rede cadastrada.',
+        '#nm-net-add-row'
+    );
+}
+
+function nmEnsureDevTemplate(tbody) {
+    if (!tbody || tbody.querySelector('#nm-dev-add-row') || !document.getElementById('nm-dev-add-btn')) return;
+    const tr = document.createElement('tr');
+    tr.className = 'nm-dev-input-template';
+    tr.id = 'nm-dev-add-row';
+    tr.hidden = true;
+    tr.style.display = 'none';
+    tr.innerHTML = [
+        '<td><input type="text" class="nm-dev-device_type form-control form-control-sm" form="_none" autocomplete="off" placeholder="Tipo"></td>',
+        '<td><input type="text" class="nm-dev-ip_address form-control form-control-sm" form="_none" autocomplete="off" placeholder="192.168.x.x"></td>',
+        '<td><input type="text" class="nm-dev-login form-control form-control-sm" form="_none" autocomplete="off" placeholder="Login"></td>',
+        '<td><input type="password" class="nm-dev-password form-control form-control-sm" form="_none" autocomplete="new-password" placeholder="Senha"></td>',
+        '<td class="text-end"><button type="button" class="btn btn-sm btn-icon nm-row-del-btn" title="Remover linha"><i class="ti ti-trash text-danger"></i></button></td>',
+    ].join('');
+    tbody.appendChild(tr);
+}
+
+function nmEnsureNetTemplate(tbody) {
+    if (!tbody || tbody.querySelector('#nm-net-add-row') || !document.getElementById('nm-net-add-btn')) return;
+    const tr = document.createElement('tr');
+    tr.className = 'nm-net-input-template';
+    tr.id = 'nm-net-add-row';
+    tr.hidden = true;
+    tr.style.display = 'none';
+    tr.innerHTML = [
+        '<td><input type="text" class="nm-net-ip_network form-control form-control-sm" form="_none" autocomplete="off" placeholder="192.168.0.0/24"></td>',
+        '<td><input type="text" class="nm-net-netmask form-control form-control-sm" form="_none" autocomplete="off" placeholder="255.255.255.0"></td>',
+        '<td><input type="text" class="nm-net-gateway form-control form-control-sm" form="_none" autocomplete="off" placeholder="192.168.0.1"></td>',
+        '<td><input type="text" class="nm-net-dns_primary form-control form-control-sm" form="_none" autocomplete="off" placeholder="8.8.8.8"></td>',
+        '<td><input type="text" class="nm-net-dns_secondary form-control form-control-sm" form="_none" autocomplete="off" placeholder="8.8.4.4"></td>',
+        '<td><input type="text" class="nm-net-supplier form-control form-control-sm" form="_none" autocomplete="off" placeholder="Fornecedor"></td>',
+        '<td class="text-end"><button type="button" class="btn btn-sm btn-icon nm-row-del-btn" title="Remover linha"><i class="ti ti-trash text-danger"></i></button></td>',
+    ].join('');
+    tbody.appendChild(tr);
+}
 
 function nmInitPagination() {
     if (window._nmPaginationDelegated) return;
@@ -311,7 +404,16 @@ function nmInitPagination() {
                           :                               'nm-net-pagination';
 
             const tbody = document.getElementById(tbodyId);
-            if (tbody) tbody.innerHTML = data.html;
+            if (tbody) {
+                tbody.innerHTML = data.html;
+                if (sectionName === 'devices') {
+                    nmEnsureDevTemplate(tbody);
+                    nmDevSyncEmptyState(section);
+                } else if (sectionName === 'network') {
+                    nmEnsureNetTemplate(tbody);
+                    nmNetSyncEmptyState(section);
+                }
+            }
 
             section.dataset.page = data.page;
 
@@ -409,6 +511,10 @@ function nmEnsureIpbxDelegated() {
         const actionUrl = btn.dataset.actionUrl || nmGetIpbxActionUrl(btn);
         const pendingExtensionRows = nmExtRowsReadyToSave(nmExtPendingRows());
         if (pendingExtensionRows === null) return;
+        const pendingDeviceRows = nmDevRowsReadyToSave(nmDevPendingRows());
+        if (pendingDeviceRows === null) return;
+        const pendingNetworkRows = nmNetRowsReadyToSave(nmNetPendingRows());
+        if (pendingNetworkRows === null) return;
 
         const ipbxData = {
             action:         nmVal('nm-ipbx-action')       || 'add_ipbx',
@@ -438,9 +544,26 @@ function nmEnsureIpbxDelegated() {
                 savedIpbxId,
                 ipbxData.companies_id
             );
+            const savedDevices = await nmDevSavePendingRows(
+                pendingDeviceRows,
+                actionUrl,
+                savedIpbxId,
+                ipbxData.companies_id
+            );
+            const savedNetworks = await nmNetSavePendingRows(
+                pendingNetworkRows,
+                actionUrl,
+                savedIpbxId,
+                ipbxData.companies_id
+            );
 
-            btn.innerHTML = savedExtensions > 0
-                ? `<i class="ti ti-check"></i> Salvo! ${savedExtensions} ramal${savedExtensions > 1 ? 's' : ''}`
+            const savedParts = [];
+            if (savedExtensions > 0) savedParts.push(`${savedExtensions} ramal${savedExtensions > 1 ? 's' : ''}`);
+            if (savedDevices > 0) savedParts.push(`${savedDevices} dispositivo${savedDevices > 1 ? 's' : ''}`);
+            if (savedNetworks > 0) savedParts.push(`${savedNetworks} rede${savedNetworks > 1 ? 's' : ''}`);
+
+            btn.innerHTML = savedParts.length
+                ? `<i class="ti ti-check"></i> Salvo! ${savedParts.join(', ')}`
                 : '<i class="ti ti-check"></i> Salvo!';
             btn.classList.replace('btn-primary', 'btn-success');
             setTimeout(() => {
@@ -484,6 +607,7 @@ function nmEnsureIpbxDelegated() {
         const confirmMsg  = btn.dataset.confirm || 'Remover item?';
         const action      = btn.dataset.action || 'delete_extension';
         const rowId       = btn.dataset.row || ('nm-ext-row-' + id);
+        const section     = btn.closest('#nm-ext-section, #nm-dev-section, #nm-net-section');
 
         if (!confirm(confirmMsg)) return;
 
@@ -498,10 +622,16 @@ function nmEnsureIpbxDelegated() {
 
             if (action === 'delete_extension') {
                 nmCounterDecrement('nm-count-ext');
-                nmExtSyncEmptyState(btn.closest('#nm-ext-section'));
+                nmExtSyncEmptyState(section);
             }
-            else if (action === 'delete_device')  nmCounterDecrement('nm-count-dev');
-            else if (action === 'delete_network') nmCounterDecrement('nm-count-net');
+            else if (action === 'delete_device') {
+                nmCounterDecrement('nm-count-dev');
+                nmDevSyncEmptyState(section);
+            }
+            else if (action === 'delete_network') {
+                nmCounterDecrement('nm-count-net');
+                nmNetSyncEmptyState(section);
+            }
 
         } catch (error) {
             console.error('[NM] Erro ao remover:', error.message);
@@ -636,6 +766,172 @@ function nmEnsureIpbxDelegated() {
         return saved;
     }
 
+    function nmScopedValue(row, selector) {
+        return row.querySelector(selector)?.value || '';
+    }
+
+    function nmClonePendingRow(btn, sectionId, tbodyId, templateId, pendingClass, focusSelector, missingMessage) {
+        const ipbxId = parseInt(btn.dataset.ipbxId || '0', 10);
+        if (ipbxId <= 0) { alert('Salve o Servidor IPBX primeiro.'); return; }
+
+        const section = btn.closest(sectionId) || document.querySelector(sectionId);
+        const tbody = section?.querySelector(tbodyId) || document.querySelector(tbodyId);
+        const template = tbody?.querySelector(templateId) || document.querySelector(templateId);
+        if (!tbody || !template) {
+            alert(missingMessage);
+            return;
+        }
+
+        const row = template.cloneNode(true);
+        row.removeAttribute('id');
+        row.hidden = false;
+        row.style.display = '';
+        row.classList.remove(template.classList[0]);
+        row.classList.add('tab_bg_1', 'nm-input-row', pendingClass);
+        row.dataset.ipbxId = String(ipbxId);
+        row.dataset.companiesId = btn.dataset.companiesId || nmGetIpbxCompaniesId(btn);
+
+        row.querySelectorAll('input[type="text"], input[type="password"]').forEach(input => {
+            input.value = '';
+            input.removeAttribute('id');
+            input.removeAttribute('name');
+        });
+
+        tbody.querySelector('tr[id$="-empty"]')?.remove();
+        tbody.insertBefore(row, template);
+        row.querySelector(focusSelector)?.focus();
+    }
+
+    function nmDevPendingRows() {
+        return Array.from(document.querySelectorAll('#nm-dev-tbody .nm-dev-pending-row'));
+    }
+
+    function nmNetPendingRows() {
+        return Array.from(document.querySelectorAll('#nm-net-tbody .nm-net-pending-row'));
+    }
+
+    function nmDevIsBlankRow(row) {
+        return [
+            '.nm-dev-device_type',
+            '.nm-dev-ip_address',
+            '.nm-dev-login',
+            '.nm-dev-password',
+        ].every(selector => nmScopedValue(row, selector).trim() === '');
+    }
+
+    function nmNetIsBlankRow(row) {
+        return [
+            '.nm-net-ip_network',
+            '.nm-net-netmask',
+            '.nm-net-gateway',
+            '.nm-net-dns_primary',
+            '.nm-net-dns_secondary',
+            '.nm-net-supplier',
+        ].every(selector => nmScopedValue(row, selector).trim() === '');
+    }
+
+    function nmDevRowsReadyToSave(rows) {
+        const readyRows = [];
+        for (const row of rows) {
+            const section = row.closest('#nm-dev-section');
+            if (nmDevIsBlankRow(row)) {
+                row.remove();
+                nmDevSyncEmptyState(section);
+                continue;
+            }
+            if (!nmScopedValue(row, '.nm-dev-device_type').trim()) {
+                alert('Informe o tipo do dispositivo.');
+                row.querySelector('.nm-dev-device_type')?.focus();
+                return null;
+            }
+            readyRows.push(row);
+        }
+        return readyRows;
+    }
+
+    function nmNetRowsReadyToSave(rows) {
+        const readyRows = [];
+        for (const row of rows) {
+            const section = row.closest('#nm-net-section');
+            if (nmNetIsBlankRow(row)) {
+                row.remove();
+                nmNetSyncEmptyState(section);
+                continue;
+            }
+            if (!nmScopedValue(row, '.nm-net-ip_network').trim()) {
+                alert('Informe o IP da rede.');
+                row.querySelector('.nm-net-ip_network')?.focus();
+                return null;
+            }
+            readyRows.push(row);
+        }
+        return readyRows;
+    }
+
+    function nmDevPayload(row, ipbxId, companiesId) {
+        return {
+            action: 'add_device',
+            ipbx_id: ipbxId,
+            companies_id: companiesId,
+            device_type: nmScopedValue(row, '.nm-dev-device_type').trim(),
+            ip_address: nmScopedValue(row, '.nm-dev-ip_address'),
+            login: nmScopedValue(row, '.nm-dev-login'),
+            password: nmScopedValue(row, '.nm-dev-password'),
+        };
+    }
+
+    function nmNetPayload(row, ipbxId, companiesId) {
+        return {
+            action: 'add_network',
+            ipbx_id: ipbxId,
+            companies_id: companiesId,
+            ip_network: nmScopedValue(row, '.nm-net-ip_network').trim(),
+            netmask: nmScopedValue(row, '.nm-net-netmask'),
+            gateway: nmScopedValue(row, '.nm-net-gateway'),
+            dns_primary: nmScopedValue(row, '.nm-net-dns_primary'),
+            dns_secondary: nmScopedValue(row, '.nm-net-dns_secondary'),
+            supplier: nmScopedValue(row, '.nm-net-supplier'),
+        };
+    }
+
+    async function nmSavePendingRows(rows, actionUrl, ipbxId, companiesId, payloadBuilder, counterId, syncEmptyState, errorMessage) {
+        if (!rows.length) return 0;
+        if (ipbxId <= 0) throw new Error('Salve o Servidor IPBX primeiro.');
+
+        let saved = 0;
+        for (const row of rows) {
+            const section = row.closest('#nm-dev-section, #nm-net-section') || document;
+            row.querySelectorAll('input, select, button').forEach(el => { el.disabled = true; });
+
+            const result = await nmPost(actionUrl, payloadBuilder(row, ipbxId, companiesId));
+            if (!result.success) {
+                row.querySelectorAll('input, select, button').forEach(el => { el.disabled = false; });
+                throw new Error(result.error || errorMessage);
+            }
+
+            if (result.html) row.outerHTML = result.html;
+            else row.remove();
+
+            saved += 1;
+            nmCounterIncrement(counterId);
+
+            if (section && section.dataset) {
+                const total = parseInt(section.dataset.total || '0', 10);
+                section.dataset.total = String(total + 1);
+            }
+            syncEmptyState(section);
+        }
+        return saved;
+    }
+
+    function nmDevSavePendingRows(rows, actionUrl, ipbxId, companiesId) {
+        return nmSavePendingRows(rows, actionUrl, ipbxId, companiesId, nmDevPayload, 'nm-count-dev', nmDevSyncEmptyState, 'Erro ao salvar dispositivo');
+    }
+
+    function nmNetSavePendingRows(rows, actionUrl, ipbxId, companiesId) {
+        return nmSavePendingRows(rows, actionUrl, ipbxId, companiesId, nmNetPayload, 'nm-count-net', nmNetSyncEmptyState, 'Erro ao salvar rede');
+    }
+
     document.addEventListener('click', (e) => {
         const btn = e.target.closest('#nm-ext-add-btn');
         if (!btn) return;
@@ -678,83 +974,49 @@ function nmEnsureIpbxDelegated() {
     document.addEventListener('click', (e) => {
         const btn = e.target.closest('.nm-row-del-btn');
         if (!btn) return;
-        const row = btn.closest('.nm-ext-pending-row');
+        const row = btn.closest('.nm-ext-pending-row, .nm-dev-pending-row, .nm-net-pending-row');
         if (!row) return;
-        const section = row.closest('#nm-ext-section');
+        const section = row.closest('#nm-ext-section, #nm-dev-section, #nm-net-section');
+        const isDevice = row.classList.contains('nm-dev-pending-row');
+        const isNetwork = row.classList.contains('nm-net-pending-row');
         row.remove();
-        nmExtSyncEmptyState(section);
+        if (isDevice) nmDevSyncEmptyState(section);
+        else if (isNetwork) nmNetSyncEmptyState(section);
+        else nmExtSyncEmptyState(section);
     });
 
     // -----------------------------------------------------------------------
     // + Adicionar Dispositivo
     // -----------------------------------------------------------------------
-    document.addEventListener('click', async (e) => {
+    document.addEventListener('click', (e) => {
         const btn = e.target.closest('#nm-dev-add-btn');
         if (!btn) return;
-        const ipbxId = parseInt(btn.dataset.ipbxId || '0', 10);
-        if (ipbxId <= 0) { alert('Salve o Servidor IPBX primeiro.'); return; }
-        const device_type = nmVal('nm-dev-device_type');
-        const ip_address  = nmVal('nm-dev-ip_address');
-        const login       = nmVal('nm-dev-login');
-        const password    = nmVal('nm-dev-password');
-        if (!device_type.trim()) { alert('Informe o tipo do dispositivo.'); document.getElementById('nm-dev-device_type')?.focus(); return; }
-        const url         = btn.dataset.url || nmGetIpbxActionUrl(btn);
-        const companiesId = btn.dataset.companiesId || nmGetIpbxCompaniesId(btn);
-        const originalHtml = btn.innerHTML;
-        btn.disabled = true;
-        btn.innerHTML = '<span class="nm-spinner"></span>';
-        try {
-            const result = await nmPost(url, { action: btn.dataset.action, ipbx_id: ipbxId, companies_id: companiesId, device_type, ip_address, login, password });
-            if (!result.success) throw new Error(result.error || 'Erro desconhecido');
-            const tr = document.createElement('tr');
-            tr.id = 'nm-dev-row-' + result.id;
-            tr.className = 'tab_bg_1';
-            tr.innerHTML = `<td>${nmEsc(device_type)}</td><td>${nmEsc(ip_address)}</td><td>${nmEsc(login)}</td><td>••••••</td><td>${nmDelBtn('delete_device', result.id, 'nm-dev-row-' + result.id, companiesId, url, 'Remover dispositivo?')}</td>`;
-            const addRow = document.getElementById('nm-dev-add-row');
-            if (addRow) addRow.parentNode.insertBefore(tr, addRow);
-            document.getElementById('nm-dev-empty')?.remove();
-            nmCounterIncrement('nm-count-dev');
-        } catch (error) {
-            console.error('[NM] Erro ao adicionar dispositivo:', error.message);
-            alert('Erro ao adicionar dispositivo: ' + error.message);
-        } finally { btn.innerHTML = originalHtml; btn.disabled = false; }
+        nmClonePendingRow(
+            btn,
+            '#nm-dev-section',
+            '#nm-dev-tbody',
+            '#nm-dev-add-row',
+            'nm-dev-pending-row',
+            '.nm-dev-device_type',
+            'Nao foi possivel localizar a linha de cadastro de dispositivo.'
+        );
     });
 
     // -----------------------------------------------------------------------
     // + Adicionar Rede
     // -----------------------------------------------------------------------
-    document.addEventListener('click', async (e) => {
+    document.addEventListener('click', (e) => {
         const btn = e.target.closest('#nm-net-add-btn');
         if (!btn) return;
-        const ipbxId = parseInt(btn.dataset.ipbxId || '0', 10);
-        if (ipbxId <= 0) { alert('Salve o Servidor IPBX primeiro.'); return; }
-        const ip_network    = nmVal('nm-net-ip_network');
-        const netmask       = nmVal('nm-net-netmask');
-        const gateway       = nmVal('nm-net-gateway');
-        const dns_primary   = nmVal('nm-net-dns_primary');
-        const dns_secondary = nmVal('nm-net-dns_secondary');
-        const supplier      = nmVal('nm-net-supplier');
-        if (!ip_network.trim()) { alert('Informe o IP da rede.'); document.getElementById('nm-net-ip_network')?.focus(); return; }
-        const url         = btn.dataset.url || nmGetIpbxActionUrl(btn);
-        const companiesId = btn.dataset.companiesId || nmGetIpbxCompaniesId(btn);
-        const originalHtml = btn.innerHTML;
-        btn.disabled = true;
-        btn.innerHTML = '<span class="nm-spinner"></span>';
-        try {
-            const result = await nmPost(url, { action: btn.dataset.action, ipbx_id: ipbxId, companies_id: companiesId, ip_network, netmask, gateway, dns_primary, dns_secondary, supplier });
-            if (!result.success) throw new Error(result.error || 'Erro desconhecido');
-            const tr = document.createElement('tr');
-            tr.id = 'nm-net-row-' + result.id;
-            tr.className = 'tab_bg_1';
-            tr.innerHTML = `<td>${nmEsc(ip_network)}</td><td>${nmEsc(netmask)}</td><td>${nmEsc(gateway)}</td><td>${nmEsc(dns_primary)}</td><td>${nmEsc(dns_secondary)}</td><td>${nmEsc(supplier)}</td><td>${nmDelBtn('delete_network', result.id, 'nm-net-row-' + result.id, companiesId, url, 'Remover rede?')}</td>`;
-            const addRow = document.getElementById('nm-net-add-row');
-            if (addRow) addRow.parentNode.insertBefore(tr, addRow);
-            document.getElementById('nm-net-empty')?.remove();
-            nmCounterIncrement('nm-count-net');
-        } catch (error) {
-            console.error('[NM] Erro ao adicionar rede:', error.message);
-            alert('Erro ao adicionar rede: ' + error.message);
-        } finally { btn.innerHTML = originalHtml; btn.disabled = false; }
+        nmClonePendingRow(
+            btn,
+            '#nm-net-section',
+            '#nm-net-tbody',
+            '#nm-net-add-row',
+            'nm-net-pending-row',
+            '.nm-net-ip_network',
+            'Nao foi possivel localizar a linha de cadastro de rede.'
+        );
     });
 
     // -----------------------------------------------------------------------

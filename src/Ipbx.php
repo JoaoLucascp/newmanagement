@@ -350,7 +350,7 @@ class Ipbx extends \CommonDBTM
         $bool_tds  = '';
         foreach ($bool_cols as $field) {
             $checked = !empty($row[$field]) ? ' checked' : '';
-            $bool_tds .= '<td class="text-center" style="min-width:52px">'
+            $bool_tds .= '<td class="text-center">'
                 . '<div class="form-check form-switch d-flex justify-content-center m-0 p-0">'
                 . '<input class="form-check-input nm-toggle-bool" type="checkbox" role="switch"'
                 . ' data-row-id="' . $id . '"'
@@ -384,7 +384,7 @@ class Ipbx extends \CommonDBTM
             . '<td>' . $h($row['department']) . '</td>'
             . '<td class="text-center">' . $grava_badge . '</td>'
             . $bool_tds
-            . ($can_delete ? '<td>' . $delete_btn . '</td>' : '')
+            . '<td class="text-end">' . $delete_btn . '</td>'
             . '</tr>';
     }
 
@@ -401,12 +401,12 @@ class Ipbx extends \CommonDBTM
                 . ' title="' . __('Remover', 'newmanagement') . '">'
                 . '<i class="ti ti-trash text-danger"></i></button>';
         }
-        return '<tr class="tab_bg_1" id="nm-dev-row-' . $id . '">'
+        return '<tr class="tab_bg_1 nm-dev-saved-row" id="nm-dev-row-' . $id . '">'
             . '<td>' . $h($row['device_type']) . '</td>'
             . '<td>' . $h($row['ip_address']) . '</td>'
             . '<td>' . $h($row['login'] ?? '') . '</td>'
-            . '<td>••••••</td>'
-            . '<td>' . $delete_btn . '</td></tr>';
+            . '<td>******</td>'
+            . '<td class="text-end">' . $delete_btn . '</td></tr>';
     }
 
     public static function renderNetworkRow(int $id, array $row, int $companies_id, string $csrf, string $action, bool $can_delete = true): string
@@ -422,13 +422,13 @@ class Ipbx extends \CommonDBTM
                 . ' title="' . __('Remover', 'newmanagement') . '">'
                 . '<i class="ti ti-trash text-danger"></i></button>';
         }
-        return '<tr class="tab_bg_1" id="nm-net-row-' . $id . '">'
+        return '<tr class="tab_bg_1 nm-net-saved-row" id="nm-net-row-' . $id . '">'
             . '<td>' . $h($row['ip_network']) . '</td>'
             . '<td>' . $h($row['netmask']) . '</td>'
             . '<td>' . $h($row['gateway']) . '</td>'
             . '<td>' . $h($row['dns_primary']) . '</td>'
             . '<td>' . $h($row['dns_secondary']) . '</td>'
             . '<td>' . $h($row['supplier'] ?? '') . '</td>'
-            . '<td>' . $delete_btn . '</td></tr>';
+            . '<td class="text-end">' . $delete_btn . '</td></tr>';
     }
 }

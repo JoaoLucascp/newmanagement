@@ -1,144 +1,121 @@
 {#
-  Newmanagement — Aba IPBX On-Premise dentro da ficha de Empresa
-  Variáveis recebidas (Ipbx::showTabForCompany):
-    action_url        — string: URL do endpoint ajax/ipbx_sub.php
-    companies_id      — int
-    ipbx_id           — int (0 = ainda não existe)
-    fields            — array com os campos do IPBX (senhas já zeradas)
-    ipbx_action       — string: 'add_ipbx' | 'update_ipbx'
-    csrf              — string: token CSRF
-    can_write         — bool
-    can_delete        — bool
-    web_placeholder   — string: placeholder do campo senha web
-    ssh_placeholder   — string: placeholder do campo senha ssh
-    extensions        — array de rows da tabela de ramais
-    devices           — array de rows da tabela de dispositivos
-    network           — array de rows da tabela de rede
-    ext_total         — int: total de ramais
-    dev_total         — int: total de dispositivos
-    net_total         — int: total de redes
+  Newmanagement - Aba IPBX On-Premise dentro da ficha de Empresa
+  Variaveis recebidas (Ipbx::showTabForCompany):
+    action_url, companies_id, ipbx_id, fields, ipbx_action, csrf,
+    can_write, can_delete, web_placeholder, ssh_placeholder,
+    extensions, devices, network, ext_total, dev_total, net_total.
 #}
-<div class="nm-ipbx-tab"
+<div class="nm-ipbx-tab nm-ipbx-page"
      data-action-url="{{ action_url|e('html_attr') }}"
      data-companies-id="{{ companies_id }}">
 
-  {# === Formulário principal === #}
-  <div id="nm-ipbx-form">
+  <div id="nm-ipbx-form" class="nm-ipbx-form-panel">
     <input type="hidden" id="nm-ipbx-csrf"         value="{{ csrf|e('html_attr') }}">
     <input type="hidden" id="nm-ipbx-action"       value="{{ ipbx_action }}">
     <input type="hidden" id="nm-ipbx-id"           value="{{ ipbx_id }}">
     <input type="hidden" id="nm-ipbx-companies-id" value="{{ companies_id }}">
 
-    <table class="tab_cadre_fixe">
+    <div class="nm-section-heading">
+      <div class="nm-section-title">
+        <i class="ti ti-server" aria-hidden="true"></i>
+        <span>{{ __('Servidor IPBX', 'newmanagement') }}</span>
+      </div>
+      {% if ipbx_id > 0 %}
+        <span class="badge bg-secondary-lt">ID {{ ipbx_id }}</span>
+      {% endif %}
+    </div>
 
-      <tr class="tab_bg_1">
-        <td>{{ __('Modelo', 'newmanagement') }}</td>
-        <td>
-          <input type="text" id="nm-ipbx-model" autocomplete="off"
-                 value="{{ fields.model|default('')|e }}"
-                 class="form-control"
-                 {{ not can_write ? 'readonly' }}
-          >
-        </td>
-        <td>{{ __('Versão', 'newmanagement') }}</td>
-        <td>
-          <input type="text" id="nm-ipbx-server_version" autocomplete="off"
-                 value="{{ fields.server_version|default('')|e }}"
-                 class="form-control"
-                 {{ not can_write ? 'readonly' }}
-          >
-        </td>
-      </tr>
+    <div class="nm-ipbx-grid">
+      <div class="nm-field">
+        <label class="form-label" for="nm-ipbx-model">{{ __('Modelo', 'newmanagement') }}</label>
+        <input type="text" id="nm-ipbx-model" autocomplete="off"
+               value="{{ fields.model|default('')|e }}"
+               class="form-control"
+               {{ not can_write ? 'readonly' }}>
+      </div>
 
-      <tr class="tab_bg_1">
-        <td>{{ __('IP Local', 'newmanagement') }}</td>
-        <td>
-          <input type="text" id="nm-ipbx-ip_local" autocomplete="off"
-                 value="{{ fields.ip_local|default('')|e }}"
-                 class="form-control" placeholder="192.168.1.1"
-                 {{ not can_write ? 'readonly' }}
-          >
-        </td>
-        <td>{{ __('IP Externo', 'newmanagement') }}</td>
-        <td>
-          <input type="text" id="nm-ipbx-ip_external" autocomplete="off"
-                 value="{{ fields.ip_external|default('')|e }}"
-                 class="form-control" placeholder="201.x.x.x"
-                 {{ not can_write ? 'readonly' }}
-          >
-        </td>
-      </tr>
+      <div class="nm-field">
+        <label class="form-label" for="nm-ipbx-server_version">{{ __('Versão', 'newmanagement') }}</label>
+        <input type="text" id="nm-ipbx-server_version" autocomplete="off"
+               value="{{ fields.server_version|default('')|e }}"
+               class="form-control"
+               {{ not can_write ? 'readonly' }}>
+      </div>
 
-      <tr class="tab_bg_1">
-        <td>{{ __('Porta Web', 'newmanagement') }}</td>
-        <td>
-          <input type="text" id="nm-ipbx-web_port" autocomplete="off"
-                 value="{{ fields.web_port|default('')|e }}"
-                 class="form-control" placeholder="80"
-                 {{ not can_write ? 'readonly' }}
-          >
-        </td>
-        <td>{{ __('Senha Web', 'newmanagement') }}</td>
-        <td>
-          <div class="input-group">
-            <input type="password" id="nm-web-password"
-                   class="form-control" autocomplete="new-password"
-                   value=""
-                   placeholder="{{ web_placeholder|e('html_attr') }}"
-                   {{ not can_write ? 'readonly' }}
-            >
-            <button type="button" class="btn btn-sm btn-icon nm-btn-eye"
-                    data-target="nm-web-password">
-              <i class="ti ti-eye"></i>
-            </button>
-          </div>
-        </td>
-      </tr>
+      <div class="nm-field">
+        <label class="form-label" for="nm-ipbx-ip_local">{{ __('IP Local', 'newmanagement') }}</label>
+        <input type="text" id="nm-ipbx-ip_local" autocomplete="off"
+               value="{{ fields.ip_local|default('')|e }}"
+               class="form-control" placeholder="192.168.1.1"
+               {{ not can_write ? 'readonly' }}>
+      </div>
 
-      <tr class="tab_bg_1">
-        <td>{{ __('Porta SSH', 'newmanagement') }}</td>
-        <td>
-          <input type="text" id="nm-ipbx-ssh_port" autocomplete="off"
-                 value="{{ fields.ssh_port|default('')|e }}"
-                 class="form-control" placeholder="22"
-                 {{ not can_write ? 'readonly' }}
-          >
-        </td>
-        <td>{{ __('Senha SSH', 'newmanagement') }}</td>
-        <td>
-          <div class="input-group">
-            <input type="password" id="nm-ssh-password"
-                   class="form-control" autocomplete="new-password"
-                   value=""
-                   placeholder="{{ ssh_placeholder|e('html_attr') }}"
-                   {{ not can_write ? 'readonly' }}
-            >
-            <button type="button" class="btn btn-sm btn-icon nm-btn-eye"
-                    data-target="nm-ssh-password">
-              <i class="ti ti-eye"></i>
-            </button>
-          </div>
-        </td>
-      </tr>
+      <div class="nm-field">
+        <label class="form-label" for="nm-ipbx-ip_external">{{ __('IP Externo', 'newmanagement') }}</label>
+        <input type="text" id="nm-ipbx-ip_external" autocomplete="off"
+               value="{{ fields.ip_external|default('')|e }}"
+               class="form-control" placeholder="201.x.x.x"
+               {{ not can_write ? 'readonly' }}>
+      </div>
 
-      <tr class="tab_bg_1">
-        <td>{{ __('Comentário', 'newmanagement') }}</td>
-        <td colspan="3">
-          <textarea id="nm-ipbx-comment" class="form-control" rows="2"
-                    {{ not can_write ? 'readonly' }}
-          >{{ fields.comment|default('')|e }}</textarea>
-        </td>
-      </tr>
+      <div class="nm-field nm-field--compact">
+        <label class="form-label" for="nm-ipbx-web_port">{{ __('Porta Web', 'newmanagement') }}</label>
+        <input type="text" id="nm-ipbx-web_port" autocomplete="off"
+               value="{{ fields.web_port|default('')|e }}"
+               class="form-control" placeholder="80"
+               {{ not can_write ? 'readonly' }}>
+      </div>
 
-    </table>
-  </div>{# /#nm-ipbx-form #}
+      <div class="nm-field">
+        <label class="form-label" for="nm-web-password">{{ __('Senha Web', 'newmanagement') }}</label>
+        <div class="input-group nm-password-group">
+          <input type="password" id="nm-web-password"
+                 class="form-control" autocomplete="new-password"
+                 value=""
+                 placeholder="{{ web_placeholder|e('html_attr') }}"
+                 {{ not can_write ? 'readonly' }}>
+          <button type="button" class="btn btn-icon nm-btn-eye"
+                  data-target="nm-web-password"
+                  title="{{ __('Mostrar ou ocultar senha', 'newmanagement') }}">
+            <i class="ti ti-eye"></i>
+          </button>
+        </div>
+      </div>
 
-  {# === Sub-seções em abas ─────────────────────────────── #}
-  <div class="nm-tabs-wrapper" style="margin-top: 1.5rem;">
+      <div class="nm-field nm-field--compact">
+        <label class="form-label" for="nm-ipbx-ssh_port">{{ __('Porta SSH', 'newmanagement') }}</label>
+        <input type="text" id="nm-ipbx-ssh_port" autocomplete="off"
+               value="{{ fields.ssh_port|default('')|e }}"
+               class="form-control" placeholder="22"
+               {{ not can_write ? 'readonly' }}>
+      </div>
 
-    {# Barra de abas #}
+      <div class="nm-field">
+        <label class="form-label" for="nm-ssh-password">{{ __('Senha SSH', 'newmanagement') }}</label>
+        <div class="input-group nm-password-group">
+          <input type="password" id="nm-ssh-password"
+                 class="form-control" autocomplete="new-password"
+                 value=""
+                 placeholder="{{ ssh_placeholder|e('html_attr') }}"
+                 {{ not can_write ? 'readonly' }}>
+          <button type="button" class="btn btn-icon nm-btn-eye"
+                  data-target="nm-ssh-password"
+                  title="{{ __('Mostrar ou ocultar senha', 'newmanagement') }}">
+            <i class="ti ti-eye"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="nm-field nm-field--full">
+        <label class="form-label" for="nm-ipbx-comment">{{ __('Comentário', 'newmanagement') }}</label>
+        <textarea id="nm-ipbx-comment" class="form-control" rows="3"
+                  {{ not can_write ? 'readonly' }}>{{ fields.comment|default('')|e }}</textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="nm-tabs-wrapper nm-ipbx-tabs">
     <div class="nm-tab-bar" role="tablist" aria-label="{{ __('Recursos do IPBX', 'newmanagement') }}">
-
       <button type="button"
               class="nm-tab active"
               role="tab"
@@ -174,10 +151,8 @@
         {{ __('Rede da Empresa', 'newmanagement') }}
         <span class="nm-tab-count" id="nm-count-net">{{ net_total }}</span>
       </button>
+    </div>
 
-    </div>{# /.nm-tab-bar #}
-
-    {# Painéis #}
     <div class="nm-tab-panel active" id="nm-panel-ext" role="tabpanel" aria-labelledby="nm-tab-ext">
       {% include '@newmanagement/ipbx/partials/extensions.html.twig' %}
     </div>
@@ -189,12 +164,10 @@
     <div class="nm-tab-panel" id="nm-panel-net" role="tabpanel" aria-labelledby="nm-tab-net" hidden>
       {% include '@newmanagement/ipbx/partials/network.html.twig' %}
     </div>
+  </div>
 
-  </div>{# /.nm-tabs-wrapper #}
-
-  {# === Botão Salvar === #}
   {% if can_write %}
-  <div class="text-end mt-3 mb-3">
+  <div class="nm-ipbx-savebar">
     <button type="button" id="nm-save-all"
             class="btn btn-primary"
             data-action-url="{{ action_url|e('html_attr') }}">
@@ -203,5 +176,4 @@
     </button>
   </div>
   {% endif %}
-
-</div>{# /.nm-ipbx-tab #}
+</div>

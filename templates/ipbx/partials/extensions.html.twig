@@ -1,15 +1,11 @@
 {#
   Partial: Tabela de Ramais
-  Colunas: Ramal | Senha | Usuário | IP Dispositivo | Departamento | Grava | LOF | LOC | DDF | DDC | DDI | SRV | [Ações]
-
-  Fluxo de adição:
-    1. Usuário clica "+ Adicionar"  → JS clona #nm-ext-add-row (oculto) e insere linha visível
-    2. Usuário preenche campos e clica ✔  → JS salva via AJAX e substitui linha por linha salva
-    3. Botão 🗑 na linha pendente descarta sem salvar
+  Fluxo: o usuario adiciona linhas pendentes e o botao Salvar do modulo grava tudo.
 #}
 {% set ext_pages = ext_page_size > 0 ? max(1, (ext_total / ext_page_size)|round(0, 'ceil')) : 1 %}
 
 <div id="nm-ext-section"
+     class="nm-related-section"
      data-section="extensions"
      data-ipbx-id="{{ ipbx_id }}"
      data-companies-id="{{ companies_id }}"
@@ -20,134 +16,150 @@
      data-page-size="{{ ext_page_size }}"
      data-total="{{ ext_total }}">
 
-  <table class="tab_cadre_fixehov" id="nm-ext-table">
-    <thead>
-      <tr class="headerRow noHover">
-        <th>{{ __('Ramal', 'newmanagement') }}</th>
-        <th>{{ __('Senha', 'newmanagement') }}</th>
-        <th>{{ __('Usuário', 'newmanagement') }}</th>
-        <th>{{ __('IP Dispositivo', 'newmanagement') }}</th>
-        <th>{{ __('Departamento', 'newmanagement') }}</th>
-        <th class="text-center">{{ __('Grava', 'newmanagement') }}</th>
-        <th class="text-center" title="Liga Ocupado Frente">LOF</th>
-        <th class="text-center" title="Liga Ocupado Congestionado">LOC</th>
-        <th class="text-center" title="Discagem Direta para Fixo">DDF</th>
-        <th class="text-center" title="Discagem Direta para Celular">DDC</th>
-        <th class="text-center" title="Discagem Direta Internacional">DDI</th>
-        <th class="text-center" title="Serviço">SRV</th>
-        <th style="text-align:right">
-          {% if can_write and ipbx_id > 0 %}
-            <button type="button" id="nm-ext-add-btn"
-                    class="btn btn-sm btn-outline-secondary"
-                    data-ipbx-id="{{ ipbx_id }}"
-                    data-companies-id="{{ companies_id }}">
-              <i class="ti ti-plus"></i> {{ __('Adicionar', 'newmanagement') }}
-            </button>
-          {% endif %}
-        </th>
-      </tr>
-    </thead>
+  <div class="nm-related-toolbar">
+    <div class="nm-related-heading">
+      <div class="nm-related-title">
+        <i class="ti ti-phone-call" aria-hidden="true"></i>
+        <span>{{ __('Ramais', 'newmanagement') }}</span>
+      </div>
+      <span class="nm-related-meta">{{ ext_total }} {{ __('ramais', 'newmanagement') }}</span>
+    </div>
+    {% if can_write and ipbx_id > 0 %}
+      <button type="button" id="nm-ext-add-btn"
+              class="btn btn-sm btn-outline-primary"
+              data-ipbx-id="{{ ipbx_id }}"
+              data-companies-id="{{ companies_id }}">
+        <i class="ti ti-plus"></i> {{ __('Adicionar', 'newmanagement') }}
+      </button>
+    {% endif %}
+  </div>
 
-    <tbody id="nm-ext-tbody">
+  <div class="table-responsive nm-table-wrap">
+    <table class="table table-vcenter table-hover nm-data-table nm-ext-table" id="nm-ext-table">
+      <colgroup>
+        <col class="nm-col-ext-number">
+        <col class="nm-col-ext-password">
+        <col class="nm-col-ext-user">
+        <col class="nm-col-ext-ip">
+        <col class="nm-col-ext-department">
+        <col class="nm-col-ext-records">
+        <col class="nm-col-switch">
+        <col class="nm-col-switch">
+        <col class="nm-col-switch">
+        <col class="nm-col-switch">
+        <col class="nm-col-switch">
+        <col class="nm-col-switch">
+        <col class="nm-col-actions">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>{{ __('Ramal', 'newmanagement') }}</th>
+          <th>{{ __('Senha', 'newmanagement') }}</th>
+          <th>{{ __('Usuário', 'newmanagement') }}</th>
+          <th>{{ __('IP Dispositivo', 'newmanagement') }}</th>
+          <th>{{ __('Departamento', 'newmanagement') }}</th>
+          <th class="text-center">{{ __('Grava', 'newmanagement') }}</th>
+          <th class="text-center" title="Liga Ocupado Frente">LOF</th>
+          <th class="text-center" title="Liga Ocupado Congestionado">LOC</th>
+          <th class="text-center" title="Discagem Direta para Fixo">DDF</th>
+          <th class="text-center" title="Discagem Direta para Celular">DDC</th>
+          <th class="text-center" title="Discagem Direta Internacional">DDI</th>
+          <th class="text-center" title="Serviço">SRV</th>
+          <th class="text-end"></th>
+        </tr>
+      </thead>
 
-      {# Linhas salvas #}
-      {% for row in extensions %}
-        <tr class="tab_bg_1 nm-ext-saved-row" id="nm-ext-row-{{ row.id }}">
-          <td>{{ row.number|e }}</td>
-          <td><code>{{ row.password_display|default('')|e }}</code></td>
-          <td>{{ row.user_name|default('')|e }}</td>
-          <td>{{ row.device_ip|default('')|e }}</td>
-          <td>{{ row.department|default('')|e }}</td>
+      <tbody id="nm-ext-tbody">
+        {% for row in extensions %}
+          <tr class="tab_bg_1 nm-ext-saved-row" id="nm-ext-row-{{ row.id }}">
+            <td>{{ row.number|e }}</td>
+            <td><code>{{ row.password_display|default('')|e }}</code></td>
+            <td>{{ row.user_name|default('')|e }}</td>
+            <td>{{ row.device_ip|default('')|e }}</td>
+            <td>{{ row.department|default('')|e }}</td>
+            <td class="text-center">
+              <span class="badge {{ row.records_calls ? 'bg-success' : 'bg-secondary' }}">
+                {{ row.records_calls ? __('Sim', 'newmanagement') : __('Não', 'newmanagement') }}
+              </span>
+            </td>
+            {% for field in ['lof','loc','ddf','ddc','ddi','srv'] %}
+            <td class="text-center">
+              <div class="form-check form-switch d-flex justify-content-center m-0 p-0">
+                <input class="form-check-input nm-toggle-bool" type="checkbox" role="switch"
+                       data-row-id="{{ row.id }}"
+                       data-field="{{ field }}"
+                       data-action-url="{{ action_url|e('html_attr') }}"
+                       data-companies-id="{{ companies_id }}"
+                       data-csrf="{{ csrf|e('html_attr') }}"
+                       {{ attribute(row, field) ? 'checked' }}
+                       style="cursor:pointer">
+              </div>
+            </td>
+            {% endfor %}
+            <td class="text-end">
+              {% if can_delete %}
+              <button type="button"
+                      class="btn btn-sm btn-icon nm-del-btn"
+                      data-action="delete_extension"
+                      data-id="{{ row.id }}"
+                      data-row="nm-ext-row-{{ row.id }}"
+                      data-companies-id="{{ companies_id }}"
+                      data-csrf="{{ csrf|e('html_attr') }}"
+                      data-url="{{ action_url|e('html_attr') }}"
+                      data-confirm="{{ __('Remover ramal?', 'newmanagement') }}"
+                      title="{{ __('Remover ramal', 'newmanagement') }}">
+                <i class="ti ti-trash text-danger"></i>
+              </button>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+
+        {% if extensions is empty %}
+          <tr id="nm-ext-empty">
+            <td colspan="13" class="text-center text-muted py-3">
+              {{ __('Nenhum ramal cadastrado.', 'newmanagement') }}
+            </td>
+          </tr>
+        {% endif %}
+
+        {% if can_write and ipbx_id > 0 %}
+        <tr class="nm-ext-input-template" id="nm-ext-add-row" hidden style="display:none">
+          <td><input type="text"     class="nm-f-number form-control form-control-sm"     form="_none" autocomplete="off"          placeholder="{{ __('Ramal', 'newmanagement') }}"></td>
+          <td><input type="password" class="nm-f-password form-control form-control-sm"   form="_none" autocomplete="new-password" placeholder="{{ __('Senha', 'newmanagement') }}"></td>
+          <td><input type="text"     class="nm-f-user_name form-control form-control-sm"  form="_none" autocomplete="off"          placeholder="{{ __('Usuário', 'newmanagement') }}"></td>
+          <td><input type="text"     class="nm-f-device_ip form-control form-control-sm"  form="_none" autocomplete="off"          placeholder="192.168.x.x"></td>
+          <td><input type="text"     class="nm-f-department form-control form-control-sm" form="_none" autocomplete="off"          placeholder="{{ __('Departamento', 'newmanagement') }}"></td>
           <td class="text-center">
-            <span class="badge {{ row.records_calls ? 'bg-success' : 'bg-secondary' }}">
-              {{ row.records_calls ? __('Sim', 'newmanagement') : __('Não', 'newmanagement') }}
-            </span>
+            <select class="nm-f-records_calls form-select form-select-sm">
+              <option value="0">{{ __('Não', 'newmanagement') }}</option>
+              <option value="1">{{ __('Sim', 'newmanagement') }}</option>
+            </select>
           </td>
           {% for field in ['lof','loc','ddf','ddc','ddi','srv'] %}
-          <td class="text-center" style="min-width:52px">
+          <td class="text-center">
             <div class="form-check form-switch d-flex justify-content-center m-0 p-0">
-              <input class="form-check-input nm-toggle-bool" type="checkbox" role="switch"
-                     data-row-id="{{ row.id }}"
-                     data-field="{{ field }}"
-                     data-action-url="{{ action_url|e('html_attr') }}"
-                     data-companies-id="{{ companies_id }}"
-                     data-csrf="{{ csrf|e('html_attr') }}"
-                     {{ attribute(row, field) ? 'checked' }}
-                     style="cursor:pointer">
+              <input class="form-check-input nm-f-bool" type="checkbox" data-field="{{ field }}" style="cursor:pointer">
             </div>
           </td>
           {% endfor %}
           <td class="text-end">
-            {% if can_delete %}
-            <button type="button"
-                    class="btn btn-sm btn-icon nm-del-btn"
-                    data-action="delete_extension"
-                    data-id="{{ row.id }}"
-                    data-row="nm-ext-row-{{ row.id }}"
-                    data-companies-id="{{ companies_id }}"
-                    data-csrf="{{ csrf|e('html_attr') }}"
-                    data-url="{{ action_url|e('html_attr') }}"
-                    data-confirm="{{ __('Remover ramal?', 'newmanagement') }}"
-                    title="{{ __('Remover ramal', 'newmanagement') }}">
+            <button type="button" class="btn btn-sm btn-icon nm-row-del-btn" title="{{ __('Descartar linha', 'newmanagement') }}">
               <i class="ti ti-trash text-danger"></i>
             </button>
-            {% endif %}
           </td>
         </tr>
-      {% endfor %}
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
 
-      {# Mensagem vazia — visível quando não há linhas salvas e usuário não pode escrever #}
-      {% if extensions is empty %}
-        <tr id="nm-ext-empty">
-          <td colspan="13" class="text-center text-muted py-3">
-            {{ __('Nenhum ramal cadastrado.', 'newmanagement') }}
-          </td>
-        </tr>
-      {% endif %}
-
-      {#
-        Linha template — SEMPRE OCULTA.
-        O JS clona este <tr> ao clicar em "+ Adicionar".
-        NÃO remova o hidden nem o display:none.
-      #}
-      {% if can_write and ipbx_id > 0 %}
-      <tr class="nm-ext-input-template" id="nm-ext-add-row" hidden style="display:none">
-        <td><input type="text"     class="nm-f-number form-control form-control-sm"     form="_none" autocomplete="off"             placeholder="{{ __('Ramal', 'newmanagement') }}"></td>
-        <td><input type="password" class="nm-f-password form-control form-control-sm"   form="_none" autocomplete="new-password"    placeholder="{{ __('Senha', 'newmanagement') }}"></td>
-        <td><input type="text"     class="nm-f-user_name form-control form-control-sm"  form="_none" autocomplete="off"             placeholder="{{ __('Usuário', 'newmanagement') }}"></td>
-        <td><input type="text"     class="nm-f-device_ip form-control form-control-sm"  form="_none" autocomplete="off"             placeholder="192.168.x.x"></td>
-        <td><input type="text"     class="nm-f-department form-control form-control-sm" form="_none" autocomplete="off"             placeholder="{{ __('Departamento', 'newmanagement') }}"></td>
-        <td class="text-center">
-          <select class="nm-f-records_calls form-select form-select-sm">
-            <option value="0">{{ __('Não', 'newmanagement') }}</option>
-            <option value="1">{{ __('Sim', 'newmanagement') }}</option>
-          </select>
-        </td>
-        {% for field in ['lof','loc','ddf','ddc','ddi','srv'] %}
-        <td class="text-center" style="min-width:52px">
-          <div class="form-check form-switch d-flex justify-content-center m-0 p-0">
-            <input class="form-check-input nm-f-bool" type="checkbox" data-field="{{ field }}" style="cursor:pointer">
-          </div>
-        </td>
-        {% endfor %}
-        <td class="text-end">
-          <button type="button" class="btn btn-sm btn-icon nm-row-del-btn" title="{{ __('Descartar linha', 'newmanagement') }}">
-            <i class="ti ti-trash text-danger"></i>
-          </button>
-        </td>
-      </tr>
-      {% endif %}
-
-    </tbody>
-  </table>
-
-  {# Paginação #}
   <div id="nm-ext-pagination"
-       class="d-flex align-items-center justify-content-between mt-2"
+       class="nm-pagination-row"
        {% if ext_pages <= 1 %}style="display:none!important"{% endif %}>
     <span class="text-muted" style="font-size:0.8rem">
       {{ __('Mostrando', 'newmanagement') }}
-      {{ ((ext_page - 1) * ext_page_size) + 1 }}–{{ min(ext_page * ext_page_size, ext_total) }}
+      {{ ((ext_page - 1) * ext_page_size) + 1 }}-{{ min(ext_page * ext_page_size, ext_total) }}
       {{ __('de', 'newmanagement') }} {{ ext_total }}
       {{ __('ramais', 'newmanagement') }}
     </span>
@@ -169,5 +181,4 @@
       </button>
     </div>
   </div>
-
 </div>
