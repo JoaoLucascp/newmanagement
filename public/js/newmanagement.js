@@ -6,7 +6,7 @@
  * fix(CSRF-01): nmGetCsrfToken() lê meta[property="glpi:csrf_token"].
  * fix(DELEGATE-01): handlers registrados UMA VEZ via nmEnsureIpbxDelegated().
  * fix(UI-02): abas horizontais — clique delegado no document.
- * fix(UI-03): ramais usam linha pendente clonada antes de salvar via AJAX.
+ * fix(UI-03): ramais usam linhas pendentes e salvamento em lote no botão principal.
  * fix(TOGGLE-01): flag padronizada para document._nmToggleBoolDelegated.
  */
 
@@ -407,6 +407,9 @@ function nmEnsureIpbxDelegated() {
         const btn = e.target.closest('#nm-save-all');
         if (!btn) return;
         const actionUrl = btn.dataset.actionUrl || nmGetIpbxActionUrl(btn);
+        const pendingExtensionRows = nmExtRowsReadyToSave(nmExtPendingRows());
+        if (pendingExtensionRows === null) return;
+
         const ipbxData = {
             action:         nmVal('nm-ipbx-action')       || 'add_ipbx',
             id:             nmVal('nm-ipbx-id')           || '0',
@@ -426,8 +429,19 @@ function nmEnsureIpbxDelegated() {
         btn.innerHTML = '<span class="nm-spinner"></span> Salvando...';
         try {
             const result = await nmPost(actionUrl, ipbxData);
+            const savedIpbxId = parseInt(result?.id || ipbxData.id || '0', 10);
             if (result && result.id) nmUpdateIpbxId(result.id);
-            btn.innerHTML = '<i class="ti ti-check"></i> Salvo!';
+
+            const savedExtensions = await nmExtSavePendingRows(
+                pendingExtensionRows,
+                actionUrl,
+                savedIpbxId,
+                ipbxData.companies_id
+            );
+
+            btn.innerHTML = savedExtensions > 0
+                ? `<i class="ti ti-check"></i> Salvo! ${savedExtensions} ramal${savedExtensions > 1 ? 's' : ''}`
+                : '<i class="ti ti-check"></i> Salvo!';
             btn.classList.replace('btn-primary', 'btn-success');
             setTimeout(() => {
                 btn.innerHTML = originalHtml;
@@ -529,6 +543,99 @@ function nmEnsureIpbxDelegated() {
         return row.querySelector(`.nm-f-bool[data-field="${field}"]`)?.checked ? '1' : '0';
     }
 
+    function nmExtPendingRows() {
+        return Array.from(document.querySelectorAll('#nm-ext-tbody .nm-ext-pending-row'));
+    }
+
+    function nmExtIsBlankRow(row) {
+        const textSelectors = [
+            '.nm-f-number',
+            '.nm-f-password',
+            '.nm-f-device_ip',
+            '.nm-f-user_name',
+            '.nm-f-department',
+        ];
+        const hasText = textSelectors.some(selector => nmExtRowValue(row, selector).trim() !== '');
+        const hasRecordFlag = nmExtRowValue(row, '.nm-f-records_calls') !== '0';
+        const hasBoolFlag = !!row.querySelector('.nm-f-bool:checked');
+        return !hasText && !hasRecordFlag && !hasBoolFlag;
+    }
+
+    function nmExtRowsReadyToSave(rows) {
+        const readyRows = [];
+
+        rows.forEach(row => {
+            const section = row.closest('#nm-ext-section');
+            if (nmExtIsBlankRow(row)) {
+                row.remove();
+                nmExtSyncEmptyState(section);
+                return;
+            }
+
+            const number = nmExtRowValue(row, '.nm-f-number').trim();
+            if (!number) {
+                readyRows.push(null);
+                alert('Informe o numero do ramal.');
+                row.querySelector('.nm-f-number')?.focus();
+                return;
+            }
+
+            readyRows.push(row);
+        });
+
+        return readyRows.includes(null) ? null : readyRows;
+    }
+
+    function nmExtPayload(row, ipbxId, companiesId) {
+        return {
+            action: 'add_extension',
+            ipbx_id: ipbxId,
+            companies_id: companiesId,
+            number: nmExtRowValue(row, '.nm-f-number').trim(),
+            password: nmExtRowValue(row, '.nm-f-password'),
+            device_ip: nmExtRowValue(row, '.nm-f-device_ip'),
+            user_name: nmExtRowValue(row, '.nm-f-user_name'),
+            records_calls: nmExtRowValue(row, '.nm-f-records_calls') || '0',
+            department: nmExtRowValue(row, '.nm-f-department'),
+            lof: nmExtBoolValue(row, 'lof'),
+            loc: nmExtBoolValue(row, 'loc'),
+            ddf: nmExtBoolValue(row, 'ddf'),
+            ddc: nmExtBoolValue(row, 'ddc'),
+            ddi: nmExtBoolValue(row, 'ddi'),
+            srv: nmExtBoolValue(row, 'srv'),
+        };
+    }
+
+    async function nmExtSavePendingRows(rows, actionUrl, ipbxId, companiesId) {
+        if (!rows.length) return 0;
+        if (ipbxId <= 0) throw new Error('Salve o Servidor IPBX primeiro.');
+
+        let saved = 0;
+        for (const row of rows) {
+            const section = row.closest('#nm-ext-section') || document.getElementById('nm-ext-section');
+            row.querySelectorAll('input, select, button').forEach(el => { el.disabled = true; });
+
+            const result = await nmPost(actionUrl, nmExtPayload(row, ipbxId, companiesId));
+            if (!result.success) {
+                row.querySelectorAll('input, select, button').forEach(el => { el.disabled = false; });
+                throw new Error(result.error || 'Erro ao salvar ramal');
+            }
+
+            if (result.html) row.outerHTML = result.html;
+            else row.remove();
+
+            saved += 1;
+            nmCounterIncrement('nm-count-ext');
+
+            if (section) {
+                const total = parseInt(section.dataset.total || '0', 10);
+                section.dataset.total = String(total + 1);
+                nmExtSyncEmptyState(section);
+            }
+        }
+        return saved;
+    }
+
     document.addEventListener('click', (e) => {
         const btn = e.target.closest('#nm-ext-add-btn');
         if (!btn) return;
@@ -576,75 +683,6 @@ function nmEnsureIpbxDelegated() {
         const section = row.closest('#nm-ext-section');
         row.remove();
         nmExtSyncEmptyState(section);
-    });
-
-    document.addEventListener('click', async (e) => {
-        const btn = e.target.closest('.nm-ext-save-row');
-        if (!btn) return;
-
-        const row = btn.closest('.nm-ext-pending-row');
-        if (!row) return;
-
-        const section = row.closest('#nm-ext-section') || document.getElementById('nm-ext-section');
-        const ipbxId = parseInt(row.dataset.ipbxId || section?.dataset.ipbxId || '0', 10);
-        if (ipbxId <= 0) { alert('Salve o Servidor IPBX primeiro.'); return; }
-
-        const number = nmExtRowValue(row, '.nm-f-number').trim();
-        if (!number) {
-            alert('Informe o numero do ramal.');
-            row.querySelector('.nm-f-number')?.focus();
-            return;
-        }
-
-        const url = section?.dataset.actionUrl || nmGetIpbxActionUrl(btn);
-        const companiesId = row.dataset.companiesId || section?.dataset.companiesId || nmGetIpbxCompaniesId(btn);
-        const originalHtml = btn.innerHTML;
-        btn.disabled = true;
-        btn.innerHTML = '<span class="nm-spinner"></span>';
-
-        try {
-            const result = await nmPost(url, {
-                action: 'add_extension',
-                ipbx_id: ipbxId,
-                companies_id: companiesId,
-                number,
-                password: nmExtRowValue(row, '.nm-f-password'),
-                device_ip: nmExtRowValue(row, '.nm-f-device_ip'),
-                user_name: nmExtRowValue(row, '.nm-f-user_name'),
-                records_calls: nmExtRowValue(row, '.nm-f-records_calls') || '0',
-                department: nmExtRowValue(row, '.nm-f-department'),
-                lof: nmExtBoolValue(row, 'lof'),
-                loc: nmExtBoolValue(row, 'loc'),
-                ddf: nmExtBoolValue(row, 'ddf'),
-                ddc: nmExtBoolValue(row, 'ddc'),
-                ddi: nmExtBoolValue(row, 'ddi'),
-                srv: nmExtBoolValue(row, 'srv'),
-            });
-            if (!result.success) throw new Error(result.error || 'Erro desconhecido');
-            if (result.html) row.outerHTML = result.html;
-            else row.remove();
-            nmCounterIncrement('nm-count-ext');
-        } catch (error) {
-            console.error('[NM] Erro ao salvar ramal:', error.message);
-            alert('Erro ao salvar ramal: ' + error.message);
-            btn.innerHTML = originalHtml;
-            btn.disabled = false;
-            return;
-        }
-
-        const total = parseInt(section?.dataset.total || '0', 10);
-        if (section) section.dataset.total = String(total + 1);
-        nmExtSyncEmptyState(section);
-    });
-
-    document.addEventListener('keydown', (e) => {
-        if (e.key !== 'Enter') return;
-        const row = e.target.closest?.('.nm-ext-pending-row');
-        if (!row) return;
-        const tag = e.target.tagName ? e.target.tagName.toLowerCase() : '';
-        if (tag === 'textarea') return;
-        e.preventDefault();
-        row.querySelector('.nm-ext-save-row')?.click();
     });
 
     // -----------------------------------------------------------------------
